@@ -1,0 +1,41 @@
+// src/types/auth.ts
+
+export interface User {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  role: 'gerant' | 'coiffeur' | 'receptionniste';
+  photo_url?: string;
+  specialite?: string;
+  is_active: boolean;
+  email_verified_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  code_pin: string;
+}
+
+export interface LoginResponse {
+  user: User;
+  token: string;
+  message: string;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+}
+
+export interface ApiError {
+  message: string;
+  errors?: Record<string, string[]>;
+}
