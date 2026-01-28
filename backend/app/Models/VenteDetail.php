@@ -16,26 +16,30 @@ class VenteDetail extends Model
         'vente_id',
         'type_article',
         'article_nom',
+        'prestation_id',
         'produit_id',
+        'produit_reference',
         'quantite',
         'prix_unitaire',
         'prix_total',
+        'reduction',
     ];
 
     protected $casts = [
         'quantite' => 'integer',
         'prix_unitaire' => 'decimal:2',
         'prix_total' => 'decimal:2',
+        'reduction' => 'decimal:2',
     ];
 
     protected $attributes = [
         'quantite' => 1,
+        'reduction' => 0,
     ];
 
     /**
      * Relations
      */
-    
     public function vente(): BelongsTo
     {
         return $this->belongsTo(Vente::class);
@@ -46,10 +50,14 @@ class VenteDetail extends Model
         return $this->belongsTo(Produit::class);
     }
 
+    public function prestation(): BelongsTo
+    {
+        return $this->belongsTo(TypePrestation::class, 'prestation_id');
+    }
+
     /**
      * Scopes
      */
-    
     public function scopePrestations($query)
     {
         return $query->where('type_article', 'prestation');
@@ -68,7 +76,6 @@ class VenteDetail extends Model
     /**
      * Accessors
      */
-    
     public function getEstPrestationAttribute(): bool
     {
         return $this->type_article === 'prestation';
@@ -84,13 +91,17 @@ class VenteDetail extends Model
         return (float) $this->prix_total;
     }
 
+    public function getPrixNetAttribute(): float
+    {
+        return (float) ($this->prix_total - $this->reduction);
+    }
+
     /**
      * Méthodes utilitaires
      */
-    
     public function calculerPrixTotal(): void
     {
-        $this->prix_total = $this->quantite * $this->prix_unitaire;
+        $this->prix_total = ($this->quantite * $this->prix_unitaire) - $this->reduction;
     }
 
     public function updateStock(): void
@@ -98,7 +109,8 @@ class VenteDetail extends Model
         if ($this->type_article === 'produit' && $this->produit_id) {
             $produit = $this->produit;
             if ($produit) {
-                $produit->decrement('stock_actuel', $this->quantite);
+                // Décrémenter le stock approprié
+                $produit->decrement('stock_vente', $this->quantite);
             }
         }
     }
@@ -108,7 +120,7 @@ class VenteDetail extends Model
         if ($this->type_article === 'produit' && $this->produit_id) {
             $produit = $this->produit;
             if ($produit) {
-                $produit->increment('stock_actuel', $this->quantite);
+                $produit->increment('stock_vente', $this->quantite);
             }
         }
     }
@@ -127,7 +139,7 @@ class VenteDetail extends Model
         });
 
         static::updating(function ($detail) {
-            if ($detail->isDirty(['quantite', 'prix_unitaire'])) {
+            if ($detail->isDirty(['quantite', 'prix_unitaire', 'reduction'])) {
                 $detail->calculerPrixTotal();
             }
         });
@@ -135,7 +147,6 @@ class VenteDetail extends Model
         static::created(function ($detail) {
             $detail->vente->calculerMontants();
             $detail->vente->save();
-            
             $detail->updateStock();
         });
 
@@ -146,7 +157,6 @@ class VenteDetail extends Model
 
         static::deleted(function ($detail) {
             $detail->restaurerStock();
-            
             $detail->vente->calculerMontants();
             $detail->vente->save();
         });

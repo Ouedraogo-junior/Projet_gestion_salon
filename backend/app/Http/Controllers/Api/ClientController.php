@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ClientRequest;
 use App\Models\Client;
 use App\Models\PhotoClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class ClientController extends Controller
 {
@@ -17,10 +17,10 @@ class ClientController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Client::with(['photos', 'ventes', 'rendezVous']);
+            $query = Client::query();
 
             // Recherche par nom, prénom, téléphone ou email
-            if ($request->has('search')) {
+            if ($request->has('search') && !empty($request->search)) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
                     $q->where('nom', 'LIKE', "%{$search}%")
@@ -30,15 +30,34 @@ class ClientController extends Controller
                 });
             }
 
-            // Filtre par statut fidélité
-            if ($request->has('fidele')) {
-                $query->where('est_fidele', $request->fidele);
+            // Filtre par statut actif
+            if ($request->has('is_active') && $request->is_active !== '') {
+                $query->where('is_active', $request->is_active);
+            }
+
+            // Filtre par points de fidélité minimum
+            if ($request->has('min_points') && $request->min_points !== '') {
+                $query->where('points_fidelite', '>=', $request->min_points);
+            }
+
+            // Filtre par date de dernière visite
+            if ($request->has('date_debut') && !empty($request->date_debut)) {
+                $query->whereDate('date_derniere_visite', '>=', $request->date_debut);
+            }
+
+            if ($request->has('date_fin') && !empty($request->date_fin)) {
+                $query->whereDate('date_derniere_visite', '<=', $request->date_fin);
             }
 
             // Tri
             $sortBy = $request->get('sort_by', 'created_at');
             $sortOrder = $request->get('sort_order', 'desc');
-            $query->orderBy($sortBy, $sortOrder);
+            
+            // Validation du champ de tri
+            $allowedSorts = ['nom', 'prenom', 'created_at', 'date_derniere_visite', 'points_fidelite', 'montant_total_depense'];
+            if (in_array($sortBy, $allowedSorts)) {
+                $query->orderBy($sortBy, $sortOrder);
+            }
 
             // Pagination
             $perPage = $request->get('per_page', 15);
@@ -61,15 +80,36 @@ class ClientController extends Controller
     /**
      * Créer un nouveau client
      */
-    public function store(ClientRequest $request)
+    public function store(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'nom' => 'required|string|max:100',
+            'prenom' => 'required|string|max:100',
+            'telephone' => 'required|string|max:20|unique:clients,telephone',
+            'email' => 'nullable|email|max:255',
+            'date_naissance' => 'nullable|date',
+            'adresse' => 'nullable|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         try {
-            $client = Client::create($request->validated());
+            $data = $validator->validated();
+            $data['date_premiere_visite'] = now()->toDateString();
+            
+            $client = Client::create($data);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Client créé avec succès',
-                'data' => $client->load('photos')
+                'data' => $client
             ], 201);
 
         } catch (\Exception $e) {
@@ -87,15 +127,14 @@ class ClientController extends Controller
     public function show($id)
     {
         try {
-            $client = Client::with(['photos', 'ventes.details.produit', 'rendezVous'])
-                ->findOrFail($id);
+            $client = Client::with(['photos'])->findOrFail($id);
 
-            // Calculer statistiques
+            // Calculer statistiques depuis les ventes si relation existe
             $stats = [
-                'total_achats' => $client->ventes->sum('montant_total'),
-                'nombre_visites' => $client->ventes->count(),
                 'points_fidelite' => $client->points_fidelite,
-                'dernier_rdv' => $client->rendezVous()->latest()->first()?->date_heure,
+                'montant_total_depense' => $client->montant_total_depense,
+                'date_premiere_visite' => $client->date_premiere_visite,
+                'date_derniere_visite' => $client->date_derniere_visite,
             ];
 
             return response()->json([
@@ -118,16 +157,36 @@ class ClientController extends Controller
     /**
      * Mettre à jour un client
      */
-    public function update(ClientRequest $request, $id)
+    public function update(Request $request, $id)
     {
         try {
             $client = Client::findOrFail($id);
-            $client->update($request->validated());
+
+            $validator = Validator::make($request->all(), [
+                'nom' => 'sometimes|required|string|max:100',
+                'prenom' => 'sometimes|required|string|max:100',
+                'telephone' => 'sometimes|required|string|max:20|unique:clients,telephone,' . $id,
+                'email' => 'nullable|email|max:255',
+                'date_naissance' => 'nullable|date',
+                'adresse' => 'nullable|string',
+                'notes' => 'nullable|string',
+                'is_active' => 'sometimes|boolean',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Erreur de validation',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $client->update($validator->validated());
 
             return response()->json([
                 'success' => true,
                 'message' => 'Client mis à jour avec succès',
-                'data' => $client->load('photos')
+                'data' => $client
             ], 200);
 
         } catch (\Exception $e) {
@@ -140,19 +199,14 @@ class ClientController extends Controller
     }
 
     /**
-     * Supprimer un client
+     * Supprimer un client (soft delete)
      */
     public function destroy($id)
     {
         try {
             $client = Client::findOrFail($id);
             
-            // Supprimer les photos associées
-            foreach ($client->photos as $photo) {
-                Storage::disk('public')->delete($photo->chemin_fichier);
-                $photo->delete();
-            }
-
+            // Soft delete (si softDeletes activé dans le model)
             $client->delete();
 
             return response()->json([
@@ -174,10 +228,22 @@ class ClientController extends Controller
      */
     public function uploadPhoto(Request $request, $id)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120', // Max 5MB
-            'description' => 'nullable|string|max:255'
+            'type_photo' => 'required|in:avant,apres',
+            'description' => 'nullable|string|max:255',
+            'vente_id' => 'nullable|exists:ventes,id',
+            'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
+            'is_public' => 'nullable|boolean',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
         try {
             $client = Client::findOrFail($id);
@@ -189,8 +255,13 @@ class ClientController extends Controller
 
                 $photo = PhotoClient::create([
                     'client_id' => $client->id,
-                    'chemin_fichier' => $path,
+                    'photo_url' => $path,
+                    'type_photo' => $request->type_photo,
                     'description' => $request->description,
+                    'vente_id' => $request->vente_id,
+                    'rendez_vous_id' => $request->rendez_vous_id,
+                    'is_public' => $request->is_public ?? false,
+                    'date_prise' => now()->toDateString(),
                 ]);
 
                 return response()->json([
@@ -223,7 +294,11 @@ class ClientController extends Controller
             $photo = PhotoClient::where('client_id', $clientId)
                 ->findOrFail($photoId);
 
-            Storage::disk('public')->delete($photo->chemin_fichier);
+            // Supprimer le fichier physique
+            if (Storage::disk('public')->exists($photo->photo_url)) {
+                Storage::disk('public')->delete($photo->photo_url);
+            }
+            
             $photo->delete();
 
             return response()->json([

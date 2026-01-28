@@ -1,4 +1,5 @@
 // src/app/App.tsx
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -9,12 +10,16 @@ import { AuthProvider } from '../contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 
-// Importe tes pages existantes
+// Pages existantes
 import { Dashboard } from './pages/Dashboard';
-import { Clients } from './pages/Clients';
 import { ProduitsPage } from './pages/Produits/ProduitsPage';
 import { Marketing } from './pages/Marketing';
 import { Parametres } from './pages/Parametres';
+
+// Modules importés
+import { VentesPage } from './pages/Ventes/VentesPage';
+import { ClientsPage } from './pages/Clients/ClientsPage';
+import { GestionPrestations } from './pages/prestations/GestionPrestations';
 
 // Layout avec Header et Sidebar
 import Header from './components/Header';
@@ -67,7 +72,7 @@ function App() {
               element={
                 <PrivateRoute>
                   <MainLayout>
-                    <Clients />
+                    <ClientsPage />
                   </MainLayout>
                 </PrivateRoute>
               }
@@ -79,6 +84,28 @@ function App() {
                 <PrivateRoute>
                   <MainLayout>
                     <ProduitsPage />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/prestations"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <GestionPrestations />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/ventes"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <VentesPage />
                   </MainLayout>
                 </PrivateRoute>
               }
@@ -108,7 +135,7 @@ function App() {
 
             {/* Redirection par défaut */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            
+
             {/* Page 404 */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

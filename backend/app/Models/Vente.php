@@ -17,27 +17,31 @@ class Vente extends Model
     protected $table = 'ventes';
 
     protected $fillable = [
-        'numero_facture',
-        'client_id',
-        'coiffeur_id',
-        'rendez_vous_id',
-        'date_vente',
-        'montant_prestations',
-        'montant_produits',
-        'montant_total_ht',
-        'montant_reduction',
-        'type_reduction',
-        'montant_total_ttc',
-        'mode_paiement',
-        'montant_paye',
-        'montant_rendu',
-        'statut_paiement',
-        'solde_restant',
-        'recu_imprime',
-        'points_gagnes',
-        'points_utilises',
-        'notes',
-        'sync_status',
+    'numero_facture',
+    'client_id',
+    'client_nom',              // ✅ AJOUTÉ
+    'client_telephone',        // ✅ AJOUTÉ
+    'coiffeur_id',
+    'vendeur_id',              // ✅ AJOUTÉ
+    'rendez_vous_id',
+    'type_vente',              // ✅ AJOUTÉ
+    'date_vente',
+    'montant_prestations',
+    'montant_produits',
+    'montant_total_ht',
+    'montant_reduction',
+    'type_reduction',
+    'montant_total_ttc',
+    'mode_paiement',
+    'montant_paye',
+    'montant_rendu',
+    'statut_paiement',
+    'solde_restant',
+    'recu_imprime',
+    'points_gagnes',
+    'points_utilises',
+    'notes',
+    'sync_status',
     ];
 
     protected $casts = [
@@ -90,6 +94,16 @@ class Vente extends Model
     public function details(): HasMany
     {
         return $this->hasMany(VenteDetail::class);
+    }
+
+    public function vendeur(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'vendeur_id');
+    }
+
+    public function paiements(): HasMany
+    {
+        return $this->hasMany(VentePaiement::class);
     }
 
     /**

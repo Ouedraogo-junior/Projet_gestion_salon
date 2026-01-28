@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\VenteController;
 use App\Http\Controllers\Api\RendezVousController;
 
+use App\Http\Controllers\Api\UserController;
+
 // ===== CONTROLLERS MODULE PRODUITS =====
 use App\Http\Controllers\Api\CategorieController;
 use App\Http\Controllers\Api\AttributController;
@@ -14,13 +16,16 @@ use App\Http\Controllers\Api\ProduitController;
 use App\Http\Controllers\Api\MouvementStockController;
 use App\Http\Controllers\Api\TransfertStockController;
 
+// ===== CONTROLLERS MODULE PRESTATIONS =====
+use App\Http\Controllers\Api\TypePrestationController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes - Application Salon Dreadlocks
 |--------------------------------------------------------------------------
 | Organisation : Module par module
 | Authentification : Sanctum (sauf routes publiques)
-| Version : 1.0.0
+| Version : 1.1.0
 |--------------------------------------------------------------------------
 */
 
@@ -130,6 +135,25 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ========================================
+    // MODULE PRESTATIONS - TYPES DE PRESTATIONS
+    // ========================================
+    Route::prefix('types-prestations')->group(function () {
+        // Liste et recherche
+        Route::get('/', [TypePrestationController::class, 'index']); // Liste avec filtres
+        Route::get('/stats', [TypePrestationController::class, 'stats']); // Statistiques
+        
+        // CRUD
+        Route::post('/', [TypePrestationController::class, 'store']); // Créer
+        Route::get('/{id}', [TypePrestationController::class, 'show']); // Détails
+        Route::put('/{id}', [TypePrestationController::class, 'update']); // Modifier
+        Route::delete('/{id}', [TypePrestationController::class, 'destroy']); // Supprimer
+        
+        // Actions
+        Route::patch('/{id}/toggle-actif', [TypePrestationController::class, 'toggleActif']); // Activer/Désactiver
+        Route::post('/reorder', [TypePrestationController::class, 'reorder']); // Réorganiser
+    });
+
+    // ========================================
     // MODULE CLIENTS
     // ========================================
     Route::prefix('clients')->group(function () {
@@ -148,13 +172,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // MODULE VENTES
     // ========================================
     Route::prefix('ventes')->group(function () {
-        Route::get('/', [VenteController::class, 'index']); // Liste + filtres
+        // Liste et statistiques
+        Route::get('/', [VenteController::class, 'index']); // Liste avec filtres
+        Route::get('/stats/summary', [VenteController::class, 'stats']); // Statistiques
+        
+        // CRUD
         Route::post('/', [VenteController::class, 'store']); // Créer vente
-        Route::get('/stats', [VenteController::class, 'stats']); // Statistiques
         Route::get('/{id}', [VenteController::class, 'show']); // Détails
-        Route::put('/{id}', [VenteController::class, 'update']); // Modifier (limité)
-        Route::post('/{id}/cancel', [VenteController::class, 'cancel']); // Annuler
+        Route::put('/{id}', [VenteController::class, 'update']); // Modifier (notes uniquement)
+        
+        // Actions
+        Route::delete('/{id}/cancel', [VenteController::class, 'cancel']); // Annuler (admin)
         Route::get('/{id}/receipt', [VenteController::class, 'generateReceipt']); // Reçu PDF
+        
+        // Utilitaires
+        Route::post('/check-stock', [VenteController::class, 'checkStock']); // Vérifier stock
+        Route::post('/calculate-points', [VenteController::class, 'calculatePointsReduction']); // Calculer réduction points
     });
 
     // ========================================
@@ -172,6 +205,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/confirm', [RendezVousController::class, 'confirm']);
         Route::post('/{id}/cancel', [RendezVousController::class, 'cancel']);
         Route::post('/{id}/complete', [RendezVousController::class, 'complete']);
+    });
+
+
+
+    // ========================================
+    // MODULE UTILISATEURS
+    // ========================================
+    Route::prefix('users')->group(function () {
+        Route::get('/', [UserController::class, 'index']); // Liste avec filtres
+        Route::get('/{id}', [UserController::class, 'show']); // Détails
     });
 
     // ========================================
@@ -198,8 +241,8 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/test', function () {
     return response()->json([
         'success' => true,
-        'message' => 'API Salon Dreadlocks - Module Produits Complet',
-        'version' => '1.0.0',
+        'message' => 'API Salon Dreadlocks - Module Prestations Intégré ✅',
+        'version' => '1.2.0',
         'modules' => [
             'auth' => 'OK',
             'categories' => 'OK',
@@ -207,6 +250,7 @@ Route::get('/test', function () {
             'produits' => 'OK',
             'mouvements_stock' => 'OK',
             'transferts' => 'OK',
+            'types_prestations' => 'OK ✅ (Nouveau)',
             'clients' => 'OK',
             'ventes' => 'OK',
             'rendez_vous' => 'OK',

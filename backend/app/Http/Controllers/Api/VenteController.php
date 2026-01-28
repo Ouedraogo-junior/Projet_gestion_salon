@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\VenteRequest;
+use App\Http\Requests\StoreVenteRequest;
 use App\Models\Vente;
 use App\Models\VenteDetail;
 use App\Models\Produit;
+use App\Models\TypePrestation;
 use App\Models\Client;
 use App\Models\MouvementStock;
+use App\Models\VentePaiement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -21,7 +23,7 @@ class VenteController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Vente::with(['client', 'user', 'details.produit']);
+            $query = Vente::with(['client', 'vendeur', 'details']);
 
             // Recherche par numéro facture ou client
             if ($request->has('search')) {
@@ -44,8 +46,8 @@ class VenteController extends Controller
             }
 
             // Filtre par statut
-            if ($request->has('statut')) {
-                $query->where('statut', $request->statut);
+            if ($request->has('statut_paiement')) {
+                $query->where('statut_paiement', $request->statut_paiement);
             }
 
             // Filtre par date
@@ -80,74 +82,269 @@ class VenteController extends Controller
     /**
      * Créer une nouvelle vente
      */
-    public function store(VenteRequest $request)
+    public function store(StoreVenteRequest $request)
     {
         DB::beginTransaction();
 
-        try {
-            // Générer numéro de facture
-            $numeroFacture = 'VT-' . date('Ymd') . '-' . str_pad(Vente::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+        if (!auth()->check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
 
-            // Créer la vente
+            // Vérifier que l'ID existe
+            $userId = auth()->id();
+            if (!$userId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ID utilisateur introuvable'
+                ], 401);
+            }
+
+
+        try {
+            // ========================================
+            // 1. GESTION DU CLIENT
+            // ========================================
+            $clientId = null;
+            $clientNom = null;
+            $clientTelephone = null;
+
+            if ($request->client_id) {
+                // Client existant
+                $clientId = $request->client_id;
+                $client = Client::find($clientId);
+                if ($client) {
+                    $clientNom = $client->nom . ' ' . $client->prenom;
+                    $clientTelephone = $client->telephone;
+                }
+            } elseif ($request->nouveau_client) {
+                // Nouveau client - créer
+                $client = Client::create([
+                    'nom' => $request->nouveau_client['nom'],
+                    'prenom' => $request->nouveau_client['prenom'],
+                    'telephone' => $request->nouveau_client['telephone'],
+                    'email' => $request->nouveau_client['email'] ?? null,
+                    'points_fidelite' => 0,
+                ]);
+                $clientId = $client->id;
+                $clientNom = $client->nom . ' ' . $client->prenom;
+                $clientTelephone = $client->telephone;
+            } elseif ($request->client_anonyme) {
+                // Client anonyme
+                $clientNom = $request->client_anonyme['nom'];
+                $clientTelephone = $request->client_anonyme['telephone'] ?? null;
+            }
+
+            // ========================================
+            // 2. CALCULER LES MONTANTS
+            // ========================================
+            $montantPrestations = 0;
+            $montantProduits = 0;
+            $montantTotalHT = 0;
+            $montantReductionArticles = 0;
+
+            foreach ($request->articles as $article) {
+                $sousTotal = $article['prix_unitaire'] * $article['quantite'];
+                $reductionArticle = $article['reduction'] ?? 0;
+                $sousTotalApresReduction = $sousTotal - $reductionArticle;
+
+                $montantTotalHT += $sousTotalApresReduction;
+                $montantReductionArticles += $reductionArticle;
+
+                if ($article['type'] === 'prestation') {
+                    $montantPrestations += $sousTotalApresReduction;
+                } else {
+                    $montantProduits += $sousTotalApresReduction;
+                }
+            }
+
+            // Réduction globale
+            $montantReductionGlobale = 0;
+            if ($request->reduction) {
+                if ($request->reduction['type'] === 'pourcentage') {
+                    $montantReductionGlobale = ($montantTotalHT * $request->reduction['valeur']) / 100;
+                } else {
+                    $montantReductionGlobale = $request->reduction['valeur'];
+                }
+            }
+
+            // Réduction points fidélité
+            $montantReductionPoints = 0;
+            if ($request->points_utilises > 0) {
+                $montantReductionPoints = ($request->points_utilises / 100) * 1000; // 100 points = 1000 FCFA
+            }
+
+            $montantReductionTotal = $montantReductionArticles + $montantReductionGlobale + $montantReductionPoints;
+            $montantTotalTTC = max(0, $montantTotalHT - $montantReductionGlobale - $montantReductionPoints);
+
+            // Paiements
+            $montantPaye = array_sum(array_column($request->paiements, 'montant'));
+            $montantRendu = max(0, $montantPaye - $montantTotalTTC);
+            $soldeRestant = max(0, $montantTotalTTC - $montantPaye);
+
+            // Statut paiement
+            if ($soldeRestant == 0) {
+                $statutPaiement = 'paye';
+            } elseif ($montantPaye > 0) {
+                $statutPaiement = 'partiel';
+            } else {
+                $statutPaiement = 'impaye';
+            }
+
+            // Points gagnés
+            $pointsGagnes = floor($montantTotalTTC / 1000); // 1 point par 1000 FCFA
+
+            // Déterminer type de vente
+            $typeVente = 'mixte';
+            if ($montantPrestations > 0 && $montantProduits == 0) {
+                $typeVente = 'prestations';
+            } elseif ($montantProduits > 0 && $montantPrestations == 0) {
+                $typeVente = 'produits';
+            }
+
+            // Déterminer mode paiement principal
+            $modePaiement = 'mixte';
+            if (count($request->paiements) == 1) {
+                $modePaiement = $request->paiements[0]['mode'];
+            }
+
+            // ========================================
+            // 3. GÉNÉRER NUMÉRO FACTURE
+            // ========================================
+            $numeroFacture = 'VT-' . date('Ymd') . '-' . str_pad(
+                Vente::whereDate('created_at', today())->count() + 1,
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            // ========================================
+            // 4. CRÉER LA VENTE
+            // ========================================
             $vente = Vente::create([
                 'numero_facture' => $numeroFacture,
-                'client_id' => $request->client_id,
-                'user_id' => auth()->id(),
+                'client_id' => $clientId,
+                'client_nom' => $clientNom,
+                'client_telephone' => $clientTelephone,
+                'coiffeur_id' => $request->coiffeur_id,
+                'vendeur_id' => $userId,
+                'rendez_vous_id' => $request->rendez_vous_id,
+                'type_vente' => $typeVente,
                 'date_vente' => now(),
-                'montant_total' => 0, // Calculé après
-                'mode_paiement' => $request->mode_paiement,
-                'statut' => $request->statut ?? 'completee',
+                'montant_prestations' => $montantPrestations,
+                'montant_produits' => $montantProduits,
+                'montant_total_ht' => $montantTotalHT,
+                'montant_reduction' => $montantReductionTotal,
+                'type_reduction' => $request->reduction ? 'manuelle' : ($request->points_utilises > 0 ? 'fidelite' : 'aucune'),
+                'montant_total_ttc' => $montantTotalTTC,
+                'mode_paiement' => $modePaiement,
+                'montant_paye' => $montantPaye,
+                'montant_rendu' => $montantRendu,
+                'statut_paiement' => $statutPaiement,
+                'solde_restant' => $soldeRestant,
+                'recu_imprime' => false,
+                'points_gagnes' => $pointsGagnes,
+                'points_utilises' => $request->points_utilises ?? 0,
                 'notes' => $request->notes,
+                'sync_status' => 'synced',
             ]);
 
-            $montantTotal = 0;
+            // ========================================
+            // 5. CRÉER LES DÉTAILS
+            // ========================================
+            foreach ($request->articles as $article) {
+                $articleNom = '';
+                $prestationId = null;
+                $produitId = null;
+                $produitReference = null;
 
-            // Créer les détails de vente
-            foreach ($request->items as $item) {
-                $produit = Produit::findOrFail($item['produit_id']);
+                if ($article['type'] === 'prestation') {
+                    $prestation = TypePrestation::find($article['id']);
+                    if ($prestation) {
+                        $articleNom = $prestation->nom;
+                        $prestationId = $prestation->id;
+                    }
+                } else {
+                    $produit = Produit::find($article['id']);
+                    if ($produit) {
+                        $articleNom = $produit->nom;
+                        $produitId = $produit->id;
+                        $produitReference = $produit->reference;
 
-                // Vérifier stock pour les produits
-                if ($produit->type === 'produit' && $produit->quantite_stock < $item['quantite']) {
-                    throw new \Exception("Stock insuffisant pour {$produit->nom}");
+                        // Vérifier stock
+                        $sourceStock = $article['source_stock'] ?? 'vente';
+                        $stockDisponible = $sourceStock === 'vente' ? $produit->stock_vente : $produit->stock_utilisation;
+
+                        if ($stockDisponible < $article['quantite']) {
+                            throw new \Exception("Stock insuffisant pour {$produit->nom}. Disponible: {$stockDisponible}");
+                        }
+
+                        // Décompter le stock
+                        if ($sourceStock === 'vente') {
+                            $produit->decrement('stock_vente', $article['quantite']);
+                        } else {
+                            $produit->decrement('stock_utilisation', $article['quantite']);
+                        }
+
+                        // Créer mouvement de stock
+                        MouvementStock::create([
+                            'produit_id' => $produit->id,
+                            'type_stock' => $sourceStock,
+                            'type_mouvement' => 'sortie',
+                            'quantite' => $article['quantite'],
+                            'stock_avant' => $stockDisponible,
+                            'stock_apres' => $stockDisponible - $article['quantite'],
+                            'motif' => "Vente #{$numeroFacture}",
+                            'vente_id' => $vente->id,
+                            'user_id' => auth()->id(),
+                        ]);
+                    }
                 }
-
-                $prixUnitaire = $item['prix_unitaire'] ?? $produit->prix_vente;
-                $sousTotal = $prixUnitaire * $item['quantite'];
 
                 // Créer détail vente
                 VenteDetail::create([
                     'vente_id' => $vente->id,
-                    'produit_id' => $produit->id,
-                    'quantite' => $item['quantite'],
-                    'prix_unitaire' => $prixUnitaire,
-                    'sous_total' => $sousTotal,
+                    'type_article' => $article['type'],
+                    'article_nom' => $articleNom,
+                    'prestation_id' => $prestationId,
+                    'produit_id' => $produitId,
+                    'produit_reference' => $produitReference,
+                    'quantite' => $article['quantite'],
+                    'prix_unitaire' => $article['prix_unitaire'],
+                    'prix_total' => $article['prix_unitaire'] * $article['quantite'],
+                    'reduction' => $article['reduction'] ?? 0,
                 ]);
-
-                $montantTotal += $sousTotal;
-
-                // Décompter le stock pour les produits
-                if ($produit->type === 'produit') {
-                    $produit->decrement('quantite_stock', $item['quantite']);
-
-                    // Créer mouvement de stock
-                    MouvementStock::create([
-                        'produit_id' => $produit->id,
-                        'type_mouvement' => 'sortie',
-                        'quantite' => $item['quantite'],
-                        'motif' => "Vente #{$numeroFacture}",
-                        'user_id' => auth()->id(),
-                    ]);
-                }
             }
 
-            // Mettre à jour montant total
-            $vente->update(['montant_total' => $montantTotal]);
+            // ========================================
+            // 6. CRÉER LES PAIEMENTS
+            // ========================================
+            foreach ($request->paiements as $paiement) {
+                VentePaiement::create([
+                    'vente_id' => $vente->id,
+                    'mode_paiement' => $paiement['mode'],
+                    'montant' => $paiement['montant'],
+                    'reference' => $paiement['reference'] ?? null,
+                ]);
+            }
 
-            // Mettre à jour points fidélité client
-            if ($vente->client_id) {
-                $client = Client::find($vente->client_id);
-                $pointsGagnes = floor($montantTotal / 1000); // 1 point par 1000 FCFA
-                $client->increment('points_fidelite', $pointsGagnes);
+            // ========================================
+            // 7. METTRE À JOUR POINTS FIDÉLITÉ
+            // ========================================
+            if ($clientId) {
+                $client = Client::find($clientId);
+                
+                // Retirer points utilisés
+                if ($request->points_utilises > 0) {
+                    $client->decrement('points_fidelite', $request->points_utilises);
+                }
+                
+                // Ajouter points gagnés
+                if ($pointsGagnes > 0) {
+                    $client->increment('points_fidelite', $pointsGagnes);
+                }
             }
 
             DB::commit();
@@ -155,7 +352,7 @@ class VenteController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Vente enregistrée avec succès',
-                'data' => $vente->load(['details.produit', 'client'])
+                'data' => $vente->load(['details', 'client', 'vendeur', 'paiements'])
             ], 201);
 
         } catch (\Exception $e) {
@@ -174,7 +371,7 @@ class VenteController extends Controller
     public function show($id)
     {
         try {
-            $vente = Vente::with(['client', 'user', 'details.produit'])
+            $vente = Vente::with(['client', 'vendeur', 'details', 'paiements'])
                 ->findOrFail($id);
 
             return response()->json([
@@ -192,25 +389,22 @@ class VenteController extends Controller
     }
 
     /**
-     * Mettre à jour une vente (modification limitée)
+     * Mettre à jour une vente (notes uniquement)
      */
     public function update(Request $request, $id)
     {
         $request->validate([
-            'statut' => 'sometimes|in:en_attente,completee,annulee',
             'notes' => 'sometimes|string|max:500',
         ]);
 
         try {
             $vente = Vente::findOrFail($id);
-
-            // Seules certaines modifications sont autorisées
-            $vente->update($request->only(['statut', 'notes']));
+            $vente->update($request->only(['notes']));
 
             return response()->json([
                 'success' => true,
                 'message' => 'Vente mise à jour avec succès',
-                'data' => $vente->load(['details.produit', 'client'])
+                'data' => $vente->load(['details', 'client'])
             ], 200);
 
         } catch (\Exception $e) {
@@ -223,46 +417,74 @@ class VenteController extends Controller
     }
 
     /**
-     * Annuler une vente (recréditer le stock)
+     * Annuler une vente
      */
     public function cancel($id)
     {
         DB::beginTransaction();
 
         try {
-            $vente = Vente::with('details.produit')->findOrFail($id);
+            $vente = Vente::with('details')->findOrFail($id);
 
-            if ($vente->statut === 'annulee') {
+            if ($vente->statut_paiement === 'annulee') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cette vente est déjà annulée'
                 ], 400);
             }
 
-            // Recréditer le stock
+            // Recréditer le stock pour les produits
             foreach ($vente->details as $detail) {
-                if ($detail->produit->type === 'produit') {
-                    $detail->produit->increment('quantite_stock', $detail->quantite);
+                if ($detail->type_article === 'produit' && $detail->produit_id) {
+                    $produit = Produit::find($detail->produit_id);
+                    if ($produit) {
+                        // Trouver le mouvement original pour connaître la source
+                        $mouvementOriginal = MouvementStock::where('vente_id', $vente->id)
+                            ->where('produit_id', $produit->id)
+                            ->first();
+                        
+                        $typeStock = $mouvementOriginal ? $mouvementOriginal->type_stock : 'vente';
+                        
+                        if ($typeStock === 'vente') {
+                            $stockAvant = $produit->stock_vente;
+                            $produit->increment('stock_vente', $detail->quantite);
+                        } else {
+                            $stockAvant = $produit->stock_utilisation;
+                            $produit->increment('stock_utilisation', $detail->quantite);
+                        }
 
-                    // Créer mouvement de stock
-                    MouvementStock::create([
-                        'produit_id' => $detail->produit_id,
-                        'type_mouvement' => 'entree',
-                        'quantite' => $detail->quantite,
-                        'motif' => "Annulation vente #{$vente->numero_facture}",
-                        'user_id' => auth()->id(),
-                    ]);
+                        // Créer mouvement de recrédit
+                        MouvementStock::create([
+                            'produit_id' => $produit->id,
+                            'type_stock' => $typeStock,
+                            'type_mouvement' => 'entree',
+                            'quantite' => $detail->quantite,
+                            'stock_avant' => $stockAvant,
+                            'stock_apres' => $stockAvant + $detail->quantite,
+                            'motif' => "Annulation vente #{$vente->numero_facture}",
+                            'vente_id' => $vente->id,
+                            'user_id' => auth()->id(),
+                        ]);
+                    }
                 }
             }
 
-            // Retirer points fidélité
+            // Recréditer les points fidélité
             if ($vente->client_id) {
                 $client = Client::find($vente->client_id);
-                $pointsRetires = floor($vente->montant_total / 1000);
-                $client->decrement('points_fidelite', $pointsRetires);
+                if ($client) {
+                    // Rendre les points utilisés
+                    if ($vente->points_utilises > 0) {
+                        $client->increment('points_fidelite', $vente->points_utilises);
+                    }
+                    // Retirer les points gagnés
+                    if ($vente->points_gagnes > 0) {
+                        $client->decrement('points_fidelite', $vente->points_gagnes);
+                    }
+                }
             }
 
-            $vente->update(['statut' => 'annulee']);
+            $vente->update(['statut_paiement' => 'annulee']);
 
             DB::commit();
 
@@ -288,7 +510,7 @@ class VenteController extends Controller
     public function generateReceipt($id)
     {
         try {
-            $vente = Vente::with(['client', 'user', 'details.produit'])
+            $vente = Vente::with(['client', 'vendeur', 'details', 'paiements'])
                 ->findOrFail($id);
 
             $pdf = Pdf::loadView('receipts.vente', compact('vente'));
@@ -314,23 +536,39 @@ class VenteController extends Controller
             $dateFin = $request->get('date_fin', now()->endOfMonth());
 
             $stats = [
-                'total_ventes' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
-                    ->where('statut', 'completee')
-                    ->sum('montant_total'),
+                'ca_total' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+                    ->where('statut_paiement', '!=', 'annulee')
+                    ->sum('montant_total_ttc'),
+                
+                'ca_prestations' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+                    ->where('statut_paiement', '!=', 'annulee')
+                    ->sum('montant_prestations'),
+                
+                'ca_produits' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+                    ->where('statut_paiement', '!=', 'annulee')
+                    ->sum('montant_produits'),
                 
                 'nombre_ventes' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
-                    ->where('statut', 'completee')
+                    ->where('statut_paiement', '!=', 'annulee')
                     ->count(),
                 
                 'panier_moyen' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
-                    ->where('statut', 'completee')
-                    ->avg('montant_total'),
+                    ->where('statut_paiement', '!=', 'annulee')
+                    ->avg('montant_total_ttc'),
                 
                 'par_mode_paiement' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
-                    ->where('statut', 'completee')
-                    ->selectRaw('mode_paiement, SUM(montant_total) as total, COUNT(*) as nombre')
+                    ->where('statut_paiement', '!=', 'annulee')
+                    ->selectRaw('mode_paiement, SUM(montant_total_ttc) as total, COUNT(*) as nombre')
                     ->groupBy('mode_paiement')
                     ->get(),
+                
+                'impayes_count' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+                    ->where('statut_paiement', 'impaye')
+                    ->count(),
+                
+                'impayes_montant' => Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+                    ->where('statut_paiement', 'impaye')
+                    ->sum('solde_restant'),
             ];
 
             return response()->json([

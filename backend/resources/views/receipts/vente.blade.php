@@ -97,6 +97,13 @@
             background-color: #2c3e50;
             color: white;
         }
+        .totals .reduction-row {
+            color: #e74c3c;
+        }
+        .totals .reste-row {
+            color: #e74c3c;
+            font-weight: bold;
+        }
         .footer {
             margin-top: 40px;
             text-align: center;
@@ -120,6 +127,10 @@
             background-color: #f39c12;
             color: white;
         }
+        .badge-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
         .signature-section {
             margin-top: 40px;
             display: flex;
@@ -133,6 +144,21 @@
             margin-top: 50px;
             border-top: 1px solid #000;
             padding-top: 5px;
+            font-size: 11px;
+        }
+        .paiements-section {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-left: 3px solid #3498db;
+        }
+        .paiements-section h4 {
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        .paiement-item {
+            padding: 5px 0;
             font-size: 11px;
         }
     </style>
@@ -156,8 +182,13 @@
                 @if($vente->client->email)
                     <p><strong>Email:</strong> {{ $vente->client->email }}</p>
                 @endif
-                @if($vente->client->est_fidele)
+                @if($vente->client->points_fidelite)
                     <p><strong>Points fidélité:</strong> {{ $vente->client->points_fidelite }} pts</p>
+                @endif
+            @elseif($vente->client_nom)
+                <p><strong>Nom:</strong> {{ $vente->client_nom }}</p>
+                @if($vente->client_telephone)
+                    <p><strong>Téléphone:</strong> {{ $vente->client_telephone }}</p>
                 @endif
             @else
                 <p>Client anonyme</p>
@@ -167,12 +198,16 @@
         <div class="info-block">
             <h3>Informations Facture</h3>
             <p><strong>N° Facture:</strong> {{ $vente->numero_facture }}</p>
-            <p><strong>Date:</strong> {{ $vente->date_vente->format('d/m/Y H:i') }}</p>
-            <p><strong>Vendeur:</strong> {{ $vente->user->name }}</p>
+            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($vente->date_vente)->format('d/m/Y H:i') }}</p>
+            <p><strong>Vendeur:</strong> {{ $vente->vendeur ? $vente->vendeur->nom : 'Non spécifié' }}</p>
+            @if($vente->coiffeur)
+                <p><strong>Coiffeur:</strong> {{ $vente->coiffeur->nom }}</p>
+            @endif
             <p><strong>Mode paiement:</strong> {{ ucfirst(str_replace('_', ' ', $vente->mode_paiement)) }}</p>
+            <p><strong>Type vente:</strong> {{ ucfirst($vente->type_vente) }}</p>
             <p><strong>Statut:</strong> 
-                <span class="badge badge-{{ $vente->statut === 'completee' ? 'success' : 'warning' }}">
-                    {{ ucfirst($vente->statut) }}
+                <span class="badge badge-{{ $vente->statut_paiement === 'paye' ? 'success' : ($vente->statut_paiement === 'partiel' ? 'warning' : 'danger') }}">
+                    {{ ucfirst($vente->statut_paiement) }}
                 </span>
             </p>
         </div>
@@ -182,24 +217,37 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 40%">Produit/Service</th>
-                <th class="text-center" style="width: 15%">Qté</th>
+                <th style="width: 5%">#</th>
+                <th style="width: 35%">Produit/Service</th>
+                <th class="text-center" style="width: 10%">Type</th>
+                <th class="text-center" style="width: 10%">Qté</th>
                 <th class="text-right" style="width: 20%">Prix Unit.</th>
-                <th class="text-right" style="width: 25%">Total</th>
+                <th class="text-right" style="width: 20%">Total</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($vente->details as $detail)
+            @foreach($vente->details as $index => $detail)
                 <tr>
+                    <td>{{ $index + 1 }}</td>
                     <td>
-                        <strong>{{ $detail->produit->nom }}</strong>
-                        @if($detail->produit->description)
-                            <br><small style="color: #666;">{{ Str::limit($detail->produit->description, 50) }}</small>
+                        <strong>{{ $detail->article_nom ?? 'Article inconnu' }}</strong>
+                        @if($detail->produit_reference)
+                            <br><small style="color: #666;">Réf: {{ $detail->produit_reference }}</small>
                         @endif
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-{{ $detail->type_article === 'prestation' ? 'success' : 'warning' }}">
+                            {{ ucfirst($detail->type_article) }}
+                        </span>
                     </td>
                     <td class="text-center">{{ $detail->quantite }}</td>
                     <td class="text-right">{{ number_format($detail->prix_unitaire, 0, ',', ' ') }} FCFA</td>
-                    <td class="text-right"><strong>{{ number_format($detail->sous_total, 0, ',', ' ') }} FCFA</strong></td>
+                    <td class="text-right">
+                        <strong>{{ number_format($detail->prix_total, 0, ',', ' ') }} FCFA</strong>
+                        @if($detail->reduction > 0)
+                            <br><small style="color: #e74c3c;">-{{ number_format($detail->reduction, 0, ',', ' ') }} FCFA</small>
+                        @endif
+                    </td>
                 </tr>
             @endforeach
         </tbody>
@@ -209,15 +257,68 @@
     <div class="totals">
         <table>
             <tr>
-                <td><strong>Sous-total:</strong></td>
-                <td class="text-right">{{ number_format($vente->montant_total, 0, ',', ' ') }} FCFA</td>
+                <td><strong>Sous-total HT:</strong></td>
+                <td class="text-right">{{ number_format($vente->montant_total_ht, 0, ',', ' ') }} FCFA</td>
             </tr>
+            @if($vente->montant_reduction > 0)
+            <tr class="reduction-row">
+                <td><strong>Réduction:</strong></td>
+                <td class="text-right">-{{ number_format($vente->montant_reduction, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            @endif
             <tr class="grand-total">
                 <td><strong>TOTAL À PAYER:</strong></td>
-                <td class="text-right"><strong>{{ number_format($vente->montant_total, 0, ',', ' ') }} FCFA</strong></td>
+                <td class="text-right"><strong>{{ number_format($vente->montant_total_ttc, 0, ',', ' ') }} FCFA</strong></td>
             </tr>
+            @if($vente->montant_paye > 0)
+            <tr>
+                <td><strong>Montant payé:</strong></td>
+                <td class="text-right">{{ number_format($vente->montant_paye, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            @endif
+            @if($vente->montant_rendu > 0)
+            <tr>
+                <td><strong>Monnaie rendue:</strong></td>
+                <td class="text-right">{{ number_format($vente->montant_rendu, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            @endif
+            @if($vente->solde_restant > 0)
+            <tr class="reste-row">
+                <td><strong>Reste à payer:</strong></td>
+                <td class="text-right">{{ number_format($vente->solde_restant, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            @endif
         </table>
     </div>
+
+    <!-- DÉTAILS PAIEMENTS (si paiements multiples) -->
+    @if($vente->paiements && $vente->paiements->count() > 0)
+        <div class="paiements-section">
+            <h4>Détails des paiements</h4>
+            @foreach($vente->paiements as $paiement)
+                <div class="paiement-item">
+                    <strong>{{ ucfirst(str_replace('_', ' ', $paiement->mode_paiement)) }}:</strong> 
+                    {{ number_format($paiement->montant, 0, ',', ' ') }} FCFA
+                    @if($paiement->reference)
+                        - Réf: {{ $paiement->reference }}
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    @endif
+
+    <!-- POINTS FIDÉLITÉ -->
+    @if($vente->points_utilises > 0 || $vente->points_gagnes > 0)
+        <div style="margin-top: 20px; padding: 10px; background-color: #e8f5e9; border-left: 3px solid #27ae60;">
+            <strong>Programme fidélité:</strong>
+            @if($vente->points_utilises > 0)
+                <br>Points utilisés: {{ $vente->points_utilises }} pts
+            @endif
+            @if($vente->points_gagnes > 0)
+                <br>Points gagnés: {{ $vente->points_gagnes }} pts
+            @endif
+        </div>
+    @endif
 
     <!-- NOTES -->
     @if($vente->notes)
@@ -243,7 +344,6 @@
     <!-- PIED DE PAGE -->
     <div class="footer">
         <p><strong>Merci de votre visite !</strong></p>
-        <p>Ce reçu fait foi de paiement | Aucun remboursement après 48h</p>
         <p>Imprimé le {{ now()->format('d/m/Y à H:i') }}</p>
     </div>
 </body>

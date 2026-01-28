@@ -36,6 +36,22 @@ class TypePrestation extends Model
     }
 
     /**
+     * Relation : Un type de prestation est dans plusieurs détails de vente
+     */
+    public function venteDetails()
+    {
+        return $this->hasMany(VenteDetail::class, 'prestation_id');
+    }
+
+    /**
+     * Relation : Un type de prestation a plusieurs prestations clients (historique technique)
+     */
+    public function prestationsClients()
+    {
+        return $this->hasMany(PrestationClient::class, 'type_prestation_id');
+    }
+
+    /**
      * Scope : Seulement les types actifs
      */
     public function scopeActif($query)
@@ -52,11 +68,19 @@ class TypePrestation extends Model
     }
 
     /**
+     * Scope : Alias pour compatibilité
+     */
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('ordre', 'asc');
+    }
+
+    /**
      * Accessor : Formater le prix
      */
     public function getPrixFormateAttribute()
     {
-        return $this->prix_base ? number_format($this->prix_base, 2, ',', ' ') . ' FCFA' : 'Non défini';
+        return $this->prix_base ? number_format($this->prix_base, 0, ',', ' ') . ' FCFA' : 'Non défini';
     }
 
     /**
@@ -72,7 +96,7 @@ class TypePrestation extends Model
         $minutes = $this->duree_estimee_minutes % 60;
 
         if ($heures > 0 && $minutes > 0) {
-            return "{$heures}h{$minutes}";
+            return "{$heures}h {$minutes}min";
         } elseif ($heures > 0) {
             return "{$heures}h";
         } else {

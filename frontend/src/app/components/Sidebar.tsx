@@ -1,3 +1,5 @@
+// src/app/components/Sidebar.tsx
+
 import { NavLink } from 'react-router-dom';
 import {
   Home,
@@ -10,12 +12,14 @@ import {
   Settings,
   Wifi,
   WifiOff,
+  Scissors,
 } from 'lucide-react';
 
 const menuItems = [
-  { path: '/', label: 'Tableau de bord', icon: Home },
+  { path: '/dashboard', label: 'Tableau de bord', icon: Home },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/produits', label: 'Produits & Stock', icon: Package },
+  { path: '/prestations', label: 'Prestations', icon: Scissors },
   { path: '/ventes', label: 'Ventes / Caisse', icon: ShoppingCart },
   { path: '/rendez-vous', label: 'Rendez-vous', icon: Calendar },
   { path: '/marketing', label: 'Marketing SMS', icon: MessageSquare },
