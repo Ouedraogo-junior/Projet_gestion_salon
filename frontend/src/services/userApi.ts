@@ -34,8 +34,36 @@ export interface User {
   specialite: string | null;
   photo_url: string | null;
   is_active: boolean;
+  nom_complet: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface UserCreateData {
+  nom: string;
+  prenom: string;
+  telephone: string;
+  email?: string;
+  password: string;
+  role: 'gerant' | 'coiffeur' | 'receptionniste';
+  specialite?: string;
+  is_active?: boolean;
+}
+
+export interface UserUpdateData {
+  nom?: string;
+  prenom?: string;
+  telephone?: string;
+  email?: string;
+  role?: 'gerant' | 'coiffeur' | 'receptionniste';
+  specialite?: string;
+  is_active?: boolean;
+}
+
+export interface UserFilters {
+  role?: string;
+  is_active?: boolean;
+  search?: string;
 }
 
 export interface ApiResponse<T> {
@@ -61,8 +89,8 @@ export const userApi = {
   /**
    * Récupérer tous les utilisateurs actifs
    */
-  async getAll(): Promise<ApiResponse<User[]>> {
-    const response = await api.get('/users');
+  async getAll(filters?: UserFilters): Promise<ApiResponse<User[]>> {
+    const response = await api.get('/users', { params: filters });
     return response.data;
   },
 
@@ -71,6 +99,69 @@ export const userApi = {
    */
   async getOne(id: number): Promise<ApiResponse<User>> {
     const response = await api.get(`/users/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Créer un utilisateur (gérant uniquement)
+   */
+  async create(userData: UserCreateData): Promise<ApiResponse<User>> {
+    const response = await api.post('/users', userData);
+    return response.data;
+  },
+
+  /**
+   * Mettre à jour un utilisateur (gérant uniquement)
+   */
+  async update(id: number, userData: UserUpdateData): Promise<ApiResponse<User>> {
+    const response = await api.put(`/users/${id}`, userData);
+    return response.data;
+  },
+
+  /**
+   * Supprimer un utilisateur - soft delete (gérant uniquement)
+   */
+  async delete(id: number): Promise<ApiResponse<void>> {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Activer/Désactiver un utilisateur (gérant uniquement)
+   */
+  async toggleActive(id: number): Promise<ApiResponse<User>> {
+    const response = await api.post(`/users/${id}/toggle-active`);
+    return response.data;
+  },
+
+  /**
+   * Réinitialiser le mot de passe d'un utilisateur (gérant uniquement)
+   */
+  async resetPassword(
+    id: number,
+    password: string,
+    password_confirmation: string
+  ): Promise<ApiResponse<void>> {
+    const response = await api.post(`/users/${id}/reset-password`, {
+      password,
+      password_confirmation,
+    });
+    return response.data;
+  },
+
+  /**
+   * Changer son propre mot de passe
+   */
+  async changePassword(
+    current_password: string,
+    password: string,
+    password_confirmation: string
+  ): Promise<ApiResponse<void>> {
+    const response = await api.post('/auth/change-password', {
+      current_password,
+      password,
+      password_confirmation,
+    });
     return response.data;
   },
 };

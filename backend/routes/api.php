@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PointageController;
 use App\Http\Controllers\Api\DepenseController;
 use App\Http\Controllers\Api\ConfectionController;
 use App\Http\Controllers\Api\RapportController;
+use App\Http\Controllers\Api\SalonController;
 
 // ===== CONTROLLERS MODULE PRODUITS =====
 use App\Http\Controllers\Api\CategorieController;
@@ -29,7 +30,7 @@ use App\Http\Controllers\Api\TypePrestationController;
 |--------------------------------------------------------------------------
 | Organisation : Module par module
 | Authentification : Sanctum (sauf routes publiques)
-| Version : 1.1.0
+| Version : 1.2.0
 |--------------------------------------------------------------------------
 */
 
@@ -52,6 +53,7 @@ Route::post('/rendez-vous/{id}/cancel-public', [RendezVousController::class, 'ca
 
 // Routes publiques (sans auth)
 Route::get('/types-prestations/public', [TypePrestationController::class, 'indexPublic']);
+Route::get('/salon/public', [SalonController::class, 'show']); // Route publique pour les infos du salon
 
 // ============================================================
 // ROUTES PROTÉGÉES (Authentification requise)
@@ -66,6 +68,38 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/refresh', [AuthController::class, 'refresh']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/change-password', [UserController::class, 'changePassword']);
+    });
+
+    // ========================================
+    // MODULE PARAMÈTRES - SALON (Gérant uniquement)
+    // ========================================
+    Route::prefix('salon')->group(function () {
+        Route::get('/', [SalonController::class, 'show']); // Accessible à tous
+        
+        Route::middleware('check.role:gerant')->group(function () {
+            Route::put('/', [SalonController::class, 'update']);
+            Route::post('/logo', [SalonController::class, 'uploadLogo']);
+            Route::delete('/logo', [SalonController::class, 'deleteLogo']);
+        });
+    });
+
+    // ========================================
+    // MODULE UTILISATEURS
+    // ========================================
+    Route::prefix('users')->group(function () {
+        // Accessibles à tous les utilisateurs authentifiés
+        Route::get('/', [UserController::class, 'index']);
+        Route::get('/{id}', [UserController::class, 'show']);
+        
+        // Gérant uniquement
+        Route::middleware('check.role:gerant')->group(function () {
+            Route::post('/', [UserController::class, 'store']);
+            Route::put('/{id}', [UserController::class, 'update']);
+            Route::delete('/{id}', [UserController::class, 'destroy']);
+            Route::post('/{id}/toggle-active', [UserController::class, 'toggleActive']);
+            Route::post('/{id}/reset-password', [UserController::class, 'resetPassword']);
+        });
     });
 
     // ========================================
@@ -237,15 +271,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ========================================
-    // MODULE UTILISATEURS
-    // ========================================
-    Route::prefix('users')->group(function () {
-        Route::get('/', [UserController::class, 'index']); // Liste avec filtres
-        Route::get('/{id}', [UserController::class, 'show']); // Détails
-    });
-
-
-    // ========================================
     // MODULE DÉPENSES
     // ========================================
     Route::prefix('depenses')->group(function () {
@@ -302,16 +327,18 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/test', function () {
     return response()->json([
         'success' => true,
-        'message' => 'API Salon Dreadlocks - Module Prestations Intégré ✅',
+        'message' => 'API Salon Dreadlocks - Module Paramètres Intégré ✅',
         'version' => '1.2.0',
         'modules' => [
             'auth' => 'OK',
+            'salon' => 'OK ✅ (Nouveau)',
+            'users' => 'OK ✅ (Amélioré)',
             'categories' => 'OK',
             'attributs' => 'OK',
             'produits' => 'OK',
             'mouvements_stock' => 'OK',
             'transferts' => 'OK',
-            'types_prestations' => 'OK ✅ (Nouveau)',
+            'types_prestations' => 'OK',
             'clients' => 'OK',
             'ventes' => 'OK',
             'rendez_vous' => 'OK',

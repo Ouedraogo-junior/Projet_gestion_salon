@@ -25,7 +25,7 @@ class User extends Authenticatable
         'prenom',
         'telephone',
         'email',
-        'code_pin',
+        'password', 
         'role',
         'photo_url',
         'specialite',
@@ -38,7 +38,7 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'code_pin',
+        'password', 
         'remember_token',
     ];
 
@@ -52,6 +52,7 @@ class User extends Authenticatable
         'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'password' => 'hashed', 
     ];
 
     /**
@@ -68,19 +69,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Hash automatique du code PIN
+     * Vérifier le mot de passe
      */
-    public function setCodePinAttribute($value): void
+    public function verifyPassword(string $password): bool
     {
-        $this->attributes['code_pin'] = Hash::make($value);
-    }
-
-    /**
-     * Vérifier le code PIN
-     */
-    public function verifyPin(string $pin): bool
-    {
-        return Hash::check($pin, $this->code_pin);
+        return Hash::check($password, $this->password);
     }
 
     /**

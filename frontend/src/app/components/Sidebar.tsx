@@ -1,5 +1,4 @@
 // src/app/components/Sidebar.tsx
-
 import { NavLink } from 'react-router-dom';
 import {
   Home,
@@ -16,6 +15,7 @@ import {
   Clock,
   Wallet,
 } from 'lucide-react';
+import { useSalon } from '@/hooks/useSalon';
 
 const menuItems = [
   { path: '/dashboard', label: 'Tableau de bord', icon: Home },
@@ -34,16 +34,35 @@ const menuItems = [
 
 export function Sidebar() {
   const isOnline = navigator.onLine;
+  const { salon, isLoading } = useSalon();
+
+  // URL de base pour les images
+  const getLogoUrl = (logoPath: string | null) => {
+    if (!logoPath) return null;
+    return `http://127.0.0.1:8000/storage/${logoPath}`;
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-gray-800 to-gray-900 text-white flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-gray-700">
-        <h1 className="text-2xl flex items-center gap-2">
-          <span className="text-3xl">🌀</span>
-          <span>Fasodreadlocks Manager</span>
-        </h1>
-        <p className="text-sm text-gray-400 mt-1">Salon Afro Style - Ouagadougou</p>
+        <div className="flex items-center gap-3 mb-2">
+          {salon?.logo_url ? (
+            <img
+              src={getLogoUrl(salon.logo_url) || ''}
+              alt="Logo"
+              className="w-12 h-12 object-cover rounded-lg border-2 border-gray-600"
+            />
+          ) : (
+            <span className="text-3xl">🌀</span>
+          )}
+          <h1 className="text-xl font-bold leading-tight">
+            {isLoading ? 'Chargement...' : salon?.nom || 'Fasodreadlocks'}
+          </h1>
+        </div>
+        <p className="text-sm text-gray-400">
+          {isLoading ? '' : salon?.adresse || 'Salon Afro Style - Ouagadougou'}
+        </p>
       </div>
 
       {/* Menu Navigation */}
