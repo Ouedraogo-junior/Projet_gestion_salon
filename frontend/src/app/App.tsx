@@ -34,6 +34,9 @@ import DepensesPage from './pages/Depenses';
 // Module Confections
 import ConfectionsPage from './pages/Confections/ConfectionPage';
 
+// Module Rapports
+import RapportsPage from './pages/Rapports/RapportsPage';
+
 // Layout avec Header et Sidebar
 import Header from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -171,6 +174,17 @@ function App() {
                 <PrivateRoute>
                   <MainLayout>
                     <Marketing />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/rapports"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <RapportsPage />
                   </MainLayout>
                 </PrivateRoute>
               }

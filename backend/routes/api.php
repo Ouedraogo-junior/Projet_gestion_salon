@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PointageController;
 use App\Http\Controllers\Api\DepenseController;
 use App\Http\Controllers\Api\ConfectionController;
+use App\Http\Controllers\Api\RapportController;
 
 // ===== CONTROLLERS MODULE PRODUITS =====
 use App\Http\Controllers\Api\CategorieController;
@@ -283,21 +284,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-    // ========================================
-    // ROUTES ADMIN/GÉRANT SEULEMENT
-    // ========================================
-    Route::middleware(['check.role:admin,gerant'])->group(function () {
-        
-        // Statistiques globales
-        Route::get('/dashboard/stats', function () {
-            return response()->json(['message' => 'Dashboard stats - Phase 2']);
+        // ========================================
+        // ROUTES RAPPORTS
+        // ========================================
+    Route::prefix('rapports')->group(function () {
+        Route::get('/global', [RapportController::class, 'global']);
+        Route::get('/ventes-detail', [RapportController::class, 'ventesDetail']);
+        Route::get('/tresorerie', [RapportController::class, 'tresorerie']);
+        Route::get('/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
         });
-        
-        // Rapports
-        Route::get('/reports/sales', function () {
-            return response()->json(['message' => 'Sales reports - Phase 2']);
-        });
-    });
 });
 
 // ============================================================

@@ -1,3 +1,4 @@
+// src/app/pages/Parametres.tsx
 import {
   Building,
   Users as UsersIcon,
@@ -29,22 +30,22 @@ export function Parametres() {
             <UsersIcon className="w-4 h-4 mr-2" />
             Utilisateurs
           </TabsTrigger>
-          <TabsTrigger value="sms">
+          {/* <TabsTrigger value="sms">
             <MessageSquare className="w-4 h-4 mr-2" />
             SMS
-          </TabsTrigger>
-          <TabsTrigger value="fidelite">
+          </TabsTrigger> */}
+          {/* <TabsTrigger value="fidelite">
             <Award className="w-4 h-4 mr-2" />
             Fidélité
-          </TabsTrigger>
-          <TabsTrigger value="sync">
+          </TabsTrigger> */}
+          {/* <TabsTrigger value="sync">
             <Database className="w-4 h-4 mr-2" />
             Synchronisation
-          </TabsTrigger>
-          <TabsTrigger value="theme">
+          </TabsTrigger> */}
+          {/* <TabsTrigger value="theme">
             <Palette className="w-4 h-4 mr-2" />
             Thème
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         {/* Informations salon */}
@@ -111,7 +112,7 @@ export function Parametres() {
         </TabsContent>
 
         {/* Configuration SMS */}
-        <TabsContent value="sms" className="mt-6">
+        {/* <TabsContent value="sms" className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Configuration SMS (Africa's Talking)</CardTitle>
@@ -141,10 +142,10 @@ export function Parametres() {
               <Button className="bg-blue-600 hover:bg-blue-700">Enregistrer</Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Programme de fidélité */}
-        <TabsContent value="fidelite" className="mt-6">
+        {/* <TabsContent value="fidelite" className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Programme de fidélité</CardTitle>
@@ -170,10 +171,10 @@ export function Parametres() {
               <Button className="bg-blue-600 hover:bg-blue-700">Enregistrer</Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Synchronisation */}
-        <TabsContent value="sync" className="mt-6">
+        {/* <TabsContent value="sync" className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Synchronisation & Backups</CardTitle>
@@ -205,10 +206,10 @@ export function Parametres() {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
 
         {/* Thème */}
-        <TabsContent value="theme" className="mt-6">
+        {/* <TabsContent value="theme" className="mt-6">
           <Card>
             <CardHeader>
               <CardTitle>Thème & Préférences</CardTitle>
@@ -234,7 +235,7 @@ export function Parametres() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );
