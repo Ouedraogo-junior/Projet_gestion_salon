@@ -133,4 +133,9 @@ export const prestationApi = {
     });
     return response.data;
   },
+
+  async getAllPublic(): Promise<ApiResponse<TypePrestation[]>> {
+    const response = await axios.get(`${API_URL}/types-prestations/public`);
+    return response.data;
+  },
 };

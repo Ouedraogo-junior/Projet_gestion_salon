@@ -331,4 +331,17 @@ class TypePrestationController extends Controller
             ], 500);
         }
     }
+
+    public function indexPublic()
+    {
+        $prestations = TypePrestation::where('actif', true)
+            ->orderBy('ordre')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $prestations
+        ]);
+    }
+
 }

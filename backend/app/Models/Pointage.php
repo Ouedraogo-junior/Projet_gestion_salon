@@ -15,11 +15,13 @@ class Pointage extends Model
 
     protected $fillable = [
         'user_id',
+        'pointeur_id', 
         'date_pointage',
         'heure_arrivee',
         'heure_depart',
         'minutes_travailles',
         'statut',
+        'type_pointage', 
         'commentaire',
     ];
 
@@ -38,6 +40,14 @@ class Pointage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relation avec le pointeur (celui qui a enregistré le pointage)
+     */
+    public function pointeur(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pointeur_id');
     }
 
     /**
@@ -218,9 +228,11 @@ class Pointage extends Model
         
         return self::create([
             'user_id' => $userId,
+            'pointeur_id' => auth()->id(),
             'date_pointage' => now()->toDateString(),
             'heure_arrivee' => $heureArrivee,
             'statut' => $statut,
+            'type_pointage' => 'manuel',
             'commentaire' => $commentaire,
         ]);
     }

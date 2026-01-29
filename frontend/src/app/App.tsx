@@ -21,23 +21,26 @@ import { VentesPage } from './pages/Ventes/VentesPage';
 import { ClientsPage } from './pages/Clients/ClientsPage';
 import { GestionPrestations } from './pages/prestations/GestionPrestations';
 
+// Module Rendez-vous
+import { RendezVousPage } from './pages/RendezVous/RendezVousPage';
+import { VuePubliqueRendezVous } from './pages/RendezVous/VuePubliqueRendezVous';
+
+// Module Pointages
+import { PointagesPage } from './pages/Pointages/PointagesPage';
+
+// Module Dépenses
+import DepensesPage from './pages/Depenses';
+
 // Layout avec Header et Sidebar
 import Header from './components/Header';
 import { Sidebar } from './components/Sidebar';
 
-// Layout pour les pages protégées
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar fixe à gauche */}
       <Sidebar />
-      
-      {/* Conteneur principal avec marge à gauche pour la sidebar */}
       <div className="flex-1 flex flex-col overflow-hidden ml-64">
-        {/* Header fixe en haut */}
         <Header />
-        
-        {/* Contenu principal avec scroll */}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
@@ -52,8 +55,12 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Route publique - Login */}
+            {/* Page d'accueil publique - Vue principale */}
+            <Route path="/" element={<VuePubliqueRendezVous />} />
+            
+            {/* Routes publiques */}
             <Route path="/login" element={<Login />} />
+            <Route path="/prendre-rendez-vous" element={<VuePubliqueRendezVous />} />
 
             {/* Routes protégées avec Layout */}
             <Route
@@ -112,6 +119,39 @@ function App() {
             />
 
             <Route
+              path="/rendez-vous"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <RendezVousPage />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/pointages"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <PointagesPage />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/depenses"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <DepensesPage />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+
+            <Route
               path="/marketing"
               element={
                 <PrivateRoute>
@@ -133,19 +173,13 @@ function App() {
               }
             />
 
-            {/* Redirection par défaut */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-            {/* Page 404 */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* Redirection pour les routes inconnues */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
 
-      {/* Toaster pour les notifications (sonner) */}
       <Toaster position="top-right" richColors />
-
-      {/* React Query Devtools (uniquement en dev) */}
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

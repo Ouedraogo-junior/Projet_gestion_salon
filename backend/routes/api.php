@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\VenteController;
 use App\Http\Controllers\Api\RendezVousController;
 
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\PointageController;
+use App\Http\Controllers\Api\DepenseController;
 
 // ===== CONTROLLERS MODULE PRODUITS =====
 use App\Http\Controllers\Api\CategorieController;
@@ -30,13 +32,24 @@ use App\Http\Controllers\Api\TypePrestationController;
 */
 
 // ============================================================
-// ROUTES PUBLIQUES (Authentification)
+// ROUTES PUBLIQUES 
 // ============================================================
 
+// Authentification
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
+
+
+// Route publique pour prise de RDV (sans auth)
+Route::post('/rendez-vous/public', [RendezVousController::class, 'storePublic']);
+Route::get('/rendez-vous/available-slots', [RendezVousController::class, 'availableSlots']);
+Route::post('/rendez-vous/mes-rendez-vous', [RendezVousController::class, 'mesRendezVous']);
+Route::post('/rendez-vous/{id}/cancel-public', [RendezVousController::class, 'cancelPublic']);
+
+// Routes publiques (sans auth)
+Route::get('/types-prestations/public', [TypePrestationController::class, 'indexPublic']);
 
 // ============================================================
 // ROUTES PROTÉGÉES (Authentification requise)
@@ -195,19 +208,31 @@ Route::middleware('auth:sanctum')->group(function () {
     // ========================================
     Route::prefix('rendez-vous')->group(function () {
         Route::get('/', [RendezVousController::class, 'index']); // Liste + filtres
-        Route::post('/', [RendezVousController::class, 'store']); // Créer
-        Route::get('/available-slots', [RendezVousController::class, 'availableSlots']); // Créneaux dispo
+        Route::post('/', [RendezVousController::class, 'store']); // Créer (gérant)
         Route::get('/{id}', [RendezVousController::class, 'show']); // Détails
         Route::put('/{id}', [RendezVousController::class, 'update']); // Modifier
         Route::delete('/{id}', [RendezVousController::class, 'destroy']); // Supprimer
         
         // Actions
-        Route::post('/{id}/confirm', [RendezVousController::class, 'confirm']);
-        Route::post('/{id}/cancel', [RendezVousController::class, 'cancel']);
-        Route::post('/{id}/complete', [RendezVousController::class, 'complete']);
+        Route::post('/{id}/confirm', [RendezVousController::class, 'confirm']); // Confirmer
+        Route::post('/{id}/cancel', [RendezVousController::class, 'cancel']); // Annuler
+        Route::post('/{id}/complete', [RendezVousController::class, 'complete']); // Terminer
     });
 
 
+    // ========================================
+    // MODULE POINTAGES
+    // ========================================
+
+    Route::prefix('pointages')->group(function () {
+        Route::get('/', [PointageController::class, 'index']);
+        Route::post('/', [PointageController::class, 'store']);
+        Route::put('/{id}', [PointageController::class, 'update']);
+        Route::post('/{id}/depart', [PointageController::class, 'marquerDepart']);
+        Route::delete('/{id}', [PointageController::class, 'destroy']);
+        Route::get('/stats', [PointageController::class, 'stats']);
+        Route::get('/employees-aujourdhui', [PointageController::class, 'employeesAujourdhui']);
+    });
 
     // ========================================
     // MODULE UTILISATEURS
@@ -216,6 +241,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [UserController::class, 'index']); // Liste avec filtres
         Route::get('/{id}', [UserController::class, 'show']); // Détails
     });
+
+
+    // ========================================
+    // MODULE DÉPENSES
+    // ========================================
+    Route::prefix('depenses')->group(function () {
+        // Routes stats AVANT les routes resource
+        Route::get('stats/total-mois', [DepenseController::class, 'totalMois']);
+        Route::get('stats/par-categorie', [DepenseController::class, 'parCategorie']);
+        
+        // Routes CRUD (apiResource après)
+        Route::get('/', [DepenseController::class, 'index']);
+        Route::post('/', [DepenseController::class, 'store']);
+        Route::get('{depense}', [DepenseController::class, 'show']);
+        Route::put('{depense}', [DepenseController::class, 'update']);
+        Route::delete('{depense}', [DepenseController::class, 'destroy']);
+    });
+
 
     // ========================================
     // ROUTES ADMIN/GÉRANT SEULEMENT

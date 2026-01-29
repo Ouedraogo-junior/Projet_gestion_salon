@@ -13,6 +13,8 @@ import {
   Wifi,
   WifiOff,
   Scissors,
+  Clock,
+  Wallet,
 } from 'lucide-react';
 
 const menuItems = [
@@ -21,7 +23,9 @@ const menuItems = [
   { path: '/produits', label: 'Produits & Stock', icon: Package },
   { path: '/prestations', label: 'Prestations', icon: Scissors },
   { path: '/ventes', label: 'Ventes / Caisse', icon: ShoppingCart },
+  { path: '/depenses', label: 'Dépenses', icon: Wallet },
   { path: '/rendez-vous', label: 'Rendez-vous', icon: Calendar },
+  { path: '/pointages', label: 'Pointages', icon: Clock },
   { path: '/marketing', label: 'Marketing SMS', icon: MessageSquare },
   { path: '/rapports', label: 'Rapports', icon: BarChart3 },
   { path: '/parametres', label: 'Paramètres', icon: Settings },

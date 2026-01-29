@@ -1,0 +1,83 @@
+// src/app/pages/Pointages/PointagesPage.tsx
+
+import React, { useState } from 'react';
+import { Calendar, Clock, Users, TrendingUp } from 'lucide-react';
+import { ListeEmployesPointage } from './components/ListeEmployesPointage';
+import { TableauPointages } from './components/TableauPointages';
+import { StatsPointages } from './components/StatsPointages';
+import type { PointageFilters } from '../../../types/pointage.types';
+
+export const PointagesPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'aujourdhui' | 'historique' | 'stats'>('aujourdhui');
+  const [filters, setFilters] = useState<PointageFilters>({
+    date: new Date().toISOString().split('T')[0],
+  });
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestion des Pointages</h1>
+          <p className="text-gray-600 mt-1">Suivi de la présence des employés</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Clock className="w-5 h-5" />
+          <span>{new Date().toLocaleDateString('fr-FR', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</span>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('aujourdhui')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium transition ${
+              activeTab === 'aujourdhui'
+                ? 'border-b-2 border-orange-600 text-orange-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Users className="w-5 h-5" />
+            Pointage du jour
+          </button>
+          <button
+            onClick={() => setActiveTab('historique')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium transition ${
+              activeTab === 'historique'
+                ? 'border-b-2 border-orange-600 text-orange-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Calendar className="w-5 h-5" />
+            Historique
+          </button>
+          <button
+            onClick={() => setActiveTab('stats')}
+            className={`flex items-center gap-2 px-6 py-4 font-medium transition ${
+              activeTab === 'stats'
+                ? 'border-b-2 border-orange-600 text-orange-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <TrendingUp className="w-5 h-5" />
+            Statistiques
+          </button>
+        </div>
+
+        <div className="p-6">
+          {activeTab === 'aujourdhui' && <ListeEmployesPointage />}
+          {activeTab === 'historique' && (
+            <TableauPointages filters={filters} onFiltersChange={setFilters} />
+          )}
+          {activeTab === 'stats' && <StatsPointages />}
+        </div>
+      </div>
+    </div>
+  );
+};
