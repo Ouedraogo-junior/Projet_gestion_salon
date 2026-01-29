@@ -16,10 +16,12 @@ class Confection extends Model
 
     protected $fillable = [
         'numero_confection',
+        'produit_id',
         'user_id',
         'categorie_id',
         'nom_produit',
         'quantite_produite',
+        'destination',
         'description',
         'date_confection',
         'cout_matiere_premiere',
@@ -49,6 +51,11 @@ class Confection extends Model
             if (!$confection->numero_confection) {
                 $confection->numero_confection = self::genererNumero();
             }
+            
+            // Destination par défaut
+            if (!$confection->destination) {
+                $confection->destination = 'vente';
+            }
         });
     }
 
@@ -66,6 +73,14 @@ class Confection extends Model
     public function categorie(): BelongsTo
     {
         return $this->belongsTo(Categorie::class);
+    }
+
+    /**
+     * Relation avec le produit créé
+     */
+    public function produit(): BelongsTo
+    {
+        return $this->belongsTo(Produit::class);
     }
 
     /**
@@ -133,6 +148,14 @@ class Confection extends Model
     }
 
     /**
+     * Scope par destination
+     */
+    public function scopePourDestination($query, string $destination)
+    {
+        return $query->where('destination', $destination);
+    }
+
+    /**
      * Vérifie si la confection est terminée
      */
     public function isTerminee(): bool
@@ -166,6 +189,19 @@ class Confection extends Model
             'terminee' => 'Terminée',
             'annulee' => 'Annulée',
             default => 'Inconnu',
+        };
+    }
+
+    /**
+     * Obtient le libellé de la destination
+     */
+    public function getDestinationLibelleAttribute(): string
+    {
+        return match($this->destination) {
+            'vente' => 'Vente',
+            'utilisation' => 'Utilisation salon',
+            'mixte' => 'Mixte (vente + utilisation)',
+            default => 'Non défini',
         };
     }
 
@@ -209,7 +245,7 @@ class Confection extends Model
     /**
      * Termine la confection et ajoute au stock
      */
-    public function terminer(?string $typeStock = 'vente'): bool
+    public function terminer(): bool
     {
         if ($this->statut === 'terminee') {
             return false;
@@ -217,20 +253,11 @@ class Confection extends Model
 
         DB::beginTransaction();
         try {
-            // Créer un produit dans le catalogue (optionnel)
+            // Créer le produit dans le catalogue
             $produit = $this->creerProduitCatalogue();
 
-            // Enregistrer l'entrée en stock
-            if ($produit) {
-                MouvementStock::enregistrerMouvement(
-                    produitId: $produit->id,
-                    typeStock: $typeStock,
-                    typeMouvement: 'entree',
-                    quantite: $this->quantite_produite,
-                    motif: "Confection {$this->numero_confection} - {$this->nom_produit}",
-                    confectionId: $this->id
-                );
-            }
+            // Enregistrer l'entrée en stock selon la destination
+            $this->enregistrerEntreeStock($produit);
 
             // Déduire les matières premières du stock utilisation
             foreach ($this->details as $detail) {
@@ -244,11 +271,12 @@ class Confection extends Model
                 );
             }
 
-            // Mettre à jour le coût total
+            // Mettre à jour le coût total et lier le produit
             $this->update([
                 'cout_matiere_premiere' => $this->details()->sum('prix_total'),
                 'cout_total' => $this->calculerCoutTotal(),
                 'statut' => 'terminee',
+                'produit_id' => $produit->id,
             ]);
 
             DB::commit();
@@ -263,12 +291,8 @@ class Confection extends Model
     /**
      * Crée un produit dans le catalogue à partir de la confection
      */
-    private function creerProduitCatalogue(): ?Produit
+    private function creerProduitCatalogue(): Produit
     {
-        if (!$this->prix_vente_unitaire) {
-            return null;
-        }
-
         $coutUnitaire = $this->cout_total / $this->quantite_produite;
 
         $produit = Produit::create([
@@ -276,9 +300,10 @@ class Confection extends Model
             'description' => $this->description,
             'categorie_id' => $this->categorie_id,
             'prix_achat' => $coutUnitaire,
-            'prix_vente' => $this->prix_vente_unitaire,
-            'stock_actuel' => 0, // Le stock sera ajouté via le mouvement
-            'type_stock_principal' => 'vente',
+            'prix_vente' => $this->prix_vente_unitaire ?? $coutUnitaire * 1.5, // Marge par défaut de 50%
+            'type_stock_principal' => $this->destination,
+            'stock_vente' => 0,
+            'stock_utilisation' => 0,
         ]);
 
         // Ajouter les attributs au produit
@@ -291,6 +316,62 @@ class Confection extends Model
         }
 
         return $produit;
+    }
+
+    /**
+     * Enregistre l'entrée en stock selon la destination
+     */
+    private function enregistrerEntreeStock(Produit $produit): void
+    {
+        $motif = "Confection {$this->numero_confection} - {$this->nom_produit}";
+
+        switch ($this->destination) {
+            case 'vente':
+                MouvementStock::enregistrerMouvement(
+                    produitId: $produit->id,
+                    typeStock: 'vente',
+                    typeMouvement: 'entree',
+                    quantite: $this->quantite_produite,
+                    motif: $motif,
+                    confectionId: $this->id
+                );
+                break;
+
+            case 'utilisation':
+                MouvementStock::enregistrerMouvement(
+                    produitId: $produit->id,
+                    typeStock: 'utilisation',
+                    typeMouvement: 'entree',
+                    quantite: $this->quantite_produite,
+                    motif: $motif,
+                    confectionId: $this->id
+                );
+                break;
+
+            case 'mixte':
+                // Répartition 50/50 par défaut (peut être personnalisé)
+                $quantiteVente = (int) floor($this->quantite_produite / 2);
+                $quantiteUtilisation = $this->quantite_produite - $quantiteVente;
+
+                MouvementStock::enregistrerMouvement(
+                    produitId: $produit->id,
+                    typeStock: 'vente',
+                    typeMouvement: 'entree',
+                    quantite: $quantiteVente,
+                    motif: $motif . ' (vente)',
+                    confectionId: $this->id
+                );
+
+                MouvementStock::enregistrerMouvement(
+                    produitId: $produit->id,
+                    typeStock: 'utilisation',
+                    typeMouvement: 'entree',
+                    quantite: $quantiteUtilisation,
+                    motif: $motif . ' (utilisation)',
+                    confectionId: $this->id
+                );
+                break;
+        }
     }
 
     /**

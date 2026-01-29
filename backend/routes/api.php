@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\RendezVousController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PointageController;
 use App\Http\Controllers\Api\DepenseController;
+use App\Http\Controllers\Api\ConfectionController;
 
 // ===== CONTROLLERS MODULE PRODUITS =====
 use App\Http\Controllers\Api\CategorieController;
@@ -258,6 +259,28 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('{depense}', [DepenseController::class, 'update']);
         Route::delete('{depense}', [DepenseController::class, 'destroy']);
     });
+
+
+    // ========================================
+    // MODULE CONFECTIONS DE PRODUITS
+    // ========================================
+    Route::prefix('confections')->group(function () {
+    
+        // Liste et statistiques
+        Route::get('/', [ConfectionController::class, 'index']);
+        Route::get('/statistiques', [ConfectionController::class, 'statistiques']);
+        
+        // CRUD
+        Route::post('/', [ConfectionController::class, 'store']);
+        Route::get('/{id}', [ConfectionController::class, 'show']);
+        Route::put('/{id}', [ConfectionController::class, 'update']);
+        Route::delete('/{id}', [ConfectionController::class, 'destroy']);
+        
+        // Actions spécifiques
+        Route::post('/{id}/terminer', [ConfectionController::class, 'terminer']);
+        Route::post('/{id}/annuler', [ConfectionController::class, 'annuler']);
+    });
+
 
 
     // ========================================

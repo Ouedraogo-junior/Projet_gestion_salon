@@ -21,6 +21,7 @@ const menuItems = [
   { path: '/dashboard', label: 'Tableau de bord', icon: Home },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/produits', label: 'Produits & Stock', icon: Package },
+  { path: '/confections', label: 'Confections', icon: Package },
   { path: '/prestations', label: 'Prestations', icon: Scissors },
   { path: '/ventes', label: 'Ventes / Caisse', icon: ShoppingCart },
   { path: '/depenses', label: 'Dépenses', icon: Wallet },
