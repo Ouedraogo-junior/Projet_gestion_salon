@@ -26,14 +26,14 @@ class UserSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
-            // Réceptionniste
+            // Gestionnaires
             [
                 'nom' => 'Sawadogo',
                 'prenom' => 'Awa',
                 'telephone' => '+22670234567',
                 'email' => 'awa.sawadogo@salon.bf',
                 'password' => Hash::make('234567'),
-                'role' => 'receptionniste',
+                'role' => 'gestionnaire',
                 'photo_url' => null,
                 'specialite' => null,
                 'is_active' => true,

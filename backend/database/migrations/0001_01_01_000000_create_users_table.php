@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('telephone', 20)->unique()->comment('Format: +226XXXXXXXX');
             $table->string('email', 255)->nullable();
             $table->string('code_pin', 255)->comment('Code PIN 6 chiffres hashé');
-            $table->enum('role', ['gerant', 'coiffeur', 'receptionniste'])->default('coiffeur');
+            $table->enum('role', ['gerant', 'coiffeur', 'gestionnaire'])->default('coiffeur');
             $table->string('photo_url', 255)->nullable();
             $table->string('specialite', 100)->nullable()->comment('Spécialité du coiffeur');
             $table->boolean('is_active')->default(true);

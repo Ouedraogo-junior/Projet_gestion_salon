@@ -6,31 +6,28 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\VenteController;
 use App\Http\Controllers\Api\RendezVousController;
-
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PointageController;
 use App\Http\Controllers\Api\DepenseController;
 use App\Http\Controllers\Api\ConfectionController;
 use App\Http\Controllers\Api\RapportController;
 use App\Http\Controllers\Api\SalonController;
-
-// ===== CONTROLLERS MODULE PRODUITS =====
 use App\Http\Controllers\Api\CategorieController;
 use App\Http\Controllers\Api\AttributController;
 use App\Http\Controllers\Api\ProduitController;
 use App\Http\Controllers\Api\MouvementStockController;
 use App\Http\Controllers\Api\TransfertStockController;
-
-// ===== CONTROLLERS MODULE PRESTATIONS =====
 use App\Http\Controllers\Api\TypePrestationController;
+use App\Http\Controllers\Api\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes - Application Salon Dreadlocks
 |--------------------------------------------------------------------------
-| Organisation : Module par module
-| Authentification : Sanctum (sauf routes publiques)
-| Version : 1.2.0
+| RÔLES :
+| - gestionnaire : Accès TOTAL (super admin)
+| - gerant : Gestion opérationnelle (validation, config, rapports)
+| - coiffeur : Opérations quotidiennes (clients, ventes, RDV)
 |--------------------------------------------------------------------------
 */
 
@@ -38,31 +35,26 @@ use App\Http\Controllers\Api\TypePrestationController;
 // ROUTES PUBLIQUES 
 // ============================================================
 
-// Authentification
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
 
-
-// Route publique pour prise de RDV (sans auth)
 Route::post('/rendez-vous/public', [RendezVousController::class, 'storePublic']);
 Route::get('/rendez-vous/available-slots', [RendezVousController::class, 'availableSlots']);
 Route::post('/rendez-vous/mes-rendez-vous', [RendezVousController::class, 'mesRendezVous']);
 Route::post('/rendez-vous/{id}/cancel-public', [RendezVousController::class, 'cancelPublic']);
-
-// Routes publiques (sans auth)
 Route::get('/types-prestations/public', [TypePrestationController::class, 'indexPublic']);
-Route::get('/salon/public', [SalonController::class, 'show']); // Route publique pour les infos du salon
+Route::get('/salon/public', [SalonController::class, 'show']);
 
 // ============================================================
-// ROUTES PROTÉGÉES (Authentification requise)
+// ROUTES PROTÉGÉES
 // ============================================================
 
 Route::middleware('auth:sanctum')->group(function () {
     
     // ========================================
-    // AUTHENTIFICATION
+    // AUTHENTIFICATION - Tous
     // ========================================
     Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -72,252 +64,204 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ========================================
-    // MODULE PARAMÈTRES - SALON (Gérant uniquement)
+    // GESTIONNAIRE UNIQUEMENT - Admin total
     // ========================================
-    Route::prefix('salon')->group(function () {
-        Route::get('/', [SalonController::class, 'show']); // Accessible à tous
+    Route::middleware('check.role:gestionnaire')->group(function () {
         
-        Route::middleware('check.role:gerant')->group(function () {
-            Route::put('/', [SalonController::class, 'update']);
-            Route::post('/logo', [SalonController::class, 'uploadLogo']);
-            Route::delete('/logo', [SalonController::class, 'deleteLogo']);
-        });
+        // Users - CRUD complet
+        Route::post('/users', [UserController::class, 'store']);
+        Route::put('/users/{id}', [UserController::class, 'update']);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
+        Route::post('/users/{id}/toggle-active', [UserController::class, 'toggleActive']);
+        Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);
+        
+        // Salon - Configuration
+        Route::put('/salon', [SalonController::class, 'update']);
+        Route::post('/salon/logo', [SalonController::class, 'uploadLogo']);
+        Route::delete('/salon/logo', [SalonController::class, 'deleteLogo']);
+        
+        // Clients - Suppression
+        Route::delete('/clients/{id}', [ClientController::class, 'destroy']);
+        
+        // Catégories - CRUD complet
+        Route::post('/categories', [CategorieController::class, 'store']);
+        Route::put('/categories/{categorie}', [CategorieController::class, 'update']);
+        Route::delete('/categories/{categorie}', [CategorieController::class, 'destroy']);
+        Route::post('/categories/{categorie}/attributs', [CategorieController::class, 'associerAttribut']);
+        Route::delete('/categories/{categorie}/attributs', [CategorieController::class, 'dissocierAttribut']);
+        Route::post('/categories/{categorie}/toggle-active', [CategorieController::class, 'toggleActive']);
+        
+        // Attributs - CRUD complet
+        Route::post('/attributs', [AttributController::class, 'store']);
+        Route::put('/attributs/{attribut}', [AttributController::class, 'update']);
+        Route::delete('/attributs/{attribut}', [AttributController::class, 'destroy']);
+        Route::post('/attributs/{attribut}/valeurs', [AttributController::class, 'ajouterValeurPossible']);
+        Route::delete('/attributs/{attribut}/valeurs', [AttributController::class, 'supprimerValeurPossible']);
+        
+        // Produits - CRUD complet
+        Route::post('/produits', [ProduitController::class, 'store']);
+        Route::put('/produits/{produit}', [ProduitController::class, 'update']);
+        Route::delete('/produits/{produit}', [ProduitController::class, 'destroy']);
+        Route::post('/produits/{produit}/toggle-active', [ProduitController::class, 'toggleActive']);
+        
+        // Types prestations - CRUD complet
+        Route::post('/types-prestations', [TypePrestationController::class, 'store']);
+        Route::put('/types-prestations/{id}', [TypePrestationController::class, 'update']);
+        Route::delete('/types-prestations/{id}', [TypePrestationController::class, 'destroy']);
+        Route::patch('/types-prestations/{id}/toggle-actif', [TypePrestationController::class, 'toggleActif']);
+        Route::post('/types-prestations/reorder', [TypePrestationController::class, 'reorder']);
+        
+        // Ventes - Annulation
+        Route::delete('/ventes/{id}/cancel', [VenteController::class, 'cancel']);
+        
+        // Rendez-vous - Suppression
+        Route::delete('/rendez-vous/{id}', [RendezVousController::class, 'destroy']);
+        
+        // Pointages - CRUD complet
+        Route::put('/pointages/{id}', [PointageController::class, 'update']);
+        Route::delete('/pointages/{id}', [PointageController::class, 'destroy']);
+        
+        // Dépenses - CRUD complet
+        Route::post('/depenses', [DepenseController::class, 'store']);
+        Route::put('/depenses/{depense}', [DepenseController::class, 'update']);
+        Route::delete('/depenses/{depense}', [DepenseController::class, 'destroy']);
+        
+        // Confections - Suppression et annulation
+        Route::put('/confections/{id}', [ConfectionController::class, 'update']);
+        Route::delete('/confections/{id}', [ConfectionController::class, 'destroy']);
+        Route::post('/confections/{id}/annuler', [ConfectionController::class, 'annuler']);
+        
+        // Transferts - Suppression
+        Route::delete('/transferts/{transfert}', [TransfertStockController::class, 'destroy']);
     });
 
     // ========================================
-    // MODULE UTILISATEURS
+    // GESTIONNAIRE + GÉRANT - Gestion avancée
     // ========================================
-    Route::prefix('users')->group(function () {
-        // Accessibles à tous les utilisateurs authentifiés
-        Route::get('/', [UserController::class, 'index']);
-        Route::get('/{id}', [UserController::class, 'show']);
+    Route::middleware('check.role:gestionnaire,gerant')->group(function () {
         
-        // Gérant uniquement
-        Route::middleware('check.role:gerant')->group(function () {
-            Route::post('/', [UserController::class, 'store']);
-            Route::put('/{id}', [UserController::class, 'update']);
-            Route::delete('/{id}', [UserController::class, 'destroy']);
-            Route::post('/{id}/toggle-active', [UserController::class, 'toggleActive']);
-            Route::post('/{id}/reset-password', [UserController::class, 'resetPassword']);
-        });
+        // Transferts stock - Validation
+        Route::get('/transferts/en-attente', [TransfertStockController::class, 'enAttente']); // AVANT /{transfert}
+        Route::post('/transferts/{transfert}/valider', [TransfertStockController::class, 'valider']);
+        Route::post('/transferts/valider-masse', [TransfertStockController::class, 'validerEnMasse']);
+        
+        // Rapports - Accès complet
+        Route::get('/rapports/global', [RapportController::class, 'global']);
+        Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
+        Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
+        Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
+        
+        // Dépenses - Consultation stats
+        Route::get('/depenses/stats/total-mois', [DepenseController::class, 'totalMois']);
+        Route::get('/depenses/stats/par-categorie', [DepenseController::class, 'parCategorie']);
+        
+        // Mouvements stock - Export
+        Route::get('/mouvements-stock/export', [MouvementStockController::class, 'export']);
+        
+        // Pointages - Stats
+        Route::get('/pointages/stats', [PointageController::class, 'stats']);
     });
 
     // ========================================
-    // MODULE PRODUITS - CATÉGORIES
+    // GESTIONNAIRE + GÉRANT + COIFFEUR - Opérations quotidiennes
     // ========================================
-    Route::prefix('categories')->group(function () {
-        Route::get('/', [CategorieController::class, 'index']); // Liste avec filtres
-        Route::post('/', [CategorieController::class, 'store']); // Créer
-        Route::get('/{categorie}', [CategorieController::class, 'show']); // Détails
-        Route::put('/{categorie}', [CategorieController::class, 'update']); // Modifier
-        Route::delete('/{categorie}', [CategorieController::class, 'destroy']); // Supprimer
+    Route::middleware('check.role:gestionnaire,gerant,coiffeur')->group(function () {
         
-        // Gestion attributs
-        Route::get('/{categorie}/attributs', [CategorieController::class, 'attributs']); // Liste attributs
-        Route::post('/{categorie}/attributs', [CategorieController::class, 'associerAttribut']); // Associer
-        Route::delete('/{categorie}/attributs', [CategorieController::class, 'dissocierAttribut']); // Dissocier
+        // Clients
+        Route::get('/clients', [ClientController::class, 'index']);
+        Route::post('/clients', [ClientController::class, 'store']);
+        Route::get('/clients/{id}', [ClientController::class, 'show']);
+        Route::put('/clients/{id}', [ClientController::class, 'update']);
+        Route::post('/clients/{id}/photos', [ClientController::class, 'uploadPhoto']);
+        Route::delete('/clients/{clientId}/photos/{photoId}', [ClientController::class, 'deletePhoto']);
         
-        // Actions
-        Route::post('/{categorie}/toggle-active', [CategorieController::class, 'toggleActive']); // Activer/Désactiver
+        // Ventes
+        Route::get('/ventes', [VenteController::class, 'index']);
+        Route::get('/ventes/stats/summary', [VenteController::class, 'stats']); // AVANT /{id}
+        Route::post('/ventes', [VenteController::class, 'store']);
+        Route::get('/ventes/{id}', [VenteController::class, 'show']);
+        Route::put('/ventes/{id}', [VenteController::class, 'update']);
+        Route::get('/ventes/{id}/receipt', [VenteController::class, 'generateReceipt']);
+        Route::post('/ventes/check-stock', [VenteController::class, 'checkStock']);
+        Route::post('/ventes/calculate-points', [VenteController::class, 'calculatePointsReduction']);
+        
+        // Rendez-vous
+        Route::get('/rendez-vous', [RendezVousController::class, 'index']);
+        Route::post('/rendez-vous', [RendezVousController::class, 'store']);
+        Route::get('/rendez-vous/{id}', [RendezVousController::class, 'show']);
+        Route::put('/rendez-vous/{id}', [RendezVousController::class, 'update']);
+        Route::post('/rendez-vous/{id}/confirm', [RendezVousController::class, 'confirm']);
+        Route::post('/rendez-vous/{id}/cancel', [RendezVousController::class, 'cancel']);
+        Route::post('/rendez-vous/{id}/complete', [RendezVousController::class, 'complete']);
+        
+        // Pointages
+        Route::get('/pointages', [PointageController::class, 'index']);
+        Route::get('/pointages/employees-aujourdhui', [PointageController::class, 'employeesAujourdhui']); // AVANT /{id}
+        Route::post('/pointages', [PointageController::class, 'store']);
+        Route::post('/pointages/{id}/depart', [PointageController::class, 'marquerDepart']);
+        
+        // Confections
+        Route::get('/confections', [ConfectionController::class, 'index']);
+        Route::get('/confections/statistiques', [ConfectionController::class, 'statistiques']); // AVANT /{id}
+        Route::post('/confections', [ConfectionController::class, 'store']);
+        Route::get('/confections/{id}', [ConfectionController::class, 'show']);
+        Route::post('/confections/{id}/terminer', [ConfectionController::class, 'terminer']);
+        
+        // Mouvements stock
+        Route::get('/mouvements-stock', [MouvementStockController::class, 'index']);
+        Route::post('/mouvements-stock', [MouvementStockController::class, 'store']);
+        Route::get('/mouvements-stock/{mouvement}', [MouvementStockController::class, 'show']);
+        Route::post('/mouvements-stock/ajuster', [MouvementStockController::class, 'ajuster']);
+        
+        // Transferts stock
+        Route::get('/transferts', [TransfertStockController::class, 'index']);
+        Route::get('/transferts/en-attente', [TransfertStockController::class, 'enAttente']); // AVANT /{transfert}
+        Route::post('/transferts', [TransfertStockController::class, 'store']);
+        Route::get('/transferts/{transfert}', [TransfertStockController::class, 'show']);
+        
+        // Dépenses - Consultation
+        Route::get('/depenses', [DepenseController::class, 'index']);
+        Route::get('/depenses/{depense}', [DepenseController::class, 'show']);
     });
 
     // ========================================
-    // MODULE PRODUITS - ATTRIBUTS
+    // LECTURE SEULE - Tous les authentifiés
     // ========================================
-    Route::prefix('attributs')->group(function () {
-        Route::get('/', [AttributController::class, 'index']); // Liste avec filtres
-        Route::post('/', [AttributController::class, 'store']); // Créer
-        Route::get('/{attribut}', [AttributController::class, 'show']); // Détails
-        Route::put('/{attribut}', [AttributController::class, 'update']); // Modifier
-        Route::delete('/{attribut}', [AttributController::class, 'destroy']); // Supprimer
-        
-        // Gestion valeurs possibles (type liste)
-        Route::post('/{attribut}/valeurs', [AttributController::class, 'ajouterValeurPossible']); // Ajouter valeur
-        Route::delete('/{attribut}/valeurs', [AttributController::class, 'supprimerValeurPossible']); // Supprimer valeur
-    });
-
-    // ========================================
-    // MODULE PRODUITS - PRODUITS
-    // ========================================
-    Route::prefix('produits')->group(function () {
-        // Liste et recherche
-        Route::get('/', [ProduitController::class, 'index']); // Liste avec filtres avancés
-        Route::get('/alertes', [ProduitController::class, 'alertes']); // Produits en alerte stock
-        
-        // CRUD
-        Route::post('/', [ProduitController::class, 'store']); // Créer avec attributs
-        Route::get('/{produit}', [ProduitController::class, 'show']); // Détails complets
-        Route::put('/{produit}', [ProduitController::class, 'update']); // Modifier
-        Route::delete('/{produit}', [ProduitController::class, 'destroy']); // Supprimer
-        
-        // Actions
-        Route::post('/{produit}/toggle-active', [ProduitController::class, 'toggleActive']); // Activer/Désactiver
-        Route::get('/{produit}/mouvements', [ProduitController::class, 'mouvements']); // Historique mouvements
-    });
-
-    // ========================================
-    // MODULE PRODUITS - MOUVEMENTS STOCK
-    // ========================================
-    Route::prefix('mouvements-stock')->group(function () {
-        Route::get('/', [MouvementStockController::class, 'index']); // Liste avec filtres
-        Route::post('/', [MouvementStockController::class, 'store']); // Créer mouvement manuel
-        Route::get('/{mouvement}', [MouvementStockController::class, 'show']); // Détails
-        
-        // Actions spéciales
-        Route::post('/ajuster', [MouvementStockController::class, 'ajuster']); // Ajustement rapide
-        Route::get('/export', [MouvementStockController::class, 'export']); // Export CSV
-    });
-
-    // ========================================
-    // MODULE PRODUITS - TRANSFERTS STOCK
-    // ========================================
-    Route::prefix('transferts')->group(function () {
-        Route::get('/', [TransfertStockController::class, 'index']); // Liste avec filtres
-        Route::post('/', [TransfertStockController::class, 'store']); // Créer transfert
-        Route::get('/{transfert}', [TransfertStockController::class, 'show']); // Détails
-        Route::delete('/{transfert}', [TransfertStockController::class, 'destroy']); // Annuler (si non validé)
-        
-        // Validation (Gérant uniquement)
-        Route::post('/{transfert}/valider', [TransfertStockController::class, 'valider']); // Valider
-        Route::get('/en-attente', [TransfertStockController::class, 'enAttente']); // Liste en attente
-        Route::post('/valider-masse', [TransfertStockController::class, 'validerEnMasse']); // Validation multiple
-    });
-
-    // ========================================
-    // MODULE PRESTATIONS - TYPES DE PRESTATIONS
-    // ========================================
-    Route::prefix('types-prestations')->group(function () {
-        // Liste et recherche
-        Route::get('/', [TypePrestationController::class, 'index']); // Liste avec filtres
-        Route::get('/stats', [TypePrestationController::class, 'stats']); // Statistiques
-        
-        // CRUD
-        Route::post('/', [TypePrestationController::class, 'store']); // Créer
-        Route::get('/{id}', [TypePrestationController::class, 'show']); // Détails
-        Route::put('/{id}', [TypePrestationController::class, 'update']); // Modifier
-        Route::delete('/{id}', [TypePrestationController::class, 'destroy']); // Supprimer
-        
-        // Actions
-        Route::patch('/{id}/toggle-actif', [TypePrestationController::class, 'toggleActif']); // Activer/Désactiver
-        Route::post('/reorder', [TypePrestationController::class, 'reorder']); // Réorganiser
-    });
-
-    // ========================================
-    // MODULE CLIENTS
-    // ========================================
-    Route::prefix('clients')->group(function () {
-        Route::get('/', [ClientController::class, 'index']); // Liste + recherche
-        Route::post('/', [ClientController::class, 'store']); // Créer
-        Route::get('/{id}', [ClientController::class, 'show']); // Détails
-        Route::put('/{id}', [ClientController::class, 'update']); // Modifier
-        Route::delete('/{id}', [ClientController::class, 'destroy']); // Supprimer
-        
-        // Photos
-        Route::post('/{id}/photos', [ClientController::class, 'uploadPhoto']);
-        Route::delete('/{clientId}/photos/{photoId}', [ClientController::class, 'deletePhoto']);
-    });
-
-    // ========================================
-    // MODULE VENTES
-    // ========================================
-    Route::prefix('ventes')->group(function () {
-        // Liste et statistiques
-        Route::get('/', [VenteController::class, 'index']); // Liste avec filtres
-        Route::get('/stats/summary', [VenteController::class, 'stats']); // Statistiques
-        
-        // CRUD
-        Route::post('/', [VenteController::class, 'store']); // Créer vente
-        Route::get('/{id}', [VenteController::class, 'show']); // Détails
-        Route::put('/{id}', [VenteController::class, 'update']); // Modifier (notes uniquement)
-        
-        // Actions
-        Route::delete('/{id}/cancel', [VenteController::class, 'cancel']); // Annuler (admin)
-        Route::get('/{id}/receipt', [VenteController::class, 'generateReceipt']); // Reçu PDF
-        
-        // Utilitaires
-        Route::post('/check-stock', [VenteController::class, 'checkStock']); // Vérifier stock
-        Route::post('/calculate-points', [VenteController::class, 'calculatePointsReduction']); // Calculer réduction points
-    });
-
-    // ========================================
-    // MODULE RENDEZ-VOUS
-    // ========================================
-    Route::prefix('rendez-vous')->group(function () {
-        Route::get('/', [RendezVousController::class, 'index']); // Liste + filtres
-        Route::post('/', [RendezVousController::class, 'store']); // Créer (gérant)
-        Route::get('/{id}', [RendezVousController::class, 'show']); // Détails
-        Route::put('/{id}', [RendezVousController::class, 'update']); // Modifier
-        Route::delete('/{id}', [RendezVousController::class, 'destroy']); // Supprimer
-        
-        // Actions
-        Route::post('/{id}/confirm', [RendezVousController::class, 'confirm']); // Confirmer
-        Route::post('/{id}/cancel', [RendezVousController::class, 'cancel']); // Annuler
-        Route::post('/{id}/complete', [RendezVousController::class, 'complete']); // Terminer
-    });
-
-
-    // ========================================
-    // MODULE POINTAGES
-    // ========================================
-
-    Route::prefix('pointages')->group(function () {
-        Route::get('/', [PointageController::class, 'index']);
-        Route::post('/', [PointageController::class, 'store']);
-        Route::put('/{id}', [PointageController::class, 'update']);
-        Route::post('/{id}/depart', [PointageController::class, 'marquerDepart']);
-        Route::delete('/{id}', [PointageController::class, 'destroy']);
-        Route::get('/stats', [PointageController::class, 'stats']);
-        Route::get('/employees-aujourdhui', [PointageController::class, 'employeesAujourdhui']);
-    });
-
-    // ========================================
-    // MODULE DÉPENSES
-    // ========================================
-    Route::prefix('depenses')->group(function () {
-        // Routes stats AVANT les routes resource
-        Route::get('stats/total-mois', [DepenseController::class, 'totalMois']);
-        Route::get('stats/par-categorie', [DepenseController::class, 'parCategorie']);
-        
-        // Routes CRUD (apiResource après)
-        Route::get('/', [DepenseController::class, 'index']);
-        Route::post('/', [DepenseController::class, 'store']);
-        Route::get('{depense}', [DepenseController::class, 'show']);
-        Route::put('{depense}', [DepenseController::class, 'update']);
-        Route::delete('{depense}', [DepenseController::class, 'destroy']);
-    });
-
-
-    // ========================================
-    // MODULE CONFECTIONS DE PRODUITS
-    // ========================================
-    Route::prefix('confections')->group(function () {
     
-        // Liste et statistiques
-        Route::get('/', [ConfectionController::class, 'index']);
-        Route::get('/statistiques', [ConfectionController::class, 'statistiques']);
-        
-        // CRUD
-        Route::post('/', [ConfectionController::class, 'store']);
-        Route::get('/{id}', [ConfectionController::class, 'show']);
-        Route::put('/{id}', [ConfectionController::class, 'update']);
-        Route::delete('/{id}', [ConfectionController::class, 'destroy']);
-        
-        // Actions spécifiques
-        Route::post('/{id}/terminer', [ConfectionController::class, 'terminer']);
-        Route::post('/{id}/annuler', [ConfectionController::class, 'annuler']);
-    });
-
-
-
-        // ========================================
-        // ROUTES RAPPORTS
-        // ========================================
-    Route::prefix('rapports')->group(function () {
-        Route::get('/global', [RapportController::class, 'global']);
-        Route::get('/ventes-detail', [RapportController::class, 'ventesDetail']);
-        Route::get('/tresorerie', [RapportController::class, 'tresorerie']);
-        Route::get('/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
-        });
+    // Users
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    
+    // Salon
+    Route::get('/salon', [SalonController::class, 'show']);
+    
+    // Catégories
+    Route::get('/categories', [CategorieController::class, 'index']);
+    Route::get('/categories/{categorie}', [CategorieController::class, 'show']);
+    Route::get('/categories/{categorie}/attributs', [CategorieController::class, 'attributs']);
+    
+    // Attributs
+    Route::get('/attributs', [AttributController::class, 'index']);
+    Route::get('/attributs/{attribut}', [AttributController::class, 'show']);
+    
+    // Produits
+    Route::get('/produits', [ProduitController::class, 'index']);
+    Route::get('/produits/alertes', [ProduitController::class, 'alertes']); // AVANT /{produit}
+    Route::get('/produits/{produit}', [ProduitController::class, 'show']);
+    Route::get('/produits/{produit}/mouvements', [ProduitController::class, 'mouvements']);
+    
+    // Types prestations
+    Route::get('/types-prestations', [TypePrestationController::class, 'index']);
+    Route::get('/types-prestations/stats', [TypePrestationController::class, 'stats']); // AVANT /{id}
+    Route::get('/types-prestations/{id}', [TypePrestationController::class, 'show']);
+    
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/count', [NotificationController::class, 'count']); // AVANT /{id}
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']); // AVANT /{id}
+    Route::delete('/notifications/read/all', [NotificationController::class, 'deleteRead']); // AVANT /{id}
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 });
 
 // ============================================================
@@ -327,12 +271,17 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/test', function () {
     return response()->json([
         'success' => true,
-        'message' => 'API Salon Dreadlocks - Module Paramètres Intégré ✅',
-        'version' => '1.2.0',
+        'message' => 'API Salon - Système de permissions par rôle ✅',
+        'version' => '2.0.0',
+        'roles' => [
+            'gestionnaire' => 'Accès TOTAL (super admin)',
+            'gerant' => 'Gestion opérationnelle (validation, config, rapports)',
+            'coiffeur' => 'Opérations quotidiennes (clients, ventes, RDV)'
+        ],
         'modules' => [
             'auth' => 'OK',
-            'salon' => 'OK ✅ (Nouveau)',
-            'users' => 'OK ✅ (Amélioré)',
+            'salon' => 'OK',
+            'users' => 'OK',
             'categories' => 'OK',
             'attributs' => 'OK',
             'produits' => 'OK',
@@ -342,6 +291,11 @@ Route::get('/test', function () {
             'clients' => 'OK',
             'ventes' => 'OK',
             'rendez_vous' => 'OK',
+            'pointages' => 'OK',
+            'depenses' => 'OK',
+            'confections' => 'OK',
+            'rapports' => 'OK',
+            'notifications' => 'OK'
         ],
         'timestamp' => now()
     ]);

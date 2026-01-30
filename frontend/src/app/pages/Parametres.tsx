@@ -227,7 +227,7 @@ export function Parametres() {
         return 'bg-purple-100 text-purple-700';
       case 'coiffeur':
         return 'bg-blue-100 text-blue-700';
-      case 'receptionniste':
+      case 'gestionnaire':
         return 'bg-green-100 text-green-700';
       default:
         return 'bg-gray-100 text-gray-700';
@@ -541,7 +541,7 @@ export function Parametres() {
                 <SelectContent>
                   <SelectItem value="gerant">Gérant</SelectItem>
                   <SelectItem value="coiffeur">Coiffeur</SelectItem>
-                  <SelectItem value="receptionniste">Réceptionniste</SelectItem>
+                  <SelectItem value="gestionnaire">Gestionnaire</SelectItem>
                 </SelectContent>
               </Select>
             </div>

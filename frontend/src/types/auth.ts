@@ -6,7 +6,7 @@ export interface User {
   prenom: string;
   email: string;
   telephone: string;
-  role: 'gerant' | 'coiffeur' | 'receptionniste';
+  role: 'gerant' | 'coiffeur' | 'gestionnaire';
   photo_url?: string;
   specialite?: string;
   is_active: boolean;

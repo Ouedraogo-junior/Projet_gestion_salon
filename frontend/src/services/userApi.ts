@@ -30,7 +30,7 @@ export interface User {
   prenom: string;
   telephone: string;
   email: string | null;
-  role: 'gerant' | 'coiffeur' | 'receptionniste';
+  role: 'gerant' | 'coiffeur' | 'gestionnaire';
   specialite: string | null;
   photo_url: string | null;
   is_active: boolean;
@@ -45,7 +45,7 @@ export interface UserCreateData {
   telephone: string;
   email?: string;
   password: string;
-  role: 'gerant' | 'coiffeur' | 'receptionniste';
+  role: 'gerant' | 'coiffeur' | 'gestionnaire';
   specialite?: string;
   is_active?: boolean;
 }
@@ -55,7 +55,7 @@ export interface UserUpdateData {
   prenom?: string;
   telephone?: string;
   email?: string;
-  role?: 'gerant' | 'coiffeur' | 'receptionniste';
+  role?: 'gerant' | 'coiffeur' | 'gestionnaire';
   specialite?: string;
   is_active?: boolean;
 }
