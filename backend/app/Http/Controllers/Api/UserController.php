@@ -78,8 +78,9 @@ class UserController extends Controller
             'telephone' => 'required|string|max:20|unique:users,telephone',
             'email' => 'nullable|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'role' => ['required', Rule::in(['gerant', 'coiffeur', 'receptionniste'])],
+            'role' => ['required', Rule::in(['gerant', 'coiffeur', 'gestionnaire'])],
             'specialite' => 'nullable|string|max:100',
+            'salaire_mensuel' => 'nullable|numeric|min:0|max:99999999.99',
             'is_active' => 'boolean',
         ]);
 
@@ -125,6 +126,7 @@ class UserController extends Controller
             ],
             'role' => ['sometimes', 'required', Rule::in(['gerant', 'coiffeur', 'receptionniste'])],
             'specialite' => 'nullable|string|max:100',
+            'salaire_mensuel' => 'nullable|numeric|min:0|max:99999999.99',
             'is_active' => 'boolean',
         ]);
 
@@ -257,5 +259,98 @@ class UserController extends Controller
             'message' => $user->is_active ? 'Utilisateur activé' : 'Utilisateur désactivé',
             'data' => $user
         ]);
+    }
+
+    /**
+     * Mettre à jour le salaire d'un utilisateur (gérant uniquement)
+     */
+    public function updateSalaire(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'salaire_mensuel' => 'required|numeric|min:0|max:99999999.99',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation échouée',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = User::findOrFail($id);
+            
+            $user->salaire_mensuel = $request->salaire_mensuel;
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Salaire mis à jour avec succès',
+                'data' => $user
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour du salaire: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupérer tous les salaires pour la comptabilité (gérant uniquement)
+     */
+    public function getSalaires()
+    {
+        try {
+            $users = User::where('is_active', true)
+                ->whereNotNull('salaire_mensuel')
+                ->select('id', 'nom', 'prenom', 'role', 'salaire_mensuel')
+                ->orderBy('nom')
+                ->get();
+
+            $totalSalaires = $users->sum('salaire_mensuel');
+            $totalAnnuel = $totalSalaires * 12;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'employes' => $users,
+                    'total_mensuel' => $totalSalaires,
+                    'total_annuel' => $totalAnnuel,
+                    'nombre_employes' => $users->count()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des salaires: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupérer les coiffeurs/employés (pour les ventes)
+     */
+    public function getCoiffeurs()
+    {
+        try {
+            $coiffeurs = User::where('is_active', true)
+                ->whereIn('role', ['coiffeur', 'gerant'])
+                ->select('id', 'nom', 'prenom', 'telephone', 'email', 'role', 'specialite', 'photo_url')
+                ->orderBy('prenom')
+                ->orderBy('nom')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $coiffeurs
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des coiffeurs: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

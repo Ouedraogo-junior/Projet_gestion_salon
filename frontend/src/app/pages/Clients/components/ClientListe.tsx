@@ -12,6 +12,9 @@ import {
   Phone,
   Mail,
   Trophy,
+  ImageOff,
+  MapPin,
+  Calendar,
 } from 'lucide-react';
 import { clientApi } from '../../../../services/clientApi';
 import type { Client, ClientFilters } from '../../../../types/client.types';
@@ -33,6 +36,8 @@ export const ClientListe: React.FC<ClientListeProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
+  const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({});
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const [filters, setFilters] = useState<ClientFilters>({
     search: '',
@@ -42,7 +47,7 @@ export const ClientListe: React.FC<ClientListeProps> = ({
     date_fin: '',
     sort_by: 'created_at',
     sort_order: 'desc',
-    per_page: 15,
+    per_page: 12,
     page: 1,
   });
 
@@ -62,6 +67,13 @@ export const ClientListe: React.FC<ClientListeProps> = ({
         setClients(response.data.data);
         setTotalPages(response.data.last_page);
         setTotal(response.data.total);
+        
+        // Initialiser les index de photos à 0 pour chaque client
+        const initialIndexes: Record<number, number> = {};
+        response.data.data.forEach((client: Client) => {
+          initialIndexes[client.id] = 0;
+        });
+        setPhotoIndexes(initialIndexes);
       }
     } catch (error: any) {
       console.error('Erreur chargement clients:', error);
@@ -97,6 +109,31 @@ export const ClientListe: React.FC<ClientListeProps> = ({
       console.error('Erreur suppression client:', error);
       alert('Erreur lors de la suppression du client');
     }
+  };
+
+  const nextPhoto = (clientId: number, photosCount: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPhotoIndexes(prev => ({
+      ...prev,
+      [clientId]: (prev[clientId] + 1) % photosCount
+    }));
+  };
+
+  const prevPhoto = (clientId: number, photosCount: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPhotoIndexes(prev => ({
+      ...prev,
+      [clientId]: prev[clientId] === 0 ? photosCount - 1 : prev[clientId] - 1
+    }));
+  };
+
+  const getImageUrl = (photoUrl: string) => {
+    let cleanUrl = photoUrl.replace(/^(storage\/)+/, '');
+    return `${import.meta.env.VITE_API_URL}/storage/${cleanUrl}`;
+  };
+
+  const handleImageError = (photoUrl: string) => {
+    setImageErrors(prev => new Set([...prev, photoUrl]));
   };
 
   const formatDate = (date?: string) => {
@@ -209,87 +246,119 @@ export const ClientListe: React.FC<ClientListeProps> = ({
         )}
       </div>
 
-      {/* Liste des clients */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Grille de cards */}
+      <div>
         {isLoading ? (
-          <div className="p-8 text-center">
+          <div className="p-8 text-center bg-white rounded-lg shadow">
             <p className="text-gray-500">Chargement...</p>
           </div>
         ) : clients.length === 0 ? (
-          <div className="p-8 text-center">
+          <div className="p-8 text-center bg-white rounded-lg shadow">
             <p className="text-gray-500">Aucun client trouvé</p>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Client
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Contact
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Dernière visite
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                      Points
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                      Total dépensé
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                      Statut
-                    </th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {clients.map((client) => (
-                    <tr key={client.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium">
-                            {client.prenom} {client.nom}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Inscrit le {formatDate(client.date_premiere_visite)}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Phone size={14} className="text-gray-400" />
-                            {client.telephone}
-                          </div>
-                          {client.email && (
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Mail size={14} className="text-gray-400" />
-                              {client.email}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {clients.map((client) => {
+                const currentPhotoIndex = photoIndexes[client.id] || 0;
+                const hasPhotos = client.photos && client.photos.length > 0;
+                const currentPhoto = hasPhotos ? client.photos[currentPhotoIndex] : null;
+
+                // LOG DE DÉBOGAGE
+                // console.log('=== CLIENT DEBUG ===');
+                // console.log('Client:', client.prenom, client.nom);
+                // console.log('client.photos:', client.photos);
+                // console.log('hasPhotos:', hasPhotos);
+                // console.log('currentPhotoIndex:', currentPhotoIndex);
+                // console.log('currentPhoto:', currentPhoto);
+                // if (currentPhoto) {
+                //   const imageUrl = getImageUrl(currentPhoto.photo_url);
+                //   console.log('Image URL:', imageUrl);
+                // }
+                // console.log('===================');
+
+                return (
+                  <div
+                    key={client.id}
+                    className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer group"
+                    onClick={() => onVoirDetails(client)}
+                  >
+                    {/* Carrousel de photos */}
+                    <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100">
+                      {hasPhotos && currentPhoto ? (
+                        <>
+                          {imageErrors.has(currentPhoto.photo_url) ? (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200">
+                              <ImageOff size={32} className="text-gray-400 mb-2" />
+                              <p className="text-xs text-gray-500">Image non disponible</p>
                             </div>
+                          ) : (
+                            <img
+                              src={getImageUrl(currentPhoto.photo_url)}
+                              alt={currentPhoto.description || `Photo ${currentPhoto.type_photo}`}
+                              className="w-full h-full object-cover"
+                              onError={() => handleImageError(currentPhoto.photo_url)}
+                            />
                           )}
+
+                          {/* Badge type photo */}
+                          <div className="absolute top-2 left-2">
+                            <span className="px-2 py-1 bg-black bg-opacity-70 text-white text-xs rounded">
+                              {currentPhoto.type_photo === 'avant' ? 'Avant' : 'Après'}
+                            </span>
+                          </div>
+
+                          {/* Indicateurs de photos multiples */}
+                          {client.photos.length > 1 && (
+                            <>
+                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
+                                {client.photos.map((_, index) => (
+                                  <div
+                                    key={index}
+                                    className={`w-2 h-2 rounded-full ${
+                                      index === currentPhotoIndex
+                                        ? 'bg-white'
+                                        : 'bg-white bg-opacity-50'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+
+                              {/* Boutons navigation */}
+                              <button
+                                onClick={(e) => prevPhoto(client.id, client.photos.length, e)}
+                                className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <ChevronLeft size={20} />
+                              </button>
+                              <button
+                                onClick={(e) => nextPhoto(client.id, client.photos.length, e)}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <ChevronRight size={20} />
+                              </button>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          <ImageOff size={48} className="text-gray-300 mb-2" />
+                          <p className="text-sm text-gray-400">Aucune photo</p>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {formatDate(client.date_derniere_visite)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Trophy size={16} className="text-yellow-500" />
-                          <span className="font-medium">{client.points_fidelite}</span>
+                      )}
+                    </div>
+
+                    {/* Informations du client */}
+                    <div className="p-4 space-y-3">
+                      {/* Nom et statut */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-lg truncate">
+                            {client.prenom} {client.nom}
+                          </h3>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        {formatMontant(client.montant_total_depense)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
                             client.is_active
                               ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
@@ -297,40 +366,108 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                         >
                           {client.is_active ? 'Actif' : 'Inactif'}
                         </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => onVoirDetails(client)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                            title="Voir détails"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={() => onModifier(client)}
-                            className="p-1 text-orange-600 hover:bg-orange-50 rounded"
-                            title="Modifier"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleSupprimer(client)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                      </div>
+
+                      {/* Contact */}
+                      <div className="space-y-1.5">
+                        <a
+                          href={`https://wa.me/${client.telephone.replace(/\s+/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700 hover:underline"
+                          title="Envoyer un message WhatsApp"
+                        >
+                          <Phone size={14} />
+                          <span className="truncate">{client.telephone}</span>
+                        </a>
+                        {client.email && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Mail size={14} />
+                            <span className="truncate">{client.email}</span>
+                          </div>
+                        )}
+                        {client.adresse && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <MapPin size={14} />
+                            <span className="truncate">{client.adresse}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                        <div className="bg-yellow-50 p-2 rounded">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <Trophy size={14} className="text-yellow-600" />
+                            <span className="text-xs text-gray-600">Points</span>
+                          </div>
+                          <p className="text-lg font-bold text-yellow-600">
+                            {client.points_fidelite}
+                          </p>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="bg-green-50 p-2 rounded">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <Calendar size={14} className="text-green-600" />
+                            <span className="text-xs text-gray-600">Visites</span>
+                          </div>
+                          <p className="text-sm font-medium text-green-600 truncate">
+                            {formatDate(client.date_derniere_visite)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Total dépensé */}
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-gray-500">Total dépensé</p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {formatMontant(client.montant_total_depense)}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 pt-2 border-t">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onVoirDetails(client);
+                          }}
+                          className="flex-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-sm flex items-center justify-center gap-2"
+                          title="Voir détails"
+                        >
+                          <Eye size={16} />
+                          Détails
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onModifier(client);
+                          }}
+                          className="flex-1 px-3 py-1.5 text-orange-600 hover:bg-orange-50 rounded text-sm flex items-center justify-center gap-2"
+                          title="Modifier"
+                        >
+                          <Edit size={16} />
+                          Modifier
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSupprimer(client);
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 border-t flex items-center justify-between">
+            <div className="mt-6 bg-white rounded-lg shadow px-4 py-3 flex items-center justify-between">
               <div className="text-sm text-gray-600">
                 Page {currentPage} sur {totalPages}
               </div>
@@ -342,6 +479,9 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                 >
                   <ChevronLeft size={18} />
                 </button>
+                <span className="text-sm text-gray-600">
+                  {currentPage} / {totalPages}
+                </span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}

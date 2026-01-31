@@ -122,6 +122,13 @@ export function TresorerieView({ data }: TresorerieViewProps) {
                 <span className="text-sm">Coûts confections</span>
                 <span className="font-semibold">{formatMontant(data.decaissements.confections)}</span>
               </div>
+              {/* ✅ AJOUTÉ : Salaires */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Salaires</span>
+                <span className="font-semibold text-purple-600">
+                  {formatMontant(data.decaissements.salaires)}
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center justify-between border-t pt-3">

@@ -34,6 +34,8 @@ class Produit extends Model
         'delai_livraison_jours',
         'is_active',
         'sync_status',
+        'visible_public',
+        'salon_id',
     ];
 
     // AJOUTEZ CECI
@@ -52,6 +54,7 @@ class Produit extends Model
         'quantite_min_commande' => 'integer',
         'delai_livraison_jours' => 'integer',
         'is_active' => 'boolean',
+        'visible_public' => 'boolean',
     ];
 
     // Relation avec la catégorie

@@ -84,10 +84,14 @@ export function useNotifications() {
     }
   }, []);
 
-  // Polling toutes les 30 secondes pour le compteur
+  // Charger immédiatement au montage du composant + Polling toutes les 30 secondes
   useEffect(() => {
+    // Charger immédiatement
     fetchCount();
+    
+    // Puis continuer le polling
     const interval = setInterval(fetchCount, 30000); // 30 secondes
+    
     return () => clearInterval(interval);
   }, [fetchCount]);
 

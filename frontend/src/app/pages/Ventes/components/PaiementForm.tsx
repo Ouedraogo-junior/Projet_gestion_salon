@@ -1,6 +1,6 @@
-// src/app/components/ventes/PaiementForm.tsx
+// src/app/pages/ventes/components/PaiementForm.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, DollarSign, Plus, X } from 'lucide-react';
 import type { Paiement, ModePaiement } from '../../../../types/vente.types';
 
@@ -13,9 +13,7 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
   montantTotal,
   onPaiementsChange,
 }) => {
-  const [paiements, setPaiements] = useState<Paiement[]>([
-    { mode: 'especes', montant: montantTotal, reference: '' },
-  ]);
+  const [paiements, setPaiements] = useState<Paiement[]>([]);
 
   const modesPaiement: { value: ModePaiement; label: string }[] = [
     { value: 'especes', label: 'Espèces' },
@@ -24,9 +22,38 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
     { value: 'carte', label: 'Carte bancaire' },
   ];
 
+  // Initialiser automatiquement le paiement avec le montant total
+  useEffect(() => {
+    if (montantTotal > 0 && paiements.length === 0) {
+      const initialPaiement: Paiement = { 
+        mode: 'especes', 
+        montant: montantTotal, 
+        reference: '' 
+      };
+      setPaiements([initialPaiement]);
+      onPaiementsChange([initialPaiement]);
+    }
+  }, [montantTotal]);
+
+  // Mettre à jour le montant du premier paiement quand le total change
+  useEffect(() => {
+    if (paiements.length === 1 && montantTotal > 0) {
+      const montantPaye = paiements.reduce((sum, p) => sum + (p.montant || 0), 0);
+      if (montantPaye !== montantTotal) {
+        const nouveaux = [...paiements];
+        nouveaux[0] = { ...nouveaux[0], montant: montantTotal };
+        setPaiements(nouveaux);
+        onPaiementsChange(nouveaux);
+      }
+    }
+  }, [montantTotal]);
+
   const ajouterPaiement = () => {
     const restant = calculerMontantRestant();
-    setPaiements([...paiements, { mode: 'especes', montant: restant, reference: '' }]);
+    const nouveau: Paiement = { mode: 'especes', montant: restant, reference: '' };
+    const nouveaux = [...paiements, nouveau];
+    setPaiements(nouveaux);
+    onPaiementsChange(nouveaux);
   };
 
   const supprimerPaiement = (index: number) => {
@@ -90,7 +117,7 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
               onChange={(e) =>
                 modifierPaiement(index, 'mode', e.target.value as ModePaiement)
               }
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
             >
               {modesPaiement.map((mode) => (
                 <option key={mode.value} value={mode.value}>
@@ -108,7 +135,7 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
                 onChange={(e) =>
                   modifierPaiement(index, 'montant', parseFloat(e.target.value) || 0)
                 }
-                className="flex-1 border rounded px-3 py-2"
+                className="flex-1 border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
                 placeholder="Montant"
                 min="0"
                 step="100"
@@ -122,7 +149,7 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
                 type="text"
                 value={paiement.reference || ''}
                 onChange={(e) => modifierPaiement(index, 'reference', e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                 placeholder="Référence de transaction"
               />
             )}
@@ -134,7 +161,7 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
       {paiements.length < 3 && (
         <button
           onClick={ajouterPaiement}
-          className="w-full border-2 border-dashed border-gray-300 rounded py-2 text-gray-600 hover:border-blue-500 hover:text-blue-500 flex items-center justify-center gap-2"
+          className="w-full border-2 border-dashed border-gray-300 rounded py-2 text-gray-600 hover:border-blue-500 hover:text-blue-500 flex items-center justify-center gap-2 transition"
         >
           <Plus size={18} />
           Ajouter un mode de paiement
@@ -177,7 +204,7 @@ export const PaiementForm: React.FC<PaiementFormProps> = ({
 
         {/* Validation visuelle */}
         <div
-          className={`mt-3 p-2 rounded text-center text-sm font-medium ${
+          className={`mt-3 p-3 rounded text-center text-sm font-medium ${
             estComplet
               ? 'bg-green-100 text-green-700'
               : 'bg-red-100 text-red-700'

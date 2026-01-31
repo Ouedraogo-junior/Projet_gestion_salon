@@ -12,7 +12,7 @@ class StoreMouvementStockRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() && in_array($this->user()->role, ['gerant', 'receptionniste']);
+        return $this->user() && in_array($this->user()->role, ['gerant', 'gestionnaire']);
     }
 
     /**

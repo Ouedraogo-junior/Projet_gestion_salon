@@ -30,6 +30,7 @@ class User extends Authenticatable
         'photo_url',
         'specialite',
         'is_active',
+        'salaire_mensuel',
     ];
 
     /**

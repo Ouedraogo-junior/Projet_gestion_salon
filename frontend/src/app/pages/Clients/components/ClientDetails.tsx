@@ -12,6 +12,7 @@ import {
   DollarSign,
   Camera,
   Trash2,
+  ImageOff,
 } from 'lucide-react';
 import { clientApi } from '../../../../services/clientApi';
 import type { Client, ClientStats, PhotoClient } from '../../../../types/client.types';
@@ -32,12 +33,27 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadPhoto, setShowUploadPhoto] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoType, setPhotoType] = useState<'avant' | 'apres'>('apres');
   const [photoDescription, setPhotoDescription] = useState('');
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     loadClientDetails();
   }, [clientId]);
+
+  // Prévisualisation de la photo sélectionnée
+  useEffect(() => {
+    if (photoFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(photoFile);
+    } else {
+      setPhotoPreview(null);
+    }
+  }, [photoFile]);
 
   const loadClientDetails = async () => {
     setIsLoading(true);
@@ -70,6 +86,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
         alert('Photo ajoutée avec succès');
         setShowUploadPhoto(false);
         setPhotoFile(null);
+        setPhotoPreview(null);
         setPhotoDescription('');
         loadClientDetails();
       }
@@ -92,6 +109,15 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
       console.error('Erreur suppression photo:', error);
       alert('Erreur lors de la suppression');
     }
+  };
+
+  const handleImageError = (photoId: number) => {
+    setImageErrors(prev => new Set([...prev, photoId]));
+  };
+
+  const getImageUrl = (photoUrl: string) => {
+    let cleanUrl = photoUrl.replace(/^(storage\/)+/, '');
+    return `${import.meta.env.VITE_API_URL}/storage/${cleanUrl}`;
   };
 
   const formatDate = (date?: string) => {
@@ -154,10 +180,16 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
               <div>
                 <h4 className="font-semibold mb-3">Informations de contact</h4>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
+                  <a
+                    href={`https://wa.me/${client.telephone.replace(/\s+/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700 hover:underline cursor-pointer"
+                    title="Envoyer un message WhatsApp"
+                  >
                     <Phone size={16} className="text-gray-400" />
                     <span>{client.telephone}</span>
-                  </div>
+                  </a>
                   {client.email && (
                     <div className="flex items-center gap-2 text-sm">
                       <Mail size={16} className="text-gray-400" />
@@ -271,6 +303,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                     className="w-full text-sm"
                   />
                 </div>
+
+                {/* Prévisualisation */}
+                {photoPreview && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium mb-2">Aperçu</label>
+                    <img
+                      src={photoPreview}
+                      alt="Aperçu"
+                      className="w-full max-w-xs h-48 object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium mb-1">Type</label>
@@ -306,6 +351,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                     onClick={() => {
                       setShowUploadPhoto(false);
                       setPhotoFile(null);
+                      setPhotoPreview(null);
                     }}
                     className="px-4 py-2 border rounded text-sm"
                   >
@@ -320,11 +366,23 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {client.photos.map((photo) => (
                   <div key={photo.id} className="relative group">
-                    <img
-                      src={`${import.meta.env.VITE_API_URL}/storage/${photo.photo_url}`}
-                      alt={photo.description || 'Photo client'}
-                      className="w-full h-40 object-cover rounded-lg"
-                    />
+                    {imageErrors.has(photo.id) ? (
+                      // Placeholder si l'image ne charge pas
+                      <div className="w-full h-40 bg-gray-200 rounded-lg flex flex-col items-center justify-center">
+                        <ImageOff size={32} className="text-gray-400 mb-2" />
+                        <p className="text-xs text-gray-500">Image non disponible</p>
+                        <p className="text-xs text-gray-400 mt-1 px-2 text-center break-all">
+                          {photo.photo_url}
+                        </p>
+                      </div>
+                    ) : (
+                      <img
+                        src={getImageUrl(photo.photo_url)}
+                        alt={photo.description || `Photo ${photo.type_photo}`}
+                        className="w-full h-40 object-cover rounded-lg"
+                        onError={() => handleImageError(photo.id)}
+                      />
+                    )}
                     <div className="absolute top-2 left-2">
                       <span className="px-2 py-1 bg-black bg-opacity-70 text-white text-xs rounded">
                         {photo.type_photo === 'avant' ? 'Avant' : 'Après'}
@@ -333,6 +391,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                     <button
                       onClick={() => handleDeletePhoto(photo.id)}
                       className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Supprimer la photo"
                     >
                       <Trash2 size={14} />
                     </button>

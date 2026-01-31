@@ -62,11 +62,11 @@ class DashboardApiService {
     
     // Récupérer les stats via l'endpoint /ventes/stats/summary
     const statsResponse = await this.request(`/ventes/stats/summary?date_debut=${today}&date_fin=${today}`);
-    console.log('📊 Stats Response:', statsResponse);
+    //console.log('📊 Stats Response:', statsResponse);
     
     // Récupérer les ventes du jour pour compter les clients uniques
     const ventesResponse = await this.request(`/ventes?date_debut=${today}&date_fin=${today}&per_page=1000`);
-    console.log('🛒 Ventes Response:', ventesResponse);
+    //console.log('🛒 Ventes Response:', ventesResponse);
     
     // Compter les clients uniques et calculer le CA
     const clientsUniques = new Set();
@@ -90,7 +90,7 @@ class DashboardApiService {
     
     // Récupérer les produits en alerte
     const alertesResponse = await this.request('/produits/alertes');
-    console.log('⚠️ Alertes Response:', alertesResponse);
+    //console.log('⚠️ Alertes Response:', alertesResponse);
     
     // Utiliser les stats de l'API si disponibles, sinon calculer manuellement
     const ventesJour = statsResponse.data?.ca_total > 0 
@@ -103,7 +103,7 @@ class DashboardApiService {
       stock_bas: (alertesResponse.data || []).length || 0,
     };
     
-    console.log('✅ Dashboard Stats:', result);
+    //console.log('✅ Dashboard Stats:', result);
     
     return result;
   }

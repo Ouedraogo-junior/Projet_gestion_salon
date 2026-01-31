@@ -18,6 +18,7 @@ class TypePrestation extends Model
         'prix_base',
         'actif',
         'ordre',
+        'salon_id',
     ];
 
     protected $casts = [

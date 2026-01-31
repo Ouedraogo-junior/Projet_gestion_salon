@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\User;
 
 // Models
 use App\Models\Vente;
@@ -22,167 +23,193 @@ class RapportController extends Controller
      * GET /api/rapports/global
      */
     public function global(Request $request)
-    {
-        $validated = $request->validate([
-            'type' => 'required|in:jour,semaine,mois,annee,personnalisee',
-            'date_debut' => 'required|date',
-            'date_fin' => 'required|date|after_or_equal:date_debut',
-            'annee' => 'nullable|integer|min:2020',
-            'mois' => 'nullable|integer|min:1|max:12',
-            'semaine' => 'nullable|integer|min:1|max:53',
-        ]);
+{
+    $validated = $request->validate([
+        'type' => 'required|in:jour,semaine,mois,annee,personnalisee',
+        'date_debut' => 'required|date',
+        'date_fin' => 'required|date|after_or_equal:date_debut',
+        'annee' => 'nullable|integer|min:2020',
+        'mois' => 'nullable|integer|min:1|max:12',
+        'semaine' => 'nullable|integer|min:1|max:53',
+    ]);
 
-        $dateDebut = Carbon::parse($validated['date_debut'])->startOfDay();
-        $dateFin = Carbon::parse($validated['date_fin'])->endOfDay();
+    $dateDebut = Carbon::parse($validated['date_debut'])->startOfDay();
+    $dateFin = Carbon::parse($validated['date_fin'])->endOfDay();
 
-        // ========================================
-        // 1. CHIFFRE D'AFFAIRES
-        // ========================================
-        
-        // Ventes (statut_paiement = 'paye' ou 'partiel' MAIS on compte uniquement montant_paye)
-        $ventesStats = Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
-            ->whereIn('statut_paiement', ['paye', 'partiel'])
-            ->selectRaw('
-                SUM(montant_paye) as total_encaisse,
-                SUM(montant_prestations) as total_prestations,
-                SUM(montant_produits) as total_produits,
-                COUNT(*) as nb_ventes
-            ')
-            ->first();
+    // ========================================
+    // 1. CHIFFRE D'AFFAIRES
+    // ========================================
+    
+    $ventesStats = Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+        ->whereIn('statut_paiement', ['paye', 'partiel'])
+        ->selectRaw('
+            SUM(montant_paye) as total_encaisse,
+            SUM(montant_prestations) as total_prestations,
+            SUM(montant_produits) as total_produits,
+            COUNT(*) as nb_ventes
+        ')
+        ->first();
 
-        $caVentesDirectes = $ventesStats->total_encaisse ?? 0;
-        $caPrestations = $ventesStats->total_prestations ?? 0;
-        $caProduits = $ventesStats->total_produits ?? 0;
+    $caVentesDirectes = $ventesStats->total_encaisse ?? 0;
+    $caPrestations = $ventesStats->total_prestations ?? 0;
+    $caProduits = $ventesStats->total_produits ?? 0;
 
-        // Confections vendues (produits créés via confections et vendus)
-        // On récupère les ventes de produits qui ont un confection_id
-        $caConfectionsVendues = VenteDetail::join('ventes', 'ventes_details.vente_id', '=', 'ventes.id')
-            ->join('produits', 'ventes_details.produit_id', '=', 'produits.id')
-            ->join('confections', 'confections.produit_id', '=', 'produits.id')
-            ->whereBetween('ventes.date_vente', [$dateDebut, $dateFin])
-            ->whereIn('ventes.statut_paiement', ['paye', 'partiel'])
-            ->sum(DB::raw('ventes_details.quantite * ventes_details.prix_unitaire'));
+    $caConfectionsVendues = VenteDetail::join('ventes', 'ventes_details.vente_id', '=', 'ventes.id')
+        ->join('produits', 'ventes_details.produit_id', '=', 'produits.id')
+        ->join('confections', 'confections.produit_id', '=', 'produits.id')
+        ->whereBetween('ventes.date_vente', [$dateDebut, $dateFin])
+        ->whereIn('ventes.statut_paiement', ['paye', 'partiel'])
+        ->sum(DB::raw('ventes_details.quantite * ventes_details.prix_unitaire'));
 
+    $caAcomptesRdv = RendezVous::whereBetween('date_heure', [$dateDebut, $dateFin])
+        ->where('acompte_paye', true)
+        ->sum('acompte_montant');
 
-        // Acomptes RDV (uniquement si acompte_paye = true)
-        $caAcomptesRdv = RendezVous::whereBetween('date_heure', [$dateDebut, $dateFin])
-            ->where('acompte_paye', true)
-            ->sum('acompte_montant');
+    $caTotal = $caVentesDirectes + $caAcomptesRdv;
 
-        $caTotal = $caVentesDirectes + $caAcomptesRdv;
+    // ========================================
+    // 2. DÉPENSES
+    // ========================================
+    
+    $depensesStats = Depense::whereBetween('date_depense', [$dateDebut, $dateFin])
+        ->selectRaw('
+            SUM(montant) as total,
+            categorie,
+            SUM(montant) as montant_categorie
+        ')
+        ->groupBy('categorie')
+        ->get();
 
-        // ========================================
-        // 2. DÉPENSES
-        // ========================================
-        
-        $depensesStats = Depense::whereBetween('date_depense', [$dateDebut, $dateFin])
-            ->selectRaw('
-                SUM(montant) as total,
-                categorie,
-                SUM(montant) as montant_categorie
-            ')
-            ->groupBy('categorie')
-            ->get();
+    $totalDepenses = $depensesStats->sum('total');
+    
+    $depensesParCategorie = $depensesStats->map(function ($item) use ($totalDepenses) {
+        return [
+            'categorie' => $item->categorie,
+            'montant' => (float) $item->montant_categorie,
+            'pourcentage' => $totalDepenses > 0 
+                ? round(($item->montant_categorie / $totalDepenses) * 100, 2) 
+                : 0,
+        ];
+    });
 
-        $totalDepenses = $depensesStats->sum('total');
-        
-        $depensesParCategorie = $depensesStats->map(function ($item) use ($totalDepenses) {
-            return [
-                'categorie' => $item->categorie,
-                'montant' => (float) $item->montant_categorie,
-                'pourcentage' => $totalDepenses > 0 
-                    ? round(($item->montant_categorie / $totalDepenses) * 100, 2) 
-                    : 0,
-            ];
-        });
+    $coutsConfections = Confection::whereBetween('date_confection', [$dateDebut, $dateFin])
+        ->where('statut', 'terminee')
+        ->sum('cout_total');
 
-        // Coûts des confections
-        $coutsConfections = Confection::whereBetween('date_confection', [$dateDebut, $dateFin])
-            ->where('statut', 'terminee')
-            ->sum('cout_total');
+    // ========================================
+    // 2.1 SALAIRES (NOUVEAU)
+    // ========================================
+    
+    $employes = User::where('is_active', true)
+        ->whereNotNull('salaire_mensuel')
+        ->get();
+    
+    $totalSalairesMensuel = $employes->sum('salaire_mensuel');
+    
+    // Calculer la proportion de salaire pour la période
+    $joursPeriode = $dateFin->diffInDays($dateDebut) + 1;
+    $joursMois = $dateDebut->daysInMonth;
+    $salairesProportionnels = ($totalSalairesMensuel / $joursMois) * $joursPeriode;
 
-        $totalDepensesGlobal = $totalDepenses + $coutsConfections;
+    $salairesDetail = $employes->map(function($emp) use ($joursPeriode, $joursMois) {
+        return [
+            'id' => $emp->id,
+            'nom_complet' => $emp->nom_complet,
+            'role' => $emp->role,
+            'salaire_mensuel' => (float) $emp->salaire_mensuel,
+            'salaire_periode' => round(($emp->salaire_mensuel / $joursMois) * $joursPeriode, 0)
+        ];
+    });
 
-        // ========================================
-        // 3. BÉNÉFICES
-        // ========================================
-        
-        $beneficeBrut = $caTotal - $coutsConfections;
-        $beneficeNet = $caTotal - $totalDepensesGlobal;
-        
-        $margeBrutePct = $caTotal > 0 ? round(($beneficeBrut / $caTotal) * 100, 2) : 0;
-        $margeNettePct = $caTotal > 0 ? round(($beneficeNet / $caTotal) * 100, 2) : 0;
+    $totalDepensesGlobal = $totalDepenses + $coutsConfections + $salairesProportionnels;
 
-        // ========================================
-        // 4. STATISTIQUES GÉNÉRALES
-        // ========================================
-        
-        $nbVentes = $ventesStats->nb_ventes ?? 0;
-        
-        $nbClientsUniques = Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
-            ->whereNotNull('client_id')
-            ->distinct('client_id')
-            ->count('client_id');
+    // ========================================
+    // 3. BÉNÉFICES
+    // ========================================
+    
+    $beneficeBrut = $caTotal - $coutsConfections;
+    $beneficeNet = $caTotal - $totalDepensesGlobal;
+    
+    $margeBrutePct = $caTotal > 0 ? round(($beneficeBrut / $caTotal) * 100, 2) : 0;
+    $margeNettePct = $caTotal > 0 ? round(($beneficeNet / $caTotal) * 100, 2) : 0;
 
-        $panierMoyen = $nbVentes > 0 ? round($caVentesDirectes / $nbVentes, 0) : 0;
+    // ========================================
+    // 4. STATISTIQUES GÉNÉRALES
+    // ========================================
+    
+    $nbVentes = $ventesStats->nb_ventes ?? 0;
+    
+    $nbClientsUniques = Vente::whereBetween('date_vente', [$dateDebut, $dateFin])
+        ->whereNotNull('client_id')
+        ->distinct('client_id')
+        ->count('client_id');
 
-        $rdvStats = RendezVous::whereBetween('date_heure', [$dateDebut, $dateFin])
-            ->selectRaw("
-                COUNT(*) as total_rdv,
-                SUM(CASE WHEN statut = 'termine' THEN 1 ELSE 0 END) as rdv_honores,
-                SUM(CASE WHEN statut = 'annule' THEN 1 ELSE 0 END) as rdv_annules
-            ")
-            ->first();
+    $panierMoyen = $nbVentes > 0 ? round($caVentesDirectes / $nbVentes, 0) : 0;
 
+    $rdvStats = RendezVous::whereBetween('date_heure', [$dateDebut, $dateFin])
+        ->selectRaw("
+            COUNT(*) as total_rdv,
+            SUM(CASE WHEN statut = 'termine' THEN 1 ELSE 0 END) as rdv_honores,
+            SUM(CASE WHEN statut = 'annule' THEN 1 ELSE 0 END) as rdv_annules
+        ")
+        ->first();
 
-        $totalRdv = $rdvStats->total_rdv ?? 0;
-        $rdvHonores = $rdvStats->rdv_honores ?? 0;
-        $rdvAnnules = $rdvStats->rdv_annules ?? 0;
-        $tauxAnnulation = $totalRdv > 0 ? round(($rdvAnnules / $totalRdv) * 100, 2) : 0;
+    $totalRdv = $rdvStats->total_rdv ?? 0;
+    $rdvHonores = $rdvStats->rdv_honores ?? 0;
+    $rdvAnnules = $rdvStats->rdv_annules ?? 0;
+    $tauxAnnulation = $totalRdv > 0 ? round(($rdvAnnules / $totalRdv) * 100, 2) : 0;
 
-        // ========================================
-        // 5. CONSTRUCTION RÉPONSE
-        // ========================================
-        
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'periode' => [
-                    'type' => $validated['type'],
-                    'date_debut' => $dateDebut->format('Y-m-d'),
-                    'date_fin' => $dateFin->format('Y-m-d'),
-                    'libelle' => $this->getLibellePeriode($validated['type'], $dateDebut, $dateFin),
-                ],
-                'chiffre_affaires' => [
-                    'total' => (float) $caTotal,
-                    'ventes_directes' => (float) $caVentesDirectes,
-                    'confections_vendues' => (float) $caConfectionsVendues,
-                    'prestations' => (float) $caPrestations,
-                    'produits' => (float) $caProduits,
-                    'acomptes_rdv' => (float) $caAcomptesRdv,
-                ],
-                'depenses' => [
-                    'total' => (float) $totalDepensesGlobal,
-                    'par_categorie' => $depensesParCategorie,
-                    'confections' => (float) $coutsConfections,
-                ],
-                'benefice' => [
-                    'brut' => (float) $beneficeBrut,
-                    'net' => (float) $beneficeNet,
-                    'marge_brute_pct' => (float) $margeBrutePct,
-                    'marge_nette_pct' => (float) $margeNettePct,
-                ],
-                'statistiques' => [
-                    'nb_ventes' => (int) $nbVentes,
-                    'nb_clients' => (int) $nbClientsUniques,
-                    'panier_moyen' => (float) $panierMoyen,
-                    'nb_rdv_honores' => (int) $rdvHonores,
-                    'taux_annulation_rdv' => (float) $tauxAnnulation,
-                ],
+    // ========================================
+    // 5. CONSTRUCTION RÉPONSE
+    // ========================================
+    
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'periode' => [
+                'type' => $validated['type'],
+                'date_debut' => $dateDebut->format('Y-m-d'),
+                'date_fin' => $dateFin->format('Y-m-d'),
+                'libelle' => $this->getLibellePeriode($validated['type'], $dateDebut, $dateFin),
+                'jours' => $joursPeriode,
             ],
-            'message' => 'Rapport global généré avec succès',
-        ]);
-    }
+            'chiffre_affaires' => [
+                'total' => (float) $caTotal,
+                'ventes_directes' => (float) $caVentesDirectes,
+                'confections_vendues' => (float) $caConfectionsVendues,
+                'prestations' => (float) $caPrestations,
+                'produits' => (float) $caProduits,
+                'acomptes_rdv' => (float) $caAcomptesRdv,
+            ],
+            'depenses' => [
+                'total' => (float) $totalDepensesGlobal,
+                'par_categorie' => $depensesParCategorie,
+                'confections' => (float) $coutsConfections,
+                'salaires' => (float) $salairesProportionnels,
+                'salaires_mensuel_total' => (float) $totalSalairesMensuel,
+            ],
+            'salaires_detail' => [
+                'employes' => $salairesDetail,
+                'nombre_employes' => $employes->count(),
+                'total_periode' => (float) $salairesProportionnels,
+            ],
+            'benefice' => [
+                'brut' => (float) $beneficeBrut,
+                'net' => (float) $beneficeNet,
+                'marge_brute_pct' => (float) $margeBrutePct,
+                'marge_nette_pct' => (float) $margeNettePct,
+            ],
+            'statistiques' => [
+                'nb_ventes' => (int) $nbVentes,
+                'nb_clients' => (int) $nbClientsUniques,
+                'panier_moyen' => (float) $panierMoyen,
+                'nb_rdv_honores' => (int) $rdvHonores,
+                'taux_annulation_rdv' => (float) $tauxAnnulation,
+            ],
+        ],
+        'message' => 'Rapport global généré avec succès',
+    ]);
+}
 
     /**
      * Détail des ventes par période

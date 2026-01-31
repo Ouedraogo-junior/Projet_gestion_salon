@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Calendar, Briefcase } from 'lucide-react';
 import type { RapportGlobal } from '@/types/rapport.types';
 
 interface RapportGlobalViewProps {
@@ -39,7 +39,7 @@ export function RapportGlobalView({ data }: RapportGlobalViewProps) {
             {data.periode.libelle}
           </CardTitle>
           <CardDescription>
-            Du {data.periode.date_debut} au {data.periode.date_fin}
+            Du {data.periode.date_debut} au {data.periode.date_fin} ({data.periode.jours} jours)
           </CardDescription>
         </CardHeader>
       </Card>
@@ -74,7 +74,7 @@ export function RapportGlobalView({ data }: RapportGlobalViewProps) {
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className={`text-2xl font-bold ${data.benefice.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatMontant(data.benefice.net)}
             </div>
             <div className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -104,6 +104,10 @@ export function RapportGlobalView({ data }: RapportGlobalViewProps) {
               <div className="flex justify-between">
                 <span>Confections</span>
                 <span>{formatMontant(data.depenses.confections)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Salaires</span>
+                <span className="text-purple-600">{formatMontant(data.depenses.salaires)}</span>
               </div>
             </div>
           </CardContent>
@@ -139,25 +143,68 @@ export function RapportGlobalView({ data }: RapportGlobalViewProps) {
         </CardContent>
       </Card>
 
-      {/* Dépenses par catégorie */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Dépenses par Catégorie</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {data.depenses.par_categorie.map((cat) => (
-              <div key={cat.categorie} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{cat.categorie}</span>
-                  <span className="text-xs text-muted-foreground">({cat.pourcentage}%)</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Dépenses par catégorie */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Dépenses par Catégorie</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {data.depenses.par_categorie.map((cat) => (
+                <div key={cat.categorie} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{cat.categorie}</span>
+                    <span className="text-xs text-muted-foreground">({cat.pourcentage}%)</span>
+                  </div>
+                  <span className="font-semibold">{formatMontant(cat.montant)}</span>
                 </div>
-                <span className="font-semibold">{formatMontant(cat.montant)}</span>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Salaires détail - NOUVEAU */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5" />
+              Salaires ({data.periode.jours} jours)
+            </CardTitle>
+            <CardDescription>
+              {data.salaires_detail.nombre_employes} employé(s) · 
+              Total mensuel: {formatMontant(data.depenses.salaires_mensuel_total)}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {data.salaires_detail.employes.map((emp) => (
+                <div key={emp.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{emp.nom_complet}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{emp.role}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-purple-600">
+                      {formatMontant(emp.salaire_periode)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      / {formatMontant(emp.salaire_mensuel)} mois
+                    </p>
+                  </div>
+                </div>
+              ))}
+              
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="font-semibold">Total période</span>
+                <span className="text-lg font-bold text-purple-600">
+                  {formatMontant(data.salaires_detail.total_periode)}
+                </span>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Statistiques générales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

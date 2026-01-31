@@ -1,4 +1,4 @@
-// src/services/produitsApi.ts
+// src/services/produitApi.ts
 import { tokenStorage } from '@/utils/tokenStorage';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -180,6 +180,46 @@ class ProduitsApiService {
       this.request(`/produits/${id}/mouvements`),
     
     mouvements: (id: number) => this.produits.getMouvements(id),
+
+    // Upload photo produit
+    uploadPhoto: async (id: number, file: File) => {
+      const token = tokenStorage.getToken();
+      
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      const formData = new FormData();
+      formData.append('photo', file);
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/produits/${id}/photo`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+            // NE PAS mettre Content-Type, FormData le gère automatiquement
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ 
+            message: 'Erreur serveur' 
+          }));
+          throw new Error(error.message || `Erreur ${response.status}`);
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Upload Error:', error);
+        throw error;
+      }
+    },
+    
+    // Supprimer photo produit
+    deletePhoto: (id: number) =>
+      this.request(`/produits/${id}/photo`, { method: 'DELETE' }),
   };
 
   // ========================================

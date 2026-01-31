@@ -1,4 +1,4 @@
-// components/vente/Panier.tsx
+// src/app/pages/ventes/components/Panier.tsx
 
 import React from 'react';
 import { ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
@@ -41,30 +41,31 @@ export const Panier: React.FC<PanierProps> = ({
       </h3>
 
       {/* Liste des articles */}
-      <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+      <div className="flex-1 overflow-y-auto space-y-2 mb-4 max-h-96">
         {articles.length === 0 ? (
           <div className="text-center text-gray-400 py-8">
             <ShoppingCart size={48} className="mx-auto mb-2 opacity-50" />
             <p>Panier vide</p>
+            <p className="text-xs mt-1">Ajoutez des produits ou prestations</p>
           </div>
         ) : (
           articles.map((article, index) => (
             <div
               key={`${article.type}-${article.id}-${index}`}
-              className="border rounded p-3 space-y-2"
+              className="border rounded p-3 space-y-2 hover:bg-gray-50 transition"
             >
               {/* Nom et type */}
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <p className="font-medium text-sm">{article.nom}</p>
                   <p className="text-xs text-gray-500">
-                    {article.type === 'prestation' ? '🔧 Prestation' : '📦 Produit'}
+                    {article.type === 'prestation' ? '✂️ Prestation' : '📦 Produit'}
                     {article.source_stock && ` (${article.source_stock})`}
                   </p>
                 </div>
                 <button
                   onClick={() => onSupprimer(index)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -76,7 +77,7 @@ export const Panier: React.FC<PanierProps> = ({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => onQuantiteChange(index, article.quantite - 1)}
-                    className="p-1 bg-gray-100 rounded hover:bg-gray-200"
+                    className="p-1 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
                     disabled={article.quantite <= 1}
                   >
                     <Minus size={14} />
@@ -87,7 +88,7 @@ export const Panier: React.FC<PanierProps> = ({
                     onChange={(e) =>
                       onQuantiteChange(index, parseInt(e.target.value) || 1)
                     }
-                    className="w-16 text-center border rounded py-1"
+                    className="w-16 text-center border rounded py-1 focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                   <button
@@ -108,7 +109,7 @@ export const Panier: React.FC<PanierProps> = ({
                   onChange={(e) =>
                     onPrixChange(index, parseFloat(e.target.value) || 0)
                   }
-                  className="flex-1 border rounded px-2 py-1 text-sm"
+                  className="flex-1 border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
                   min="0"
                   step="100"
                 />
@@ -124,7 +125,7 @@ export const Panier: React.FC<PanierProps> = ({
                   onChange={(e) =>
                     onReductionChange(index, parseFloat(e.target.value) || 0)
                   }
-                  className="flex-1 border rounded px-2 py-1 text-sm"
+                  className="flex-1 border rounded px-2 py-1 text-sm focus:ring-2 focus:ring-blue-500"
                   min="0"
                   step="100"
                 />
@@ -132,7 +133,7 @@ export const Panier: React.FC<PanierProps> = ({
               </div>
 
               {/* Sous-total */}
-              <div className="text-right font-semibold text-blue-600">
+              <div className="text-right font-semibold text-blue-600 pt-2 border-t">
                 {formaterMontant(calculerSousTotal(article))}
               </div>
             </div>

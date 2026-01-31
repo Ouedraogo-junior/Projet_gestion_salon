@@ -5,8 +5,8 @@ import { Save, X } from 'lucide-react';
 import { ClientSelector } from './components/ClientSelector';
 import { Panier } from './components/Panier';
 import { PaiementForm } from './components/PaiementForm';
-import { SelectionProduitModal } from './components/SelectionProduitModal';
-import { SelectionPrestationModal } from './components/SelectionPrestationModal';
+import { ProduitsList } from './components/ProduitsList';
+import { PrestationsList } from './components/PrestationsList';
 import { usePanier } from '../../../hooks/usePanier';
 import { useCalculsVente } from '../../../hooks/useCalculsVente';
 import { venteApi } from '../../../services/venteApi';
@@ -24,8 +24,6 @@ import type {
 import type { Produit } from '../../../types/produit.types';
 import type { TypePrestation } from '../../../types/prestation.types';
 
-// Type pour les coiffeurs (utilisateurs)
-// Remplacer l'interface Coiffeur par :
 interface Coiffeur {
   id: number;
   nom: string;
@@ -56,9 +54,8 @@ export const NouvelleVente: React.FC = () => {
   const [coiffeurs, setCoiffeurs] = useState<Coiffeur[]>([]);
   const [isLoadingCoiffeurs, setIsLoadingCoiffeurs] = useState(false);
   
-  // Modals
-  const [showProduitModal, setShowProduitModal] = useState(false);
-  const [showPrestationModal, setShowPrestationModal] = useState(false);
+  // Onglet actif pour basculer entre produits et prestations
+  const [activeTab, setActiveTab] = useState<'prestations' | 'produits'>('prestations');
 
   // Hooks personnalisés
   const {
@@ -83,10 +80,7 @@ export const NouvelleVente: React.FC = () => {
     loadCoiffeurs();
   }, []);
 
-  /**
-   * Charger la liste des coiffeurs (employés)
-   */
-    const loadCoiffeurs = async () => {
+  const loadCoiffeurs = async () => {
     setIsLoadingCoiffeurs(true);
     try {
       const response = await userApi.getCoiffeurs();
@@ -102,11 +96,9 @@ export const NouvelleVente: React.FC = () => {
     }
   };
 
-  // Gestionnaires
   const handleClientSelect = async (data: any) => {
     setClientData(data);
     
-    // Si c'est un client existant, récupérer ses détails
     if (data.client_id) {
       try {
         const response = await clientApi.getOne(data.client_id);
@@ -115,7 +107,6 @@ export const NouvelleVente: React.FC = () => {
         }
       } catch (error) {
         console.error('Erreur récupération client:', error);
-        // En cas d'erreur, garder juste l'ID
         setClientSelectionne(null);
       }
     } else {
@@ -123,38 +114,20 @@ export const NouvelleVente: React.FC = () => {
     }
   };
 
-  const handleAjouterPrestation = () => {
-    setShowPrestationModal(true);
-  };
-
   const handleSelectPrestation = (prestation: TypePrestation, quantite: number) => {
-    // Ajouter la prestation au panier
     ajouterArticle(
       prestation.id,
       'prestation',
       prestation.nom,
       prestation.prix_base,
-      undefined, // sourceStock (pas applicable aux prestations)
-      undefined  // reference (pas applicable aux prestations)
+      undefined,
+      undefined
     );
-
-    console.log('Prestation ajoutée:', {
-      id: prestation.id,
-      nom: prestation.nom,
-      quantite,
-      prix: prestation.prix_base,
-    });
-  };
-
-  const handleAjouterProduit = () => {
-    setShowProduitModal(true);
   };
 
   const handleSelectProduit = (produit: Produit, quantite: number, sourceStock: SourceStock) => {
-    // Calculer le prix (promo ou normal)
     const prix = getPrixProduit(produit);
     
-    // Ajouter au panier
     ajouterArticle(
       produit.id,
       'produit',
@@ -163,18 +136,9 @@ export const NouvelleVente: React.FC = () => {
       sourceStock,
       produit.reference
     );
-
-    console.log('Produit ajouté:', {
-      id: produit.id,
-      nom: produit.nom,
-      quantite,
-      prix,
-      sourceStock,
-    });
   };
 
   const getPrixProduit = (produit: Produit): number => {
-    // Vérifier si le produit est en promotion
     if (produit.prix_promo && produit.date_debut_promo && produit.date_fin_promo) {
       const now = new Date();
       const debut = new Date(produit.date_debut_promo);
@@ -260,139 +224,139 @@ export const NouvelleVente: React.FC = () => {
   };
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-7xl mx-auto">
-          {/* En-tête */}
-          <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Nouvelle Vente</h1>
-            <div className="flex gap-2">
-              <button
-                onClick={resetForm}
-                className="px-4 py-2 border rounded hover:bg-gray-100 flex items-center gap-2"
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* En-tête */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Nouvelle Vente</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={resetForm}
+              className="px-4 py-2 border rounded hover:bg-gray-100 flex items-center gap-2"
+            >
+              <X size={18} />
+              Annuler
+            </button>
+            <button
+              onClick={handleValiderVente}
+              disabled={isLoading || articles.length === 0}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 flex items-center gap-2"
+            >
+              <Save size={18} />
+              {isLoading ? 'Enregistrement...' : 'Valider la vente'}
+            </button>
+          </div>
+        </div>
+
+        {/* Contenu principal */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Colonne gauche - Client et Articles */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Sélection client */}
+            <ClientSelector
+              onClientSelect={handleClientSelect}
+              clientSelectionne={clientSelectionne}
+            />
+
+            {/* Sélection articles - Onglets */}
+            <div className="bg-white rounded-lg border">
+              <div className="border-b flex">
+                <button
+                  onClick={() => setActiveTab('prestations')}
+                  className={`flex-1 py-3 font-medium transition ${
+                    activeTab === 'prestations'
+                      ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Prestations
+                </button>
+                <button
+                  onClick={() => setActiveTab('produits')}
+                  className={`flex-1 py-3 font-medium transition ${
+                    activeTab === 'produits'
+                      ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  Produits
+                </button>
+              </div>
+
+              <div className="p-4">
+                {activeTab === 'prestations' ? (
+                  <PrestationsList onSelect={handleSelectPrestation} />
+                ) : (
+                  <ProduitsList onSelect={handleSelectProduit} />
+                )}
+              </div>
+            </div>
+
+            {/* Coiffeur (optionnel) */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h3 className="font-semibold mb-3">
+                Coiffeur / Employé (optionnel)
+              </h3>
+              <select
+                value={coiffeurId || ''}
+                onChange={(e) => setCoiffeurId(e.target.value ? Number(e.target.value) : undefined)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                disabled={isLoadingCoiffeurs}
               >
-                <X size={18} />
-                Annuler
-              </button>
-              <button
-                onClick={handleValiderVente}
-                disabled={isLoading || articles.length === 0}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 flex items-center gap-2"
-              >
-                <Save size={18} />
-                {isLoading ? 'Enregistrement...' : 'Valider la vente'}
-              </button>
+                <option value="">
+                  {isLoadingCoiffeurs ? 'Chargement...' : 'Aucun coiffeur sélectionné'}
+                </option>
+                {coiffeurs.map((coiffeur) => (
+                  <option key={coiffeur.id} value={coiffeur.id}>
+                    {coiffeur.prenom} {coiffeur.nom} {coiffeur.specialite ? `- ${coiffeur.specialite}` : ''}
+                  </option>
+                ))}
+              </select>
+              {coiffeurs.length === 0 && !isLoadingCoiffeurs && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Aucun employé disponible
+                </p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div className="bg-white p-4 rounded-lg border">
+              <h3 className="font-semibold mb-3">Notes (optionnel)</h3>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                rows={3}
+                placeholder="Remarques, instructions particulières..."
+              />
             </div>
           </div>
 
-          {/* Contenu principal */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Colonne gauche */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Sélection client */}
-              <ClientSelector
-                onClientSelect={handleClientSelect}
-                clientSelectionne={clientSelectionne}
+          {/* Colonne droite - Panier et Paiement */}
+          <div className="space-y-4">
+            {/* Panier */}
+            <Panier
+              articles={articles}
+              onQuantiteChange={modifierQuantite}
+              onPrixChange={modifierPrix}
+              onReductionChange={appliquerReductionArticle}
+              onSupprimer={supprimerArticle}
+              montantHT={totaux.montantHT}
+              montantReduction={totaux.totalReductionGlobale}
+              montantTTC={totaux.montantTTC}
+            />
+
+            {/* Paiement */}
+            {articles.length > 0 && (
+              <PaiementForm
+                montantTotal={totaux.montantTTC}
+                onPaiementsChange={setPaiements}
               />
-
-              {/* Sélection articles */}
-              <div className="bg-white p-4 rounded-lg border">
-                <h3 className="font-semibold mb-3">Articles</h3>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAjouterPrestation}
-                    className="flex-1 py-3 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition"
-                  >
-                    + Ajouter Prestation
-                  </button>
-                  <button
-                    onClick={handleAjouterProduit}
-                    className="flex-1 py-3 bg-green-100 text-green-700 rounded hover:bg-green-200 transition"
-                  >
-                    + Ajouter Produit
-                  </button>
-                </div>
-              </div>
-
-              {/* Coiffeur (optionnel) */}
-              <div className="bg-white p-4 rounded-lg border">
-                <h3 className="font-semibold mb-3">
-                  Coiffeur / Employé (optionnel)
-                </h3>
-                <select
-                  value={coiffeurId || ''}
-                  onChange={(e) => setCoiffeurId(e.target.value ? Number(e.target.value) : undefined)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  disabled={isLoadingCoiffeurs}
-                >
-                  <option value="">
-                    {isLoadingCoiffeurs ? 'Chargement...' : 'Aucun coiffeur sélectionné'}
-                  </option>
-                  {coiffeurs.map((coiffeur) => (
-                    <option key={coiffeur.id} value={coiffeur.id}>
-                    {coiffeur.prenom} {coiffeur.nom} {coiffeur.specialite ? `- ${coiffeur.specialite}` : ''}
-                  </option>
-                  ))}
-                </select>
-                {coiffeurs.length === 0 && !isLoadingCoiffeurs && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Aucun employé disponible
-                  </p>
-                )}
-              </div>
-
-              {/* Notes */}
-              <div className="bg-white p-4 rounded-lg border">
-                <h3 className="font-semibold mb-3">Notes (optionnel)</h3>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  rows={3}
-                  placeholder="Remarques, instructions particulières..."
-                />
-              </div>
-            </div>
-
-            {/* Colonne droite */}
-            <div className="space-y-4">
-              {/* Panier */}
-              <Panier
-                articles={articles}
-                onQuantiteChange={modifierQuantite}
-                onPrixChange={modifierPrix}
-                onReductionChange={appliquerReductionArticle}
-                onSupprimer={supprimerArticle}
-                montantHT={totaux.montantHT}
-                montantReduction={totaux.totalReductionGlobale}
-                montantTTC={totaux.montantTTC}
-              />
-
-              {/* Paiement */}
-              {articles.length > 0 && (
-                <PaiementForm
-                  montantTotal={totaux.montantTTC}
-                  onPaiementsChange={setPaiements}
-                />
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Modals */}
-      <SelectionProduitModal
-        isOpen={showProduitModal}
-        onClose={() => setShowProduitModal(false)}
-        onSelect={handleSelectProduit}
-      />
-
-      <SelectionPrestationModal
-        isOpen={showPrestationModal}
-        onClose={() => setShowPrestationModal(false)}
-        onSelect={handleSelectPrestation}
-      />
-    </>
+    </div>
   );
 };
 

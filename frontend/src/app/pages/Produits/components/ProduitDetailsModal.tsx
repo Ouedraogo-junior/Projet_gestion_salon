@@ -1,6 +1,6 @@
 // src/app/pages/Produits/components/ProduitDetailsModal.tsx
 import { useEffect, useState } from 'react';
-import { X, Package, Tag, DollarSign, TrendingUp, Calendar, Info } from 'lucide-react';
+import { X, Package, Tag, DollarSign, TrendingUp, Calendar, Info, ImageOff } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Badge } from './ui/Badge';
 import { produitsApi } from '@/services/produitsApi';
@@ -15,6 +15,7 @@ interface ProduitDetailsModalProps {
 export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetailsModalProps) {
   const [produit, setProduit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (isOpen && produitId) {
@@ -27,12 +28,19 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
       setLoading(true);
       const response = await produitsApi.produits.show(produitId);
       setProduit(response.data);
+      setImageError(false);
     } catch (error: any) {
       console.error('Erreur lors du chargement des détails:', error);
       alert('❌ Erreur lors du chargement des détails');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getImageUrl = (photoUrl?: string) => {
+    if (!photoUrl) return null;
+    const cleanUrl = photoUrl.replace(/^(storage\/)+/, '');
+    return `${import.meta.env.VITE_API_URL}/storage/${cleanUrl}`;
   };
 
   const formatCurrency = (value: number) => {
@@ -53,6 +61,8 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
 
   if (!isOpen) return null;
 
+  const imageUrl = produit?.photo_url ? getImageUrl(produit.photo_url) : null;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -67,15 +77,84 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
         </div>
       ) : produit ? (
         <div className="space-y-6">
-          {/* En-tête */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold text-gray-900">{produit.nom}</h2>
-              <p className="text-sm text-gray-500 mt-1">Réf: {produit.reference || 'N/A'}</p>
+          {/* En-tête avec photo */}
+          <div className="flex gap-6">
+            {/* Photo du produit */}
+            <div className="flex-shrink-0">
+              <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                {imageUrl && !imageError ? (
+                  <img
+                    src={imageUrl}
+                    alt={produit.nom}
+                    className="w-full h-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center">
+                    <ImageOff size={64} className="text-gray-300 mb-2" />
+                    <p className="text-sm text-gray-400">Aucune photo</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <Badge variant={produit.is_active ? 'success' : 'danger'}>
-              {produit.is_active ? 'Actif' : 'Inactif'}
-            </Badge>
+
+            {/* Informations principales */}
+            <div className="flex-1">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-gray-900">{produit.nom}</h2>
+                  <p className="text-sm text-gray-500 mt-1">Réf: {produit.reference || 'N/A'}</p>
+                  {produit.marque && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      <span className="font-medium">Marque:</span> {produit.marque}
+                    </p>
+                  )}
+                  {produit.fournisseur && (
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Fournisseur:</span> {produit.fournisseur}
+                    </p>
+                  )}
+                </div>
+                <Badge variant={produit.is_active ? 'success' : 'danger'}>
+                  {produit.is_active ? 'Actif' : 'Inactif'}
+                </Badge>
+              </div>
+
+              {/* Prix rapides */}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <label className="text-xs text-gray-600">Prix d'achat</label>
+                  <p className="text-lg font-bold text-gray-900">
+                    {formatCurrency(produit.prix_achat)} FCFA
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <label className="text-xs text-gray-600">Prix de vente</label>
+                  <p className="text-lg font-bold text-blue-600">
+                    {formatCurrency(produit.prix_vente)} FCFA
+                  </p>
+                </div>
+              </div>
+
+              {/* Badge promo */}
+              {produit.prix_promo && (
+                <div className="mt-3 bg-red-50 border border-red-200 p-3 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-red-600 font-medium">PROMOTION</span>
+                      <p className="text-lg font-bold text-red-600">
+                        {formatCurrency(produit.prix_promo)} FCFA
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-red-600">
+                        -{Math.round(((produit.prix_vente - produit.prix_promo) / produit.prix_vente) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Description */}
@@ -120,18 +199,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                     {produit.type_stock_principal === 'mixte' && 'Mixte (vente + salon)'}
                   </p>
                 </div>
-                {produit.marque && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Marque</label>
-                    <p className="text-gray-900 mt-1">{produit.marque}</p>
-                  </div>
-                )}
-                {produit.fournisseur && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Fournisseur</label>
-                    <p className="text-gray-900 mt-1">{produit.fournisseur}</p>
-                  </div>
-                )}
               </div>
 
               {/* Attributs de la catégorie */}

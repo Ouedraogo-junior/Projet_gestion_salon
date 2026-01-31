@@ -1,5 +1,5 @@
 // src/app/pages/Parametres.tsx
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Building,
   Users as UsersIcon,
@@ -10,6 +10,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  DollarSign,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
@@ -33,12 +34,17 @@ import {
   SelectValue,
 } from '@/app/components/ui/select';
 import { useSalon } from '@/hooks/useSalon';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsers, useSalaires } from '@/hooks/useUsers';
+import { useAuth } from '@/hooks/useAuth';
 import type { UserCreateData, UserUpdateData, User } from '@/services/userApi';
 import { toast } from 'sonner';
 
 export function Parametres() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user: currentUser } = useAuth();
+
+  // Vérifier si l'utilisateur est gérant
+  const isGerant = currentUser?.role === 'gestionnaire';
 
   // États Salon
   const { salon, isLoading: loadingSalon, updateSalon, isUpdating, uploadLogo, deleteLogo } = useSalon();
@@ -52,9 +58,12 @@ export function Parametres() {
 
   // États Utilisateurs
   const { users, isLoading: loadingUsers, createUser, updateUser, deleteUser, toggleActive, resetPassword } = useUsers();
+  const { salaires, isLoading: loadingSalaires, updateSalaire } = useSalaires();
+  
   const [userDialog, setUserDialog] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [passwordDialog, setPasswordDialog] = useState(false);
+  const [salaireDialog, setSalaireDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [userForm, setUserForm] = useState<UserCreateData>({
@@ -71,9 +80,12 @@ export function Parametres() {
     password: '',
     password_confirmation: '',
   });
+  const [salaireForm, setSalaireForm] = useState({
+    salaire_mensuel: 0,
+  });
 
   // Initialiser le formulaire salon quand les données sont chargées
-  useState(() => {
+  useEffect(() => {
     if (salon) {
       setSalonForm({
         nom: salon.nom || '',
@@ -83,7 +95,22 @@ export function Parametres() {
         horaires: salon.horaires || '',
       });
     }
-  });
+  }, [salon]);
+
+  // Si l'utilisateur n'est pas gérant, rediriger ou afficher message
+  if (!isGerant) {
+    return (
+      <div className="p-6 flex items-center justify-center h-screen">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <p className="text-center text-gray-600">
+              Accès réservé aux gérants uniquement.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Handlers Salon
   const handleSalonChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,6 +248,31 @@ export function Parametres() {
     );
   };
 
+  const openSalaireDialog = (user: User) => {
+    setSelectedUserId(user.id);
+    setSalaireForm({ salaire_mensuel: user.salaire_mensuel || 0 });
+    setSalaireDialog(true);
+  };
+
+  const handleSalaireSubmit = () => {
+    if (!selectedUserId) return;
+
+    if (salaireForm.salaire_mensuel < 0) {
+      toast.error('Le salaire ne peut pas être négatif');
+      return;
+    }
+
+    updateSalaire(
+      { id: selectedUserId, salaire_mensuel: salaireForm.salaire_mensuel },
+      {
+        onSuccess: () => {
+          setSalaireDialog(false);
+          setSelectedUserId(null);
+        },
+      }
+    );
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'gerant':
@@ -240,11 +292,19 @@ export function Parametres() {
         return 'Gérant';
       case 'coiffeur':
         return 'Coiffeur';
-      case 'receptionniste':
-        return 'Réceptionniste';
+      case 'gestionnaire':
+        return 'Gestionnaire';
       default:
         return role;
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'XOF',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   if (loadingSalon || loadingUsers) {
@@ -268,6 +328,10 @@ export function Parametres() {
           <TabsTrigger value="utilisateurs">
             <UsersIcon className="w-4 h-4 mr-2" />
             Utilisateurs
+          </TabsTrigger>
+          <TabsTrigger value="salaires">
+            <DollarSign className="w-4 h-4 mr-2" />
+            Salaires
           </TabsTrigger>
         </TabsList>
 
@@ -416,6 +480,11 @@ export function Parametres() {
                           {user.specialite}
                         </p>
                       )}
+                      {user.salaire_mensuel && (
+                        <p className="text-xs text-green-600 mt-1">
+                          Salaire: {formatCurrency(user.salaire_mensuel)}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <span
@@ -432,7 +501,16 @@ export function Parametres() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => openSalaireDialog(user)}
+                        title="Gérer le salaire"
+                      >
+                        <DollarSign className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => openPasswordDialog(user.id)}
+                        title="Réinitialiser le mot de passe"
                       >
                         <Lock className="w-3 h-3" />
                       </Button>
@@ -440,6 +518,7 @@ export function Parametres() {
                         variant="outline"
                         size="sm"
                         onClick={() => openEditDialog(user)}
+                        title="Modifier"
                       >
                         <Edit className="w-3 h-3" />
                       </Button>
@@ -447,6 +526,7 @@ export function Parametres() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDeleteUser(user.id)}
+                        title="Supprimer"
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -454,6 +534,81 @@ export function Parametres() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB SALAIRES */}
+        <TabsContent value="salaires" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Récapitulatif des salaires</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingSalaires ? (
+                <p>Chargement...</p>
+              ) : salaires ? (
+                <div className="space-y-6">
+                  {/* Statistiques */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Total mensuel</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {formatCurrency(salaires.total_mensuel)}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Total annuel</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {formatCurrency(salaires.total_annuel)}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-lg">
+                      <p className="text-sm text-gray-600">Nombre d'employés</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {salaires.nombre_employes}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Liste des employés */}
+                  <div className="space-y-3">
+                    {salaires.employes.map((employe) => (
+                      <div
+                        key={employe.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">{employe.nom_complet}</p>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${getRoleBadgeColor(
+                              employe.role
+                            )}`}
+                          >
+                            {getRoleLabel(employe.role)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <p className="text-lg font-semibold text-gray-700">
+                            {formatCurrency(employe.salaire_mensuel || 0)}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openSalaireDialog(employe)}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500">Aucune donnée disponible</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -603,6 +758,36 @@ export function Parametres() {
               Annuler
             </Button>
             <Button onClick={handlePasswordReset}>Réinitialiser</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Salaire */}
+      <Dialog open={salaireDialog} onOpenChange={setSalaireDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier le salaire</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Salaire mensuel (FCFA) *</Label>
+              <Input
+                type="number"
+                min="0"
+                step="1000"
+                value={salaireForm.salaire_mensuel}
+                onChange={(e) =>
+                  setSalaireForm({ salaire_mensuel: Number(e.target.value) })
+                }
+                placeholder="Ex: 150000"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSalaireDialog(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSalaireSubmit}>Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

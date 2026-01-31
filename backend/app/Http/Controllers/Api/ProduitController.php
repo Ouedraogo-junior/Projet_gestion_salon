@@ -13,6 +13,8 @@ use App\Models\ProduitAttributValeur;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class ProduitController extends Controller
 {
@@ -322,5 +324,114 @@ class ProduitController extends Controller
                 ? 'Produit activé avec succès' 
                 : 'Produit désactivé avec succès',
         ]);
+    }
+
+    /**
+     * Upload photo produit
+     */
+    public function uploadPhoto(Request $request, $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', // Max 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $produit = Produit::findOrFail($id);
+
+            if ($request->hasFile('photo')) {
+                // Supprimer l'ancienne photo si elle existe
+                if ($produit->photo_url && Storage::disk('public')->exists($produit->photo_url)) {
+                    Storage::disk('public')->delete($produit->photo_url);
+                }
+
+                $file = $request->file('photo');
+                
+                // Nom de fichier sécurisé
+                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $file->getClientOriginalExtension();
+                $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
+                $filename = 'produit_' . $produit->id . '_' . time() . '_' . $safeName . '.' . $extension;
+                
+                // Stocker dans public/storage/photos/produits
+                $path = $file->storeAs('photos/produits', $filename, 'public');
+
+                // Mettre à jour le produit
+                $produit->update([
+                    'photo_url' => $path
+                ]);
+
+                // Recharger les relations
+                $produit->load(['categorie', 'valeursAttributs.attribut']);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Photo uploadée avec succès',
+                    'data' => new ProduitResource($produit)
+                ], 200);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun fichier fourni'
+            ], 400);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload de la photo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Supprimer la photo d'un produit
+     */
+    public function deletePhoto($id): JsonResponse
+    {
+        try {
+            $produit = Produit::findOrFail($id);
+
+            if (!$produit->photo_url) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune photo à supprimer'
+                ], 404);
+            }
+
+            // Supprimer le fichier physique
+            if (Storage::disk('public')->exists($produit->photo_url)) {
+                Storage::disk('public')->delete($produit->photo_url);
+            }
+            
+            // Mettre à jour le produit
+            $produit->update([
+                'photo_url' => null
+            ]);
+
+            // Recharger les relations
+            $produit->load(['categorie', 'valeursAttributs.attribut']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Photo supprimée avec succès',
+                'data' => new ProduitResource($produit)
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression de la photo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -20,6 +20,7 @@ export interface PeriodeInfo {
   date_debut: string;
   date_fin: string;
   libelle: string; // "Janvier 2026", "Semaine 5", "15/01/2026 - 21/01/2026"
+  jours: number; // AJOUTÉ : Nombre de jours dans la période
 }
 
 export interface ChiffreAffaires {
@@ -41,11 +42,13 @@ export interface Depenses {
   total: number;
   par_categorie: DepenseCategorie[];
   confections: number; // Coûts de production confections
+  salaires: number; // AJOUTÉ : Salaires proportionnels à la période
+  salaires_mensuel_total: number; // AJOUTÉ : Total des salaires mensuels
 }
 
 export interface Benefice {
   brut: number; // CA - Coûts confections
-  net: number; // CA - Toutes dépenses
+  net: number; // CA - Toutes dépenses (y compris salaires)
   marge_brute_pct: number;
   marge_nette_pct: number;
 }
@@ -58,10 +61,26 @@ export interface Statistiques {
   taux_annulation_rdv: number;
 }
 
+
+export interface SalaireDetail {
+  id: number;
+  nom_complet: string;
+  role: string;
+  salaire_mensuel: number;
+  salaire_periode: number;
+}
+
+export interface SalairesDetail {
+  employes: SalaireDetail[];
+  nombre_employes: number;
+  total_periode: number;
+}
+
 export interface RapportGlobal {
   periode: PeriodeInfo;
   chiffre_affaires: ChiffreAffaires;
   depenses: Depenses;
+  salaires_detail: SalairesDetail; 
   benefice: Benefice;
   statistiques: Statistiques;
 }
@@ -127,6 +146,7 @@ export interface Decaissements {
   depenses_operationnelles: number;
   achats_stock: number;
   confections: number;
+  salaires: number; 
   total: number;
 }
 

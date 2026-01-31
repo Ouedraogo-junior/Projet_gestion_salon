@@ -12,7 +12,7 @@ class StoreCategorieRequest extends FormRequest
     public function authorize(): bool
     {
         // Seuls les gérants peuvent créer des catégories
-        return $this->user() && $this->user()->role === 'gerant';
+        return $this->user() && $this->user()->role === 'gestionnaire';
     }
 
     /**

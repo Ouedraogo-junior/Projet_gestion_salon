@@ -14,68 +14,71 @@ class ClientController extends Controller
     /**
      * Liste des clients avec recherche et pagination
      */
-    public function index(Request $request)
-    {
-        try {
-            $query = Client::query();
+    /**
+ * Liste des clients avec recherche et pagination
+ */
+public function index(Request $request)
+{
+    try {
+        $query = Client::with('photos'); // ← AJOUTER with('photos') ICI
 
-            // Recherche par nom, prénom, téléphone ou email
-            if ($request->has('search') && !empty($request->search)) {
-                $search = $request->search;
-                $query->where(function($q) use ($search) {
-                    $q->where('nom', 'LIKE', "%{$search}%")
-                      ->orWhere('prenom', 'LIKE', "%{$search}%")
-                      ->orWhere('telephone', 'LIKE', "%{$search}%")
-                      ->orWhere('email', 'LIKE', "%{$search}%");
-                });
-            }
-
-            // Filtre par statut actif
-            if ($request->has('is_active') && $request->is_active !== '') {
-                $query->where('is_active', $request->is_active);
-            }
-
-            // Filtre par points de fidélité minimum
-            if ($request->has('min_points') && $request->min_points !== '') {
-                $query->where('points_fidelite', '>=', $request->min_points);
-            }
-
-            // Filtre par date de dernière visite
-            if ($request->has('date_debut') && !empty($request->date_debut)) {
-                $query->whereDate('date_derniere_visite', '>=', $request->date_debut);
-            }
-
-            if ($request->has('date_fin') && !empty($request->date_fin)) {
-                $query->whereDate('date_derniere_visite', '<=', $request->date_fin);
-            }
-
-            // Tri
-            $sortBy = $request->get('sort_by', 'created_at');
-            $sortOrder = $request->get('sort_order', 'desc');
-            
-            // Validation du champ de tri
-            $allowedSorts = ['nom', 'prenom', 'created_at', 'date_derniere_visite', 'points_fidelite', 'montant_total_depense'];
-            if (in_array($sortBy, $allowedSorts)) {
-                $query->orderBy($sortBy, $sortOrder);
-            }
-
-            // Pagination
-            $perPage = $request->get('per_page', 15);
-            $clients = $query->paginate($perPage);
-
-            return response()->json([
-                'success' => true,
-                'data' => $clients
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des clients',
-                'error' => $e->getMessage()
-            ], 500);
+        // Recherche par nom, prénom, téléphone ou email
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('nom', 'LIKE', "%{$search}%")
+                  ->orWhere('prenom', 'LIKE', "%{$search}%")
+                  ->orWhere('telephone', 'LIKE', "%{$search}%")
+                  ->orWhere('email', 'LIKE', "%{$search}%");
+            });
         }
+
+        // Filtre par statut actif
+        if ($request->has('is_active') && $request->is_active !== '') {
+            $query->where('is_active', $request->is_active);
+        }
+
+        // Filtre par points de fidélité minimum
+        if ($request->has('min_points') && $request->min_points !== '') {
+            $query->where('points_fidelite', '>=', $request->min_points);
+        }
+
+        // Filtre par date de dernière visite
+        if ($request->has('date_debut') && !empty($request->date_debut)) {
+            $query->whereDate('date_derniere_visite', '>=', $request->date_debut);
+        }
+
+        if ($request->has('date_fin') && !empty($request->date_fin)) {
+            $query->whereDate('date_derniere_visite', '<=', $request->date_fin);
+        }
+
+        // Tri
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        
+        // Validation du champ de tri
+        $allowedSorts = ['nom', 'prenom', 'created_at', 'date_derniere_visite', 'points_fidelite', 'montant_total_depense'];
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 15);
+        $clients = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $clients
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de la récupération des clients',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Créer un nouveau client
@@ -226,64 +229,71 @@ class ClientController extends Controller
     /**
      * Upload photo client
      */
-    public function uploadPhoto(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120', // Max 5MB
-            'type_photo' => 'required|in:avant,apres',
-            'description' => 'nullable|string|max:255',
-            'vente_id' => 'nullable|exists:ventes,id',
-            'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
-            'is_public' => 'nullable|boolean',
-        ]);
+   public function uploadPhoto(Request $request, $id)
+{
+    $validator = Validator::make($request->all(), [
+        'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+        'type_photo' => 'required|in:avant,apres',
+        'description' => 'nullable|string|max:255',
+        'vente_id' => 'nullable|exists:ventes,id',
+        'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
+        'is_public' => 'nullable|boolean',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $client = Client::findOrFail($id);
-
-            if ($request->hasFile('photo')) {
-                $file = $request->file('photo');
-                $filename = time() . '_' . $client->id . '_' . $file->getClientOriginalName();
-                $path = $file->storeAs('photos/clients', $filename, 'public');
-
-                $photo = PhotoClient::create([
-                    'client_id' => $client->id,
-                    'photo_url' => $path,
-                    'type_photo' => $request->type_photo,
-                    'description' => $request->description,
-                    'vente_id' => $request->vente_id,
-                    'rendez_vous_id' => $request->rendez_vous_id,
-                    'is_public' => $request->is_public ?? false,
-                    'date_prise' => now()->toDateString(),
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Photo uploadée avec succès',
-                    'data' => $photo
-                ], 201);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Aucun fichier fourni'
-            ], 400);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'upload de la photo',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur de validation',
+            'errors' => $validator->errors()
+        ], 422);
     }
+
+    try {
+        $client = Client::findOrFail($id);
+
+        if ($request->hasFile('photo')) {
+            $file = $request->file('photo');
+            
+            // Nom de fichier sécurisé (sans espaces ni caractères spéciaux)
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $file->getClientOriginalExtension();
+            $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
+            $filename = time() . '_' . $client->id . '_' . $safeName . '.' . $extension;
+            
+            // Stocker dans public/storage/photos/clients
+            $path = $file->storeAs('photos/clients', $filename, 'public');
+
+            $photo = PhotoClient::create([
+                'client_id' => $client->id,
+                'photo_url' => $path, // Sera "photos/clients/xxx.jpg"
+                'type_photo' => $request->type_photo,
+                'description' => $request->description,
+                'vente_id' => $request->vente_id,
+                'rendez_vous_id' => $request->rendez_vous_id,
+                'is_public' => $request->is_public ?? false,
+                'date_prise' => now()->toDateString(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Photo uploadée avec succès',
+                'data' => $photo
+            ], 201);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Aucun fichier fourni'
+        ], 400);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur lors de l\'upload de la photo',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     /**
      * Supprimer une photo

@@ -2,7 +2,8 @@
 import axios from 'axios';
 import { tokenStorage } from '../utils/tokenStorage';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+
 
 const api = axios.create({
   baseURL: API_URL,
@@ -32,6 +33,7 @@ export interface User {
   email: string | null;
   role: 'gerant' | 'coiffeur' | 'gestionnaire';
   specialite: string | null;
+  salaire_mensuel: number | null;
   photo_url: string | null;
   is_active: boolean;
   nom_complet: string;
@@ -70,6 +72,17 @@ export interface ApiResponse<T> {
   success: boolean;
   data: T;
   message?: string;
+}
+
+export interface SalaireData {
+  salaire_mensuel: number;
+}
+
+export interface SalairesResponse {
+  employes: User[];
+  total_mensuel: number;
+  total_annuel: number;
+  nombre_employes: number;
 }
 
 export const userApi = {
@@ -164,4 +177,30 @@ export const userApi = {
     });
     return response.data;
   },
+
+
+  /**
+   * Mettre à jour le salaire d'un utilisateur (gérant uniquement)
+   */
+  async updateSalaire(id: number, salaire_mensuel: number): Promise<ApiResponse<User>> {
+    const response = await api.put(`/users/${id}/salaire`, { salaire_mensuel });
+    return response.data;
+  },
+
+  /**
+   * Récupérer tous les salaires (gérant uniquement)
+   */
+  async getSalaires(): Promise<ApiResponse<SalairesResponse>> {
+    const response = await api.get('/users/salaires');
+    return response.data;
+  },
+
+  /**
+   * Récupérer les coiffeurs pour les ventes
+   */
+  async getCoiffeursActifs(): Promise<ApiResponse<User[]>> {
+    const response = await api.get('/users/coiffeurs');
+    return response.data;
+  },
+  
 };

@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\MouvementStockController;
 use App\Http\Controllers\Api\TransfertStockController;
 use App\Http\Controllers\Api\TypePrestationController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PublicController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,6 +40,26 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
+
+
+
+// Route pour obtenir le salon par défaut
+Route::get('/public/salon-defaut', [PublicController::class, 'getSalonDefaut']);
+
+// Routes publiques sans slug (utilise le salon par défaut)
+Route::prefix('public')->name('public.')->group(function () {
+    Route::get('/prestations', [PublicController::class, 'prestations'])->name('prestations.defaut');
+    Route::get('/produits', [PublicController::class, 'produits'])->name('produits.defaut');
+    Route::get('/info', [PublicController::class, 'salonInfo'])->name('info.defaut');
+});
+
+// Routes publiques avec slug spécifique
+Route::prefix('public/{slug}')->name('public.slug.')->group(function () {
+    Route::get('/prestations', [PublicController::class, 'prestations'])->name('prestations');
+    Route::get('/produits', [PublicController::class, 'produits'])->name('produits');
+    Route::get('/info', [PublicController::class, 'salonInfo'])->name('info');
+});
+
 
 Route::post('/rendez-vous/public', [RendezVousController::class, 'storePublic']);
 Route::get('/rendez-vous/available-slots', [RendezVousController::class, 'availableSlots']);
@@ -74,6 +95,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
         Route::post('/users/{id}/toggle-active', [UserController::class, 'toggleActive']);
         Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);
+        Route::patch('/users/{id}/salaire', [UserController::class, 'updateSalaire']);
+        Route::get('/users/salaires', [UserController::class, 'getSalaires']);
+        Route::get('/users/coiffeurs', [UserController::class, 'getCoiffeurs']);
         
         // Salon - Configuration
         Route::put('/salon', [SalonController::class, 'update']);
@@ -103,6 +127,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/produits/{produit}', [ProduitController::class, 'update']);
         Route::delete('/produits/{produit}', [ProduitController::class, 'destroy']);
         Route::post('/produits/{produit}/toggle-active', [ProduitController::class, 'toggleActive']);
+        Route::post('/produits/{id}/photo', [ProduitController::class, 'uploadPhoto']);
+        Route::delete('/produits/{id}/photo', [ProduitController::class, 'deletePhoto']);
         
         // Types prestations - CRUD complet
         Route::post('/types-prestations', [TypePrestationController::class, 'store']);

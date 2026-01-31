@@ -1,5 +1,5 @@
 // src/app/components/Header.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu, RefreshCw, LogOut, User, Settings, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
@@ -17,6 +17,7 @@ function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  
   // Fonction de synchronisation
   const handleSync = async () => {
     setIsSyncing(true);

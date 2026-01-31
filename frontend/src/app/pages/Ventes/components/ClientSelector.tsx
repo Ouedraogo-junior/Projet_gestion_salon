@@ -1,4 +1,4 @@
-// src/app/components/ventes/ClientSelector.tsx
+// src/app/pages/ventes/components/ClientSelector.tsx
 
 import React, { useState, useEffect } from 'react';
 import { Search, User, UserPlus, X, Loader2 } from 'lucide-react';
@@ -33,7 +33,6 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
     telephone: '',
   });
 
-  // Charger les clients quand on tape dans la recherche
   useEffect(() => {
     if (mode === 'existant' && searchTerm.length >= 2) {
       loadClients();
@@ -59,7 +58,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
 
   const handleClientExistantSelect = (client: Client) => {
     onClientSelect({ client_id: client.id });
-    setSearchTerm(''); // Réinitialiser la recherche
+    setSearchTerm('');
   };
 
   const handleNouveauClientSubmit = () => {
@@ -92,24 +91,41 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
       </h3>
 
       {clientSelectionne ? (
-        <div className="flex items-center justify-between p-3 bg-green-50 rounded border border-green-200">
-          <div>
-            <p className="font-medium">
-              {clientSelectionne.prenom} {clientSelectionne.nom}
-            </p>
-            <p className="text-sm text-gray-600">{clientSelectionne.telephone}</p>
-            {clientSelectionne.points_fidelite > 0 && (
-              <p className="text-sm text-green-600">
-                {clientSelectionne.points_fidelite} points
-              </p>
-            )}
+        <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border-2 border-green-300 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md">
+                {clientSelectionne.prenom.charAt(0)}{clientSelectionne.nom.charAt(0)}
+              </div>
+              <div>
+                <p className="font-bold text-green-900 text-lg">
+                  {clientSelectionne.prenom} {clientSelectionne.nom}
+                </p>
+                <p className="text-sm text-green-700">{clientSelectionne.telephone}</p>
+              </div>
+            </div>
+            <button
+              onClick={resetSelection}
+              className="p-2 bg-red-100 hover:bg-red-200 rounded-full text-red-600 transition"
+              title="Changer de client"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            onClick={resetSelection}
-            className="text-red-500 hover:text-red-700"
-          >
-            <X size={20} />
-          </button>
+          {clientSelectionne.points_fidelite > 0 && (
+            <div className="flex items-center gap-2 p-2 bg-white/60 rounded mt-2">
+              <span className="text-sm font-medium text-green-800">
+                💎 Points de fidélité:
+              </span>
+              <span className="text-sm font-bold text-green-600">
+                {clientSelectionne.points_fidelite} points
+              </span>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-2 text-sm text-green-700 bg-white/40 px-3 py-1.5 rounded">
+            <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            <span className="font-medium">Client sélectionné</span>
+          </div>
         </div>
       ) : (
         <>
@@ -117,30 +133,30 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
           <div className="flex gap-2 mb-3">
             <button
               onClick={() => setMode('existant')}
-              className={`flex-1 py-2 px-3 rounded text-sm ${
+              className={`flex-1 py-2 px-3 rounded text-sm font-medium transition ${
                 mode === 'existant'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700'
+                  ? 'bg-blue-500 text-white shadow'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Existant
             </button>
             <button
               onClick={() => setMode('nouveau')}
-              className={`flex-1 py-2 px-3 rounded text-sm ${
+              className={`flex-1 py-2 px-3 rounded text-sm font-medium transition ${
                 mode === 'nouveau'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700'
+                  ? 'bg-blue-500 text-white shadow'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Nouveau
             </button>
             <button
               onClick={() => setMode('anonyme')}
-              className={`flex-1 py-2 px-3 rounded text-sm ${
+              className={`flex-1 py-2 px-3 rounded text-sm font-medium transition ${
                 mode === 'anonyme'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-700'
+                  ? 'bg-blue-500 text-white shadow'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Anonyme
@@ -160,7 +176,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                   placeholder="Rechercher par nom ou téléphone... (min 2 caractères)"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border rounded"
+                  className="w-full pl-10 pr-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
                 />
                 {isLoadingClients && (
                   <Loader2
@@ -170,7 +186,6 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 )}
               </div>
 
-              {/* Résultats de recherche */}
               {searchTerm.length >= 2 && (
                 <div className="max-h-48 overflow-y-auto space-y-1">
                   {isLoadingClients ? (
@@ -186,7 +201,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                       <button
                         key={client.id}
                         onClick={() => handleClientExistantSelect(client)}
-                        className="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors"
+                        className="w-full text-left p-2 rounded hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200"
                       >
                         <p className="font-medium">
                           {client.prenom} {client.nom}
@@ -221,7 +236,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onChange={(e) =>
                   setNouveauClient({ ...nouveauClient, nom: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="text"
@@ -230,7 +245,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onChange={(e) =>
                   setNouveauClient({ ...nouveauClient, prenom: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="tel"
@@ -239,7 +254,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onChange={(e) =>
                   setNouveauClient({ ...nouveauClient, telephone: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="email"
@@ -248,11 +263,11 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onChange={(e) =>
                   setNouveauClient({ ...nouveauClient, email: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={handleNouveauClientSubmit}
-                className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 flex items-center justify-center gap-2"
+                className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 flex items-center justify-center gap-2 font-medium shadow"
               >
                 <UserPlus size={18} />
                 Ajouter ce client
@@ -270,7 +285,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onChange={(e) =>
                   setClientAnonyme({ ...clientAnonyme, nom: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <input
                 type="tel"
@@ -279,11 +294,11 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
                 onChange={(e) =>
                   setClientAnonyme({ ...clientAnonyme, telephone: e.target.value })
                 }
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500"
               />
               <button
                 onClick={handleClientAnonymeSubmit}
-                className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600 font-medium shadow"
               >
                 Continuer sans enregistrement
               </button>

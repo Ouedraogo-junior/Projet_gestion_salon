@@ -117,3 +117,58 @@ export const useUser = (id: number) => {
     error,
   };
 };
+
+
+/**
+ * Hook pour gérer les salaires
+ */
+export const useSalaires = () => {
+  const queryClient = useQueryClient();
+
+  // Récupérer tous les salaires
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['salaires'],
+    queryFn: () => userApi.getSalaires(),
+  });
+
+  // Mettre à jour un salaire
+  const updateSalaireMutation = useMutation({
+    mutationFn: ({ id, salaire_mensuel }: { id: number; salaire_mensuel: number }) =>
+      userApi.updateSalaire(id, salaire_mensuel),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['salaires'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(response.message || 'Salaire mis à jour avec succès');
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Erreur lors de la mise à jour du salaire';
+      toast.error(message);
+    },
+  });
+
+  return {
+    salaires: data?.data,
+    isLoading,
+    error,
+    refetch,
+    updateSalaire: updateSalaireMutation.mutate,
+    isUpdatingSalaire: updateSalaireMutation.isPending,
+  };
+};
+
+/**
+ * Hook pour récupérer les coiffeurs actifs
+ */
+export const useCoiffeurs = () => {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['coiffeurs'],
+    queryFn: () => userApi.getCoiffeursActifs(),
+  });
+
+  return {
+    coiffeurs: data?.data || [],
+    isLoading,
+    error,
+    refetch,
+  };
+};

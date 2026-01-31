@@ -12,7 +12,8 @@ class StoreAttributRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() && $this->user()->role === 'gerant';
+        return $this->user() && $this->user()->role === 'gestionnaire';
+        // return $this->user() && in_array($this->user()->role, ['gestionnaire', 'gerant']);
     }
 
     /**
