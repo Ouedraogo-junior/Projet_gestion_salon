@@ -50,6 +50,8 @@ export function ProduitFormModal({
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attributsCategorie, setAttributsCategorie] = useState<any[]>([]);
+  const [valeursAttributs, setValeursAttributs] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (produit) {
@@ -81,6 +83,42 @@ export function ProduitFormModal({
       resetForm();
     }
   }, [produit]);
+
+
+    useEffect(() => {
+    const loadAttributs = async () => {
+      if (!formData.categorie_id) {
+        setAttributsCategorie([]);
+        return;
+      }
+
+      try {
+        // API à créer ou utiliser celle existante
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/categories/${formData.categorie_id}`
+        );
+        const data = await response.json();
+        
+        if (data.success && data.data.attributs) {
+          setAttributsCategorie(data.data.attributs);
+          
+          // Pré-remplir si édition
+          if (produit?.valeurs_attributs) {
+            const valeurs: Record<number, string> = {};
+            produit.valeurs_attributs.forEach((va: any) => {
+              valeurs[va.attribut_id] = va.valeur;
+            });
+            setValeursAttributs(valeurs);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur chargement attributs:', error);
+      }
+    };
+
+    loadAttributs();
+  }, [formData.categorie_id, produit]);
+
 
   const getImageUrl = (url: string) => {
     if (!url) return null;
@@ -174,7 +212,8 @@ export function ProduitFormModal({
         seuil_alerte: parseInt(formData.seuil_alerte),
         seuil_critique: parseInt(formData.seuil_critique),
         seuil_alerte_utilisation: parseInt(formData.seuil_alerte_utilisation),
-        seuil_critique_utilisation: parseInt(formData.seuil_critique_utilisation)
+        seuil_critique_utilisation: parseInt(formData.seuil_critique_utilisation),
+        attributs: valeursAttributs
       };
 
       let produitId: number;
@@ -314,41 +353,89 @@ export function ProduitFormModal({
         />
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Catégorie <span className="text-red-500">*</span>
-            </label>
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Catégorie <span className="text-red-500">*</span>
+    </label>
+    <select
+      value={formData.categorie_id}
+      onChange={(e) => setFormData({ ...formData, categorie_id: e.target.value })}
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      required
+    >
+      <option value="">Sélectionnez...</option>
+      {categories.map((cat: any) => (
+        <option key={cat.id} value={cat.id}>
+          {cat.nom}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Type de stock <span className="text-red-500">*</span>
+    </label>
+    <select
+      value={formData.type_stock_principal}
+      onChange={(e) => setFormData({ ...formData, type_stock_principal: e.target.value })}
+      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      required
+    >
+      <option value="vente">Vente uniquement</option>
+      <option value="utilisation">Utilisation salon uniquement</option>
+      <option value="mixte">Mixte (vente + salon)</option>
+    </select>
+  </div>
+</div>
+
+{/* Section Attributs - DÉPLACÉE ICI, APRÈS LA GRILLE */}
+{attributsCategorie.length > 0 && (
+  <div className="border-t pt-4 space-y-3">
+    <h3 className="text-sm font-medium text-gray-900">
+      Caractéristiques du produit
+    </h3>
+    
+    <div className="grid grid-cols-2 gap-4">
+      {attributsCategorie.map((attr) => (
+        <div key={attr.id}>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {attr.nom}
+            {attr.pivot?.obligatoire && <span className="text-red-500">*</span>}
+          </label>
+          
+          {attr.type_valeur === 'liste' ? (
             <select
-              value={formData.categorie_id}
-              onChange={(e) => setFormData({ ...formData, categorie_id: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
+              value={valeursAttributs[attr.id] || ''}
+              onChange={(e) => setValeursAttributs({
+                ...valeursAttributs,
+                [attr.id]: e.target.value
+              })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required={attr.pivot?.obligatoire}
             >
               <option value="">Sélectionnez...</option>
-              {categories.map((cat: any) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nom}
-                </option>
+              {attr.valeurs_possibles?.map((val: string, idx: number) => (
+                <option key={idx} value={val}>{val}</option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type de stock <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.type_stock_principal}
-              onChange={(e) => setFormData({ ...formData, type_stock_principal: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="vente">Vente uniquement</option>
-              <option value="utilisation">Utilisation salon uniquement</option>
-              <option value="mixte">Mixte (vente + salon)</option>
-            </select>
-          </div>
+          ) : (
+            <Input
+              type={attr.type_valeur === 'nombre' ? 'number' : 'text'}
+              value={valeursAttributs[attr.id] || ''}
+              onChange={(e) => setValeursAttributs({
+                ...valeursAttributs,
+                [attr.id]: e.target.value
+              })}
+              placeholder={attr.unite ? `Valeur en ${attr.unite}` : ''}
+              required={attr.pivot?.obligatoire}
+            />
+          )}
         </div>
+      ))}
+    </div>
+  </div>
+)}
 
         <div className="grid grid-cols-2 gap-4">
           <div>

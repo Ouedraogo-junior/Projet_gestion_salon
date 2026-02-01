@@ -14,7 +14,10 @@ export function useCategories() {
     setLoading(true);
     setError(null);
     try {
-      const params: any = {};
+      const params: any = {
+        with_attributs: '1',
+        with_produits: '1'
+      };
       
       if (search) {
         params.search = search;
@@ -49,7 +52,9 @@ export function useAttributs() {
     setLoading(true);
     setError(null);
     try {
-      const params: any = {};
+      const params: any = {
+        with_categories: '1'
+      };
       
       if (search) {
         params.search = search;

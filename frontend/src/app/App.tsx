@@ -14,7 +14,7 @@ import Login from './pages/Login';
 // Pages existantes
 import { Dashboard } from './pages/Dashboard';
 import { ProduitsPage } from './pages/Produits/ProduitsPage';
-import { Marketing } from './pages/Marketing';
+//import { Marketing } from './pages/Marketing';
 import { Parametres } from './pages/Parametres';
 
 // Modules importés
@@ -45,6 +45,8 @@ import { Sidebar } from './components/Sidebar';
 import { VuePubliqueMain } from './pages/public/VuePubliqueMain';
 import { ServicesPage } from './pages/public/ServicesPage';
 import { ProduitsPagePublic } from './pages/public/ProduitsPagePublic';
+import { AccueilPage } from './pages/public/AccueilPage';
+import { GaleriePage } from './pages/public/GaleriePage';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -68,16 +70,22 @@ function App() {
           <NotificationProvider>
             <Routes>
               {/* Page d'accueil publique - Vue principale */}
-              {/* Route d'accueil - Vue publique par défaut */}
-              <Route path="/" element={<VuePubliqueMain><Navigate to="/services" replace /></VuePubliqueMain>} />
+              <Route path="/" element={<VuePubliqueMain><AccueilPage /></VuePubliqueMain>} />
               <Route path="/services" element={<VuePubliqueMain><ServicesPage /></VuePubliqueMain>} />
-              <Route path="/publicproduits" element={<VuePubliqueMain><ProduitsPagePublic /></VuePubliqueMain>} />
-              <Route path="/rendez-vous" element={<VuePubliqueMain><VuePubliqueRendezVous /></VuePubliqueMain>} />
+              <Route path="/public-produits" element={<VuePubliqueMain><ProduitsPagePublic /></VuePubliqueMain>} />
+              <Route path="/galerie" element={<VuePubliqueMain><GaleriePage /></VuePubliqueMain>} />
+              <Route path="/public-rendez-vous" element={<VuePubliqueMain><VuePubliqueRendezVous /></VuePubliqueMain>} />
 
+              {/* Avec slug */}
+              <Route path="/public/:slug" element={<VuePubliqueMain><AccueilPage /></VuePubliqueMain>} />
+              <Route path="/public/:slug/services" element={<VuePubliqueMain><ServicesPage /></VuePubliqueMain>} />
+              <Route path="/public/:slug/public-produits" element={<VuePubliqueMain><ProduitsPage /></VuePubliqueMain>} />
+              <Route path="/public/:slug/galerie" element={<VuePubliqueMain><GaleriePage /></VuePubliqueMain>} />
+              <Route path="/public/:slug/public-rendez-vous" element={<VuePubliqueMain><VuePubliqueRendezVous /></VuePubliqueMain>} />
               
               {/* Routes publiques */}
               <Route path="/login" element={<Login />} />
-              <Route path="/prendre-rendez-vous" element={<VuePubliqueRendezVous />} />
+              {/* <Route path="/prendre-rendez-vous" element={<VuePubliqueRendezVous />} /> */}
 
               {/* Routes protégées avec Layout */}
               <Route
@@ -179,7 +187,7 @@ function App() {
                 }
               />
 
-              <Route
+              {/* <Route
                 path="/marketing"
                 element={
                   <PrivateRoute>
@@ -188,7 +196,7 @@ function App() {
                     </MainLayout>
                   </PrivateRoute>
                 }
-              />
+              /> */}
 
               <Route
                 path="/rapports"

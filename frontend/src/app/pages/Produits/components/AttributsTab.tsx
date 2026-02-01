@@ -1,6 +1,6 @@
 // src/app/pages/Produits/components/AttributsTab.tsx
-import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, Tag } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Search, Edit, Trash2, Tag, FolderOpen } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent } from '@/app/components/ui/card';
@@ -14,6 +14,7 @@ export function AttributsTab() {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const handleDelete = async (id: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet attribut ?')) return;
@@ -24,6 +25,18 @@ export function AttributsTab() {
     } catch (error: any) {
       alert('❌ Erreur: ' + error.message);
     }
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const openCreateModal = () => {
@@ -142,80 +155,128 @@ export function AttributsTab() {
                     }
                   }
 
+                  const categoriesCount = attr.categories_count || attr.categories?.length || 0;
+
                   return (
-                    <tr key={attr.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Tag className="w-4 h-4 mr-2 text-gray-400" />
-                          <span className="font-medium text-gray-900">
-                            {attr.nom}
+                    <React.Fragment key={attr.id}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <Tag className="w-4 h-4 mr-2 text-gray-400" />
+                            <span className="font-medium text-gray-900">
+                              {attr.nom}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge variant="info">
+                            {getTypeLabel(attr.type_valeur)}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          {valeursPossibles.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {valeursPossibles.slice(0, 3).map((val: string, idx: number) => (
+                                <span 
+                                  key={idx} 
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                                    attr.type_valeur === 'liste' 
+                                      ? 'bg-blue-100 text-blue-700' 
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {val}
+                                </span>
+                              ))}
+                              {valeursPossibles.length > 3 && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
+                                  +{valeursPossibles.length - 3}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm italic">Aucune valeur</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-gray-600 text-sm">
+                            {attr.unite || '-'}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant="info">
-                          {getTypeLabel(attr.type_valeur)}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4">
-                        {valeursPossibles.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {valeursPossibles.slice(0, 3).map((val: string, idx: number) => (
-                              <span 
-                                key={idx} 
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                  attr.type_valeur === 'liste' 
-                                    ? 'bg-blue-100 text-blue-700' 
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}
-                              >
-                                {val}
-                              </span>
-                            ))}
-                            {valeursPossibles.length > 3 && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700">
-                                +{valeursPossibles.length - 3}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => toggleRow(attr.id)}
+                            className="flex items-center gap-2 hover:text-blue-600 transition"
+                          >
+                            <FolderOpen className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">
+                              {categoriesCount}
+                            </span>
+                            {categoriesCount > 0 && attr.categories && (
+                              <span className="text-xs text-gray-500">
+                                ({expandedRows.has(attr.id) ? '▼' : '▶'})
                               </span>
                             )}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Badge variant={attr.obligatoire ? 'warning' : 'default'}>
+                            {attr.obligatoire ? 'Oui' : 'Non'}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-3">
+                            <button
+                              onClick={() => openEditModal(attr)}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Modifier"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(attr.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm italic">Aucune valeur</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-gray-600 text-sm">
-                          {attr.unite || '-'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900 font-medium">
-                          {attr.nombre_categories || 0}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant={attr.obligatoire ? 'warning' : 'default'}>
-                          {attr.obligatoire ? 'Oui' : 'Non'}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-3">
-                          <button
-                            onClick={() => openEditModal(attr)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Modifier"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(attr.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+
+                      {/* Ligne étendue avec détails des catégories */}
+                      {expandedRows.has(attr.id) && attr.categories && attr.categories.length > 0 && (
+                        <tr className="bg-gray-50">
+                          <td colSpan={7} className="px-6 py-4">
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                <FolderOpen className="w-4 h-4" />
+                                Catégories associées ({attr.categories.length})
+                              </h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {attr.categories.map((cat: any) => (
+                                  <div 
+                                    key={cat.id} 
+                                    className="flex items-center gap-2 text-sm text-gray-600 p-2 bg-white rounded border border-gray-200"
+                                  >
+                                    {cat.couleur && (
+                                      <div 
+                                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                                        style={{ backgroundColor: cat.couleur }}
+                                      />
+                                    )}
+                                    <span className="font-medium">{cat.nom}</span>
+                                    {cat.pivot?.obligatoire && (
+                                      <span className="text-xs text-red-500 font-semibold">*</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

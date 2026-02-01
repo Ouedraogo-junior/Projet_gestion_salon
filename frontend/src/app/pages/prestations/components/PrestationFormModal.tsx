@@ -1,7 +1,7 @@
 // src/app/pages/prestations/components/PrestationFormModal.tsx
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Clock, DollarSign } from 'lucide-react';
+import { X, Save, Clock, DollarSign, Percent } from 'lucide-react';
 import type { TypePrestation, CreateTypePrestationDTO } from '../../../../types/prestation.types';
 
 interface PrestationFormModalProps {
@@ -23,8 +23,12 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
     duree_estimee_minutes: undefined,
     prix_base: 0,
     actif: true,
+    acompte_requis: false,
+    acompte_montant: undefined,
+    acompte_pourcentage: undefined,
   });
 
+  const [typeAcompte, setTypeAcompte] = useState<'montant' | 'pourcentage'>('montant');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,7 +41,17 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
         duree_estimee_minutes: prestation.duree_estimee_minutes || undefined,
         prix_base: prestation.prix_base,
         actif: prestation.actif,
+        acompte_requis: prestation.acompte_requis || false,
+        acompte_montant: prestation.acompte_montant || undefined,
+        acompte_pourcentage: prestation.acompte_pourcentage || undefined,
       });
+      
+      // Déterminer le type d'acompte
+      if (prestation.acompte_montant) {
+        setTypeAcompte('montant');
+      } else if (prestation.acompte_pourcentage) {
+        setTypeAcompte('pourcentage');
+      }
     } else {
       setFormData({
         nom: '',
@@ -45,7 +59,11 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
         duree_estimee_minutes: undefined,
         prix_base: 0,
         actif: true,
+        acompte_requis: false,
+        acompte_montant: undefined,
+        acompte_pourcentage: undefined,
       });
+      setTypeAcompte('montant');
     }
     setErrors({});
   }, [prestation, isOpen]);
@@ -77,6 +95,16 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
     }
   };
 
+  const handleTypeAcompteChange = (type: 'montant' | 'pourcentage') => {
+    setTypeAcompte(type);
+    // Réinitialiser les valeurs d'acompte
+    setFormData((prev) => ({
+      ...prev,
+      acompte_montant: type === 'montant' ? prev.acompte_montant : undefined,
+      acompte_pourcentage: type === 'pourcentage' ? prev.acompte_pourcentage : undefined,
+    }));
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -95,6 +123,15 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
       newErrors.duree_estimee_minutes = 'La durée doit être supérieure à 0';
     }
 
+    if (formData.acompte_requis) {
+      if (typeAcompte === 'montant' && (!formData.acompte_montant || formData.acompte_montant <= 0)) {
+        newErrors.acompte_montant = 'Le montant de l\'acompte doit être supérieur à 0';
+      }
+      if (typeAcompte === 'pourcentage' && (!formData.acompte_pourcentage || formData.acompte_pourcentage <= 0 || formData.acompte_pourcentage > 100)) {
+        newErrors.acompte_pourcentage = 'Le pourcentage doit être entre 1 et 100';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -106,7 +143,14 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // Préparer les données selon le type d'acompte
+      const submitData = {
+        ...formData,
+        acompte_montant: typeAcompte === 'montant' ? formData.acompte_montant : undefined,
+        acompte_pourcentage: typeAcompte === 'pourcentage' ? formData.acompte_pourcentage : undefined,
+      };
+      
+      await onSubmit(submitData);
       onClose();
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -227,6 +271,118 @@ export const PrestationFormModal: React.FC<PrestationFormModalProps> = ({
                 <p className="mt-1 text-sm text-red-600">{errors.duree_estimee_minutes}</p>
               )}
             </div>
+          </div>
+
+          {/* Section Acompte */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-4">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="acompte_requis"
+                checked={formData.acompte_requis}
+                onChange={handleChange}
+                className="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500"
+              />
+              <label className="ml-3 text-sm font-semibold text-gray-700">
+                Acompte requis pour cette prestation
+              </label>
+            </div>
+
+            {formData.acompte_requis && (
+              <>
+                {/* Type d'acompte */}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => handleTypeAcompteChange('montant')}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+                      typeAcompte === 'montant'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300'
+                    }`}
+                  >
+                    Montant fixe
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTypeAcompteChange('pourcentage')}
+                    className={`flex-1 px-4 py-2 rounded-lg font-medium transition ${
+                      typeAcompte === 'pourcentage'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300'
+                    }`}
+                  >
+                    Pourcentage
+                  </button>
+                </div>
+
+                {/* Montant fixe */}
+                {typeAcompte === 'montant' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Montant de l'acompte (FCFA)
+                    </label>
+                    <div className="relative">
+                      <DollarSign
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        size={20}
+                      />
+                      <input
+                        type="number"
+                        name="acompte_montant"
+                        value={formData.acompte_montant || ''}
+                        onChange={handleChange}
+                        min="0"
+                        step="100"
+                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition ${
+                          errors.acompte_montant ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Ex: 10000"
+                      />
+                    </div>
+                    {errors.acompte_montant && (
+                      <p className="mt-1 text-sm text-red-600">{errors.acompte_montant}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Pourcentage */}
+                {typeAcompte === 'pourcentage' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pourcentage de l'acompte (%)
+                    </label>
+                    <div className="relative">
+                      <Percent
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        size={20}
+                      />
+                      <input
+                        type="number"
+                        name="acompte_pourcentage"
+                        value={formData.acompte_pourcentage || ''}
+                        onChange={handleChange}
+                        min="1"
+                        max="100"
+                        step="1"
+                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition ${
+                          errors.acompte_pourcentage ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                        placeholder="Ex: 20"
+                      />
+                    </div>
+                    {errors.acompte_pourcentage && (
+                      <p className="mt-1 text-sm text-red-600">{errors.acompte_pourcentage}</p>
+                    )}
+                    {formData.acompte_pourcentage && formData.prix_base > 0 && (
+                      <p className="mt-2 text-sm text-gray-600">
+                        Acompte calculé: {((formData.prix_base * formData.acompte_pourcentage) / 100).toFixed(0)} FCFA
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Actif */}

@@ -313,47 +313,50 @@ export const FormPriseRendezVous: React.FC = () => {
               Choisissez votre prestation <span className="text-red-500">*</span>
             </label>
 
-            <div className="grid grid-cols-1 gap-3">
-              {prestations.map((prestation) => (
-                <div
-                  key={prestation.id}
-                  onClick={() => setFormData({ ...formData, type_prestation_id: prestation.id })}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                    formData.type_prestation_id === prestation.id
-                      ? 'border-orange-600 bg-orange-50'
-                      : 'border-gray-200 hover:border-orange-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{prestation.nom}</h4>
-                      {prestation.description && (
-                        <p className="text-sm text-gray-600 mt-1">{prestation.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {prestation.duree_estimee_minutes} min
-                        </span>
-                        <span className="font-semibold text-orange-600">
-                          {prestation.prix_base.toLocaleString()} FCFA
-                        </span>
+            {/* Liste scrollable avec hauteur fixe */}
+            <div className="max-h-[400px] overflow-y-auto border-2 border-gray-200 rounded-lg">
+              <div className="grid grid-cols-1 gap-3 p-3">
+                {prestations.map((prestation) => (
+                  <div
+                    key={prestation.id}
+                    onClick={() => setFormData({ ...formData, type_prestation_id: prestation.id })}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition ${
+                      formData.type_prestation_id === prestation.id
+                        ? 'border-orange-600 bg-orange-50'
+                        : 'border-gray-200 hover:border-orange-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{prestation.nom}</h4>
+                        {prestation.description && (
+                          <p className="text-sm text-gray-600 mt-1">{prestation.description}</p>
+                        )}
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {prestation.duree_estimee_minutes} min
+                          </span>
+                          <span className="font-semibold text-orange-600">
+                            {prestation.prix_base.toLocaleString()} FCFA
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          formData.type_prestation_id === prestation.id
+                            ? 'border-orange-600 bg-orange-600'
+                            : 'border-gray-300'
+                        }`}
+                      >
+                        {formData.type_prestation_id === prestation.id && (
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        )}
                       </div>
                     </div>
-                    <div
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        formData.type_prestation_id === prestation.id
-                          ? 'border-orange-600 bg-orange-600'
-                          : 'border-gray-300'
-                      }`}
-                    >
-                      {formData.type_prestation_id === prestation.id && (
-                        <CheckCircle className="w-4 h-4 text-white" />
-                      )}
-                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             <div className="flex gap-3">

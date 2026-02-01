@@ -20,11 +20,13 @@ class AuthController extends Controller
     {
         try {
             $user = User::create([
-                'name' => $request->name,
+                'nom' => $request->nom,
+                'prenom' => $request->prenom,
+                'telephone' => $request->telephone,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'role' => $request->role ?? 'coiffeur', // Par défaut coiffeur
-                'telephone' => $request->telephone,
+                'role' => $request->role ?? 'coiffeur',
+                'specialite' => $request->specialite,
             ]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
@@ -49,22 +51,33 @@ class AuthController extends Controller
     }
 
     /**
-     * Connexion utilisateur
+     * Connexion utilisateur (par téléphone)
      */
     public function login(LoginRequest $request)
     {
         try {
-            $user = User::where('email', $request->email)->first();
+            // Rechercher l'utilisateur par téléphone
+            $user = User::where('telephone', $request->telephone)->first();
 
+            // Vérifier si l'utilisateur existe et si le mot de passe est correct
             if (!$user || !Hash::check($request->password, $user->password)) {
                 throw ValidationException::withMessages([
-                    'email' => ['Les identifiants fournis sont incorrects.'],
+                    'telephone' => ['Numéro de téléphone ou mot de passe incorrect.'],
                 ]);
+            }
+
+            // Vérifier si le compte est actif
+            if (!$user->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Votre compte est désactivé. Veuillez contacter l\'administrateur.'
+                ], 403);
             }
 
             // Supprimer les anciens tokens (optionnel)
             $user->tokens()->delete();
 
+            // Créer un nouveau token
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([

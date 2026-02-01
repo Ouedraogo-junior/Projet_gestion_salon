@@ -24,22 +24,21 @@ class AttributResource extends JsonResource
             'unite' => $this->unite,
             'obligatoire' => $this->obligatoire,
             'ordre' => $this->ordre,
-            
-            // Informations pivot si chargé depuis une catégorie
-            'pivot' => $this->when(
-                $this->relationLoaded('pivot') && $this->pivot,
-                [
+
+            // CORRECTION : Informations pivot
+            'pivot' => $this->whenPivotLoaded('categorie_attribut', function () {
+                return [
                     'obligatoire' => $this->pivot->obligatoire ?? false,
                     'ordre' => $this->pivot->ordre ?? 0,
-                ]
-            ),
-            
+                ];
+            }),
+
             // Relations
             'categories' => CategorieResource::collection($this->whenLoaded('categories')),
-            
+
             // Compteurs
             'nombre_categories' => $this->whenCounted('categories'),
-            
+
             // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),

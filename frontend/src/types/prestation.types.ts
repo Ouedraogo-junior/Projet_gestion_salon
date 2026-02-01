@@ -1,5 +1,4 @@
 // src/types/prestation.types.ts
-
 export interface TypePrestation {
   id: number;
   nom: string;
@@ -8,6 +7,9 @@ export interface TypePrestation {
   prix_base: number;
   actif: boolean;
   ordre: number;
+  acompte_requis: boolean;
+  acompte_montant: number | null;
+  acompte_pourcentage: number | null;
   created_at: string;
   updated_at: string;
   duree_formattee?: string;
@@ -21,6 +23,9 @@ export interface CreateTypePrestationDTO {
   prix_base: number;
   actif?: boolean;
   ordre?: number;
+  acompte_requis?: boolean;
+  acompte_montant?: number;
+  acompte_pourcentage?: number;
 }
 
 export interface UpdateTypePrestationDTO {
@@ -30,6 +35,9 @@ export interface UpdateTypePrestationDTO {
   prix_base: number;
   actif?: boolean;
   ordre?: number;
+  acompte_requis?: boolean;
+  acompte_montant?: number;
+  acompte_pourcentage?: number;
 }
 
 export interface ReorderItemDTO {

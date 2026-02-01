@@ -1,6 +1,6 @@
 // src/app/pages/RendezVous/components/ModalDetailsRendezVous.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Phone, Mail, Calendar, Clock, Scissors, DollarSign, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import type { RendezVous } from '../../../../types/rendezVous.types';
 import { useRendezVous } from '../../../../hooks/useRendezVous';
@@ -13,11 +13,15 @@ interface Props {
 }
 
 export const ModalDetailsRendezVous: React.FC<Props> = ({ rdv, isOpen, onClose, onSuccess }) => {
-  const { confirmer, annuler, terminer, delete: deleteRdv } = useRendezVous();
+  const { confirmer, annuler, terminer, delete: deleteRdv, marquerAcomptePaye } = useRendezVous();
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showAnnuler, setShowAnnuler] = useState(false);
   const [motifAnnulation, setMotifAnnulation] = useState('');
+  const [acomptePaye, setAcomptePaye] = useState(rdv.acompte_paye);
 
+  useEffect(() => {
+    setAcomptePaye(rdv.acompte_paye);
+  }, [rdv.acompte_paye]);
 
     // LOG POUR DEBUG
   // console.log('RDV reçu dans modal:', rdv);
@@ -91,6 +95,15 @@ export const ModalDetailsRendezVous: React.FC<Props> = ({ rdv, isOpen, onClose, 
       onSuccess: () => {
         setShowConfirmDelete(false);
         onSuccess();
+      },
+    });
+  };
+
+  const handleMarquerAcomptePaye = () => {
+    setAcomptePaye(true);
+    marquerAcomptePaye(rdv.id, {
+      onSuccess: () => {
+        //onSuccess();
       },
     });
   };
@@ -204,18 +217,25 @@ export const ModalDetailsRendezVous: React.FC<Props> = ({ rdv, isOpen, onClose, 
           {rdv.acompte_demande && (
             <div>
               <h3 className="text-sm font-medium text-gray-500 uppercase mb-3">Acompte</h3>
-              <div className={`rounded-lg p-4 ${rdv.acompte_paye ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+              <div className={`rounded-lg p-4 ${acomptePaye ? 'bg-green-50 border border-green-200' : 'bg-yellow-50 border border-yellow-200'}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium text-gray-900">
                       {rdv.acompte_montant ? `${Number(rdv.acompte_montant).toFixed(0)} FCFA` : '-'}
                     </div>
                     <div className="text-sm text-gray-600">
-                      {rdv.acompte_paye ? 'Payé' : 'En attente de paiement'}
+                      {acomptePaye ? 'Payé' : 'En attente de paiement'}
                     </div>
                   </div>
-                  {rdv.acompte_paye && (
+                  {acomptePaye ? (
                     <CheckCircle className="w-6 h-6 text-green-600" />
+                  ) : (
+                    <button
+                      onClick={handleMarquerAcomptePaye}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                    >
+                      Marquer comme payé
+                    </button>
                   )}
                 </div>
               </div>

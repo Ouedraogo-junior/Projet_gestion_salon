@@ -37,7 +37,7 @@ class NotificationService
      */
     public function notifierStockCritique(Produit $produit): void
     {
-        $gerants = User::where('role', 'gerant')->get();
+        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
             // Vérifier si une notification similaire n'existe pas déjà aujourd'hui
@@ -70,7 +70,7 @@ class NotificationService
      */
     public function notifierStockAlerte(Produit $produit): void
     {
-        $gerants = User::where('role', 'gerant')->get();
+        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
             // Vérifier si une notification similaire n'existe pas déjà aujourd'hui
@@ -103,7 +103,7 @@ class NotificationService
      */
     public function notifierNouveauRendezVous(RendezVous $rdv): void
     {
-        $gerants = User::where('role', 'gerant')->get();
+        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
             $this->creer(
@@ -127,7 +127,7 @@ class NotificationService
      */
     public function notifierRappelRdvVeille(RendezVous $rdv): void
     {
-        $gerants = User::where('role', 'gerant')->get();
+        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
             $this->creer(
@@ -151,7 +151,7 @@ class NotificationService
      */
     public function notifierRappelRdvJour(RendezVous $rdv): void
     {
-        $gerants = User::where('role', 'gerant')->get();
+        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
             $this->creer(

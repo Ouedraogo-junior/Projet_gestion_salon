@@ -145,7 +145,7 @@ class ProduitController extends Controller
     public function show(Produit $produit): JsonResponse
     {
         $produit->load([
-            'categorie',
+            'categorie.attributs',
             'valeursAttributs.attribut',
             'mouvementsStock' => function($query) {
                 $query->latest()->limit(10);

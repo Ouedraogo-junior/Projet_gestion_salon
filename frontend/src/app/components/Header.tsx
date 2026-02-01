@@ -54,11 +54,11 @@ function Header() {
   // Formater le rôle en français
   const getRoleLabel = () => {
     if (!user?.role) return 'Utilisateur';
+    //console.log('User role:', user?.role);
     const roles: Record<string, string> = {
-      'gerant': 'Gestionnaire',
+      'gerant': 'Gerant',
       'coiffeur': 'Coiffeur',
-      'receptionniste': 'Réceptionniste',
-      'admin': 'Administrateur'
+      'gestionnaire': 'Gestionnaire',
     };
     return roles[user.role] || user.role;
   };

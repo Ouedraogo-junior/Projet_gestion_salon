@@ -38,4 +38,17 @@ export const publicApiService = {
     const response = await publicApi.get(url);
     return response.data;
   },
+
+  // Détails d'un produit avec attributs
+  getProduitDetails: async (id: number) => {
+    const response = await publicApi.get(`/public/produits/${id}`);
+    return response.data;
+  },
+
+  // Photos publiques
+  getPhotosPubliques: async (slug?: string) => {
+    const url = slug ? `/public/${slug}/photos` : '/public/photos';
+    const response = await publicApi.get(url);
+    return response.data;
+  },
 };

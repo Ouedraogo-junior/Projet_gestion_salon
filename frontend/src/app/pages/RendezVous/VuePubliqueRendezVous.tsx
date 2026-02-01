@@ -21,7 +21,7 @@ export const VuePubliqueRendezVous: React.FC = () => {
     if (!horaires) {
       return {
         semaine: '8h - 18h',
-        samedi: '8h - 18h',
+        //samedi: '8h - 18h',
         dimanche: 'Fermé',
         pause: '12h30 - 14h00'
       };
@@ -30,7 +30,7 @@ export const VuePubliqueRendezVous: React.FC = () => {
     // Horaires par défaut si parsing échoue
     return {
       semaine: horaires,
-      samedi: horaires,
+      //samedi: horaires,
       dimanche: 'Fermé',
       pause: '12h30 - 14h00'
     };
@@ -40,48 +40,6 @@ export const VuePubliqueRendezVous: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-yellow-50">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-orange-600 to-yellow-500 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {salon?.logo_url ? (
-                <img 
-                  src={getLogoUrl(salon.logo_url) || ''} 
-                  alt="Logo" 
-                  className="w-16 h-16 object-cover rounded-full border-2 border-white shadow-lg"
-                />
-              ) : (
-                <span className="text-5xl">🌀</span>
-              )}
-              <div>
-                <h1 className="text-3xl font-bold">
-                  {isLoading ? 'Chargement...' : salon?.nom || 'Fasodreadlocks'}
-                </h1>
-                <p className="text-orange-100 text-sm">
-                  {isLoading ? '' : salon?.adresse || 'Salon Afro Style - Ouagadougou'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowMesRendezVous(true)}
-                className="bg-white text-orange-600 px-6 py-2 rounded-lg font-semibold hover:bg-orange-50 transition"
-              >
-                Mes Rendez-vous
-              </button>
-              
-              <a
-                href="/login"
-                className="bg-orange-700 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-800 transition"
-              >
-                Espace Gérant
-              </a>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -91,8 +49,24 @@ export const VuePubliqueRendezVous: React.FC = () => {
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Choisissez votre prestation, sélectionnez un créneau et confirmez en quelques clics.
-            Recevez une confirmation par SMS.
           </p>
+        </div>
+
+        {/* Bouton Mes Rendez-vous centré */}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={() => setShowMesRendezVous(true)}
+            className="bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold border-2 border-orange-600 hover:bg-orange-50 transition shadow-md"
+          >
+            Mes Rendez-vous
+          </button>
+
+           {/* <a
+                href="/login"
+                className="bg-orange-700 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-800 transition"
+              >
+                Espace Gérant
+              </a> */}
         </div>
 
         {/* Grille : Formulaire + Infos */}
@@ -115,10 +89,10 @@ export const VuePubliqueRendezVous: React.FC = () => {
                   <span>Lundi - Vendredi</span>
                   <span className="font-medium">{horaires.semaine}</span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span>Samedi</span>
                   <span className="font-medium">{horaires.samedi}</span>
-                </div>
+                </div> */}
                 <div className="flex justify-between">
                   <span>Dimanche</span>
                   <span className="font-medium text-red-600">{horaires.dimanche}</span>
@@ -182,19 +156,6 @@ export const VuePubliqueRendezVous: React.FC = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <p className="text-gray-400">
-              © 2026 {salon?.nom || 'Fasodreadlocks'} - Tous droits réservés
-            </p>
-            <p className="text-gray-500 text-sm mt-2">
-              Fait par Junior OUEDRAOGO ✨
-            </p>
-          </div>
-        </div>
-      </footer>
 
       {/* Modal Mes Rendez-vous */}
       <MesRendezVousModal

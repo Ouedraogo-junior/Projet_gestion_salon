@@ -67,12 +67,9 @@ class TypePrestationController extends Controller
             'prix_base' => 'required|numeric|min:0',
             'actif' => 'boolean',
             'ordre' => 'nullable|integer|min:0',
-        ], [
-            'nom.required' => 'Le nom de la prestation est obligatoire',
-            'nom.unique' => 'Cette prestation existe déjà',
-            'prix_base.required' => 'Le prix de base est obligatoire',
-            'prix_base.min' => 'Le prix ne peut pas être négatif',
-            'duree_estimee_minutes.max' => 'La durée ne peut pas dépasser 24 heures',
+            'acompte_requis' => 'boolean',
+            'acompte_montant' => 'nullable|numeric|min:0',
+            'acompte_pourcentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -84,7 +81,6 @@ class TypePrestationController extends Controller
         }
 
         try {
-            // Calculer l'ordre automatiquement si non fourni
             $ordre = $request->ordre ?? TypePrestation::max('ordre') + 1;
 
             $prestation = TypePrestation::create([
@@ -94,6 +90,9 @@ class TypePrestationController extends Controller
                 'prix_base' => $request->prix_base,
                 'actif' => $request->actif ?? true,
                 'ordre' => $ordre,
+                'acompte_requis' => $request->acompte_requis ?? false,
+                'acompte_montant' => $request->acompte_montant,
+                'acompte_pourcentage' => $request->acompte_pourcentage,
             ]);
 
             return response()->json([
@@ -145,12 +144,9 @@ class TypePrestationController extends Controller
             'prix_base' => 'required|numeric|min:0',
             'actif' => 'boolean',
             'ordre' => 'nullable|integer|min:0',
-        ], [
-            'nom.required' => 'Le nom de la prestation est obligatoire',
-            'nom.unique' => 'Cette prestation existe déjà',
-            'prix_base.required' => 'Le prix de base est obligatoire',
-            'prix_base.min' => 'Le prix ne peut pas être négatif',
-            'duree_estimee_minutes.max' => 'La durée ne peut pas dépasser 24 heures',
+            'acompte_requis' => 'boolean',
+            'acompte_montant' => 'nullable|numeric|min:0',
+            'acompte_pourcentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -171,6 +167,9 @@ class TypePrestationController extends Controller
                 'prix_base' => $request->prix_base,
                 'actif' => $request->actif ?? $prestation->actif,
                 'ordre' => $request->ordre ?? $prestation->ordre,
+                'acompte_requis' => $request->acompte_requis ?? $prestation->acompte_requis,
+                'acompte_montant' => $request->acompte_montant,
+                'acompte_pourcentage' => $request->acompte_pourcentage,
             ]);
 
             return response()->json([

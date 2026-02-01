@@ -51,6 +51,8 @@ Route::prefix('public')->name('public.')->group(function () {
     Route::get('/prestations', [PublicController::class, 'prestations'])->name('prestations.defaut');
     Route::get('/produits', [PublicController::class, 'produits'])->name('produits.defaut');
     Route::get('/info', [PublicController::class, 'salonInfo'])->name('info.defaut');
+    Route::get('/photos', [PublicController::class, 'photosPubliques']);
+    Route::get('/produits/{id}', [PublicController::class, 'produitDetails']);
 });
 
 // Routes publiques avec slug spécifique
@@ -58,6 +60,8 @@ Route::prefix('public/{slug}')->name('public.slug.')->group(function () {
     Route::get('/prestations', [PublicController::class, 'prestations'])->name('prestations');
     Route::get('/produits', [PublicController::class, 'produits'])->name('produits');
     Route::get('/info', [PublicController::class, 'salonInfo'])->name('info');
+    Route::get('/photos', [PublicController::class, 'photosPubliques']);
+    Route::get('/produits/{id}', [PublicController::class, 'produitDetails']);
 });
 
 
@@ -219,6 +223,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/rendez-vous/{id}/confirm', [RendezVousController::class, 'confirm']);
         Route::post('/rendez-vous/{id}/cancel', [RendezVousController::class, 'cancel']);
         Route::post('/rendez-vous/{id}/complete', [RendezVousController::class, 'complete']);
+        Route::post('/rendez-vous/{id}/marquer-acompte-paye', [RendezVousController::class, 'marquerAcomptePaye']);
         
         // Pointages
         Route::get('/pointages', [PointageController::class, 'index']);

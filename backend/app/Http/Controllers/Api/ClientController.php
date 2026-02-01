@@ -230,70 +230,70 @@ public function index(Request $request)
      * Upload photo client
      */
    public function uploadPhoto(Request $request, $id)
-{
-    $validator = Validator::make($request->all(), [
-        'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
-        'type_photo' => 'required|in:avant,apres',
-        'description' => 'nullable|string|max:255',
-        'vente_id' => 'nullable|exists:ventes,id',
-        'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
-        'is_public' => 'nullable|boolean',
-    ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
+            'type_photo' => 'required|in:avant,apres',
+            'description' => 'nullable|string|max:255',
+            'vente_id' => 'nullable|exists:ventes,id',
+            'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
+            'is_public' => 'nullable|boolean',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur de validation',
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    try {
-        $client = Client::findOrFail($id);
-
-        if ($request->hasFile('photo')) {
-            $file = $request->file('photo');
-            
-            // Nom de fichier sécurisé (sans espaces ni caractères spéciaux)
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
-            $filename = time() . '_' . $client->id . '_' . $safeName . '.' . $extension;
-            
-            // Stocker dans public/storage/photos/clients
-            $path = $file->storeAs('photos/clients', $filename, 'public');
-
-            $photo = PhotoClient::create([
-                'client_id' => $client->id,
-                'photo_url' => $path, // Sera "photos/clients/xxx.jpg"
-                'type_photo' => $request->type_photo,
-                'description' => $request->description,
-                'vente_id' => $request->vente_id,
-                'rendez_vous_id' => $request->rendez_vous_id,
-                'is_public' => $request->is_public ?? false,
-                'date_prise' => now()->toDateString(),
-            ]);
-
+        if ($validator->fails()) {
             return response()->json([
-                'success' => true,
-                'message' => 'Photo uploadée avec succès',
-                'data' => $photo
-            ], 201);
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Aucun fichier fourni'
-        ], 400);
+        try {
+            $client = Client::findOrFail($id);
 
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur lors de l\'upload de la photo',
-            'error' => $e->getMessage()
-        ], 500);
+            if ($request->hasFile('photo')) {
+                $file = $request->file('photo');
+                
+                // Nom de fichier sécurisé (sans espaces ni caractères spéciaux)
+                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $file->getClientOriginalExtension();
+                $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
+                $filename = time() . '_' . $client->id . '_' . $safeName . '.' . $extension;
+                
+                // Stocker dans public/storage/photos/clients
+                $path = $file->storeAs('photos/clients', $filename, 'public');
+
+                $photo = PhotoClient::create([
+                    'client_id' => $client->id,
+                    'photo_url' => $path, // Sera "photos/clients/xxx.jpg"
+                    'type_photo' => $request->type_photo,
+                    'description' => $request->description,
+                    'vente_id' => $request->vente_id,
+                    'rendez_vous_id' => $request->rendez_vous_id,
+                    'is_public' => $request->is_public ?? false,
+                    'date_prise' => now()->toDateString(),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Photo uploadée avec succès',
+                    'data' => $photo
+                ], 201);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun fichier fourni'
+            ], 400);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload de la photo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
     /**
      * Supprimer une photo

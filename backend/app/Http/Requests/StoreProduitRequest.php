@@ -52,8 +52,7 @@ class StoreProduitRequest extends FormRequest
 
             // Attributs dynamiques
             'attributs' => ['nullable', 'array'],
-            'attributs.*.attribut_id' => ['required', 'exists:attributs,id'],
-            'attributs.*.valeur' => ['required', 'string', 'max:255'],
+            'attributs.*' => ['nullable', 'string', 'max:255'],
 
             // Photo
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
@@ -92,9 +91,7 @@ class StoreProduitRequest extends FormRequest
             'photo.mimes' => 'L\'image doit être au format : jpeg, png, jpg ou webp.',
             'photo.max' => 'L\'image ne doit pas dépasser 2 Mo.',
             
-            'attributs.*.attribut_id.required' => 'L\'attribut est obligatoire.',
-            'attributs.*.attribut_id.exists' => 'Cet attribut n\'existe pas.',
-            'attributs.*.valeur.required' => 'La valeur de l\'attribut est obligatoire.',
+            'attributs.*.max' => 'La valeur de l\'attribut ne doit pas dépasser 255 caractères.',
         ];
     }
 }

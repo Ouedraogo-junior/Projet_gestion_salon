@@ -19,6 +19,9 @@ class TypePrestation extends Model
         'actif',
         'ordre',
         'salon_id',
+        'acompte_requis',
+        'acompte_montant',
+        'acompte_pourcentage',
     ];
 
     protected $casts = [
@@ -26,6 +29,9 @@ class TypePrestation extends Model
         'prix_base' => 'decimal:2',
         'actif' => 'boolean',
         'ordre' => 'integer',
+        'acompte_requis' => 'boolean',
+        'acompte_montant' => 'decimal:2',
+        'acompte_pourcentage' => 'decimal:2',
     ];
 
     /**

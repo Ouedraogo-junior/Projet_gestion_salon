@@ -186,5 +186,10 @@ export const rendezVousApi = {
     return response.data;
   },
 
+  marquerAcomptePaye: async (id: number) => {
+    const response = await apiAuth.post(`/rendez-vous/${id}/marquer-acompte-paye`);
+    return response.data;
+  },
+
 
 };

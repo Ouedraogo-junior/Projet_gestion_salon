@@ -109,7 +109,21 @@ class RendezVousController extends Controller
             // 2. Récupérer les infos de la prestation
             $prestation = TypePrestation::findOrFail($request->type_prestation_id);
 
-            // 3. Créer le rendez-vous
+            // 3. Calculer l'acompte automatiquement depuis la prestation
+            $acompteDemande = $prestation->acompte_requis;
+            $acompteMontant = null;
+
+            if ($acompteDemande) {
+                if ($prestation->acompte_montant) {
+                    // Montant fixe défini
+                    $acompteMontant = $prestation->acompte_montant;
+                } elseif ($prestation->acompte_pourcentage) {
+                    // Pourcentage du prix
+                    $acompteMontant = $prestation->prix_base * ($prestation->acompte_pourcentage / 100);
+                }
+            }
+
+            // 4. Créer le rendez-vous
             $rendezVous = RendezVous::create([
                 'client_id' => $client->id,
                 'type_prestation_id' => $request->type_prestation_id,
@@ -118,7 +132,8 @@ class RendezVousController extends Controller
                 'prix_estime' => $prestation->prix_base,
                 'statut' => 'en_attente',
                 'notes' => $request->notes,
-                'acompte_demande' => false,
+                'acompte_demande' => $acompteDemande,
+                'acompte_montant' => $acompteMontant,
                 'acompte_paye' => false,
             ]);
 
@@ -146,6 +161,7 @@ class RendezVousController extends Controller
     /**
      * Créer un rendez-vous (GÉRANT - avec auth)
      */
+    
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -157,9 +173,6 @@ class RendezVousController extends Controller
             'prix_estime' => 'nullable|numeric|min:0',
             'statut' => 'nullable|in:en_attente,confirme,en_cours,termine,annule',
             'notes' => 'nullable|string',
-            'acompte_demande' => 'boolean',
-            'acompte_montant' => 'nullable|numeric|min:0',
-            'acompte_paye' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -188,15 +201,40 @@ class RendezVousController extends Controller
                 }
             }
 
+            // Récupérer la prestation pour calculer l'acompte
+            $prestation = TypePrestation::findOrFail($request->type_prestation_id);
+
+            // Calculer l'acompte automatiquement
+            $acompteDemande = $prestation->acompte_requis;
+            $acompteMontant = null;
+
+            if ($acompteDemande) {
+                if ($prestation->acompte_montant) {
+                    // Montant fixe défini
+                    $acompteMontant = $prestation->acompte_montant;
+                } elseif ($prestation->acompte_pourcentage) {
+                    // Pourcentage du prix
+                    $prixBase = $request->prix_estime ?? $prestation->prix_base;
+                    $acompteMontant = $prixBase * ($prestation->acompte_pourcentage / 100);
+                }
+            }
+
             // Créer le rendez-vous
-            $rendezVous = RendezVous::create($request->all());
+            $rendezVous = RendezVous::create([
+                'client_id' => $request->client_id,
+                'coiffeur_id' => $request->coiffeur_id,
+                'type_prestation_id' => $request->type_prestation_id,
+                'date_heure' => $request->date_heure,
+                'duree_minutes' => $request->duree_minutes,
+                'prix_estime' => $request->prix_estime ?? $prestation->prix_base,
+                'statut' => $request->statut ?? 'en_attente',
+                'notes' => $request->notes,
+                'acompte_demande' => $acompteDemande,
+                'acompte_montant' => $acompteMontant,
+                'acompte_paye' => false,
+            ]);
 
             DB::commit();
-
-            // TODO: Envoyer SMS si confirmé
-            // if ($rendezVous->statut === 'confirme') {
-            //     $this->envoyerSMSConfirmation($rendezVous);
-            // }
 
             return response()->json([
                 'success' => true,
@@ -703,21 +741,33 @@ class RendezVousController extends Controller
         ]);
     }
 
-    // TODO: Méthodes pour les SMS (à implémenter plus tard)
-    /*
-    private function envoyerSMSConfirmation($rendezVous)
+   /**
+     * Marquer l'acompte comme payé
+     */
+    public function marquerAcomptePaye($id)
     {
-        // Intégration API SMS
-    }
+        $rendezVous = RendezVous::findOrFail($id);
 
-    private function envoyerSMSRappel($rendezVous)
-    {
-        // Intégration API SMS
-    }
+        if (!$rendezVous->acompte_demande) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun acompte n\'a été demandé pour ce rendez-vous'
+            ], 400);
+        }
 
-    private function envoyerSMSAnnulation($rendezVous)
-    {
-        // Intégration API SMS
+        if ($rendezVous->acompte_paye) {
+            return response()->json([
+                'success' => false,
+                'message' => 'L\'acompte a déjà été payé'
+            ], 400);
+        }
+
+        $rendezVous->update(['acompte_paye' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Acompte marqué comme payé',
+            'data' => $rendezVous->fresh(['client', 'coiffeur', 'typePrestation'])
+        ]);
     }
-    */
 }

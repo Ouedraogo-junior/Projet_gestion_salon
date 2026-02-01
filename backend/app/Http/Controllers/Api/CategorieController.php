@@ -70,10 +70,15 @@ class CategorieController extends Controller
     /**
      * Affiche une catégorie spécifique
      */
-    public function show(Categorie $categorie): JsonResponse
+   public function show(Categorie $categorie): JsonResponse
     {
         $categorie->loadCount(['produits', 'attributs'])
-                  ->load(['attributs', 'produits']);
+                ->load([
+                    'attributs' => function($query) {
+                        $query->orderBy('categorie_attribut.ordre', 'asc');
+                    },
+                    'produits'
+                ]);
 
         return response()->json([
             'success' => true,

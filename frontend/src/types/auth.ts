@@ -16,8 +16,8 @@ export interface User {
 }
 
 export interface LoginCredentials {
-  email: string;
-  code_pin: string;
+  telephone: string;
+  password: string;
 }
 
 export interface LoginResponse {

@@ -1,6 +1,6 @@
 // src/app/pages/Produits/components/CategoriesTab.tsx
 import { useState } from 'react';
-import { Plus, Search, Edit, Trash2, CheckCircle, XCircle, Tag } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, CheckCircle, XCircle, Tag, Package } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent } from '@/app/components/ui/card';
@@ -14,6 +14,7 @@ export function CategoriesTab() {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [search, setSearch] = useState('');
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const handleDelete = async (id: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) return;
@@ -33,6 +34,18 @@ export function CategoriesTab() {
     } catch (error: any) {
       alert('❌ Erreur: ' + error.message);
     }
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
   const openCreateModal = () => {
@@ -128,73 +141,146 @@ export function CategoriesTab() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {categories.map((cat: any) => (
-                  <tr key={cat.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {cat.nom}
+                  <>
+                    <tr key={cat.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {cat.nom}
+                          </div>
+                          {cat.couleur && (
+                            <div 
+                              className="w-16 h-2 rounded mt-1" 
+                              style={{ backgroundColor: cat.couleur }}
+                            />
+                          )}
                         </div>
-                        {cat.couleur && (
-                          <div 
-                            className="w-16 h-2 rounded mt-1" 
-                            style={{ backgroundColor: cat.couleur }}
-                          />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-gray-600 text-sm">
-                        {cat.description || '-'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Tag className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {cat.nombre_attributs || 0}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-gray-600 text-sm">
+                          {cat.description || '-'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">
-                        {cat.nombre_produits || 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant={cat.is_active ? 'success' : 'danger'}>
-                        {cat.is_active ? 'Actif' : 'Inactif'}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-3">
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => openEditModal(cat)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title="Modifier"
+                          onClick={() => toggleRow(cat.id)}
+                          className="flex items-center gap-2 hover:text-blue-600 transition"
                         >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(cat.id)}
-                          className="text-gray-600 hover:text-gray-800"
-                          title={cat.is_active ? 'Désactiver' : 'Activer'}
-                        >
-                          {cat.is_active ? (
-                            <XCircle size={18} />
-                          ) : (
-                            <CheckCircle size={18} />
+                          <Tag className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {cat.nombre_attributs || 0}
+                          </span>
+                          {cat.nombre_attributs > 0 && cat.attributs && (
+                            <span className="text-xs text-gray-500">
+                              ({expandedRows.has(cat.id) ? '▼' : '▶'})
+                            </span>
                           )}
                         </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <button
-                          onClick={() => handleDelete(cat.id)}
-                          className="text-red-600 hover:text-red-800"
-                          title="Supprimer"
+                          onClick={() => toggleRow(cat.id)}
+                          className="flex items-center gap-2 hover:text-blue-600 transition"
                         >
-                          <Trash2 size={18} />
+                          <Package className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {cat.nombre_produits || 0}
+                          </span>
+                          {cat.nombre_produits > 0 && cat.produits && (
+                            <span className="text-xs text-gray-500">
+                              ({expandedRows.has(cat.id) ? '▼' : '▶'})
+                            </span>
+                          )}
                         </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant={cat.is_active ? 'success' : 'danger'}>
+                          {cat.is_active ? 'Actif' : 'Inactif'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-3">
+                          <button
+                            onClick={() => openEditModal(cat)}
+                            className="text-blue-600 hover:text-blue-800"
+                            title="Modifier"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleToggleActive(cat.id)}
+                            className="text-gray-600 hover:text-gray-800"
+                            title={cat.is_active ? 'Désactiver' : 'Activer'}
+                          >
+                            {cat.is_active ? (
+                              <XCircle size={18} />
+                            ) : (
+                              <CheckCircle size={18} />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cat.id)}
+                            className="text-red-600 hover:text-red-800"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    {/* Ligne étendue avec détails */}
+                    {expandedRows.has(cat.id) && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={6} className="px-6 py-4">
+                          <div className="grid grid-cols-2 gap-6">
+                            {/* Attributs */}
+                            {cat.attributs && cat.attributs.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                  <Tag className="w-4 h-4" />
+                                  Attributs ({cat.attributs.length})
+                                </h4>
+                                <div className="space-y-1">
+                                  {cat.attributs.map((attr: any) => (
+                                    <div key={attr.id} className="text-sm text-gray-600 flex items-center gap-2">
+                                      <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                                      <span className="font-medium">{attr.nom}</span>
+                                      <span className="text-xs text-gray-500">
+                                        ({attr.type_valeur})
+                                        {attr.pivot?.obligatoire && <span className="text-red-500 ml-1">*</span>}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Produits */}
+                            {cat.produits && cat.produits.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                  <Package className="w-4 h-4" />
+                                  Produits ({cat.produits.length})
+                                </h4>
+                                <div className="space-y-1 max-h-40 overflow-y-auto">
+                                  {cat.produits.map((prod: any) => (
+                                    <div key={prod.id} className="text-sm text-gray-600 flex items-center gap-2">
+                                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                      <span className="font-medium">{prod.nom}</span>
+                                      <span className="text-xs text-gray-500">
+                                        ({prod.reference})
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>

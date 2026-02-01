@@ -89,6 +89,18 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     },
   });
 
+  // Marquer acompte payé
+  const marquerAcomptePayeMutation = useMutation({
+    mutationFn: (id: number) => rendezVousApi.marquerAcomptePaye(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rendez-vous'] });
+      toast.success('Acompte marqué comme payé');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erreur');
+    },
+  });
+
   return {
     rendezVous: data?.data?.data || [],
     isLoading,
@@ -102,5 +114,6 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     delete: deleteMutation.mutate,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
+    marquerAcomptePaye: marquerAcomptePayeMutation.mutate,
   };
 };

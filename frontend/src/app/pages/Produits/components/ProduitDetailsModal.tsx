@@ -1,6 +1,6 @@
 // src/app/pages/Produits/components/ProduitDetailsModal.tsx
 import { useEffect, useState } from 'react';
-import { X, Package, Tag, DollarSign, TrendingUp, Calendar, Info, ImageOff } from 'lucide-react';
+import { X, Package, Tag, DollarSign, Calendar, Info, ImageOff } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Badge } from './ui/Badge';
 import { produitsApi } from '@/services/produitsApi';
@@ -30,8 +30,8 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
       setProduit(response.data);
       setImageError(false);
     } catch (error: any) {
-      console.error('Erreur lors du chargement des détails:', error);
-      alert('❌ Erreur lors du chargement des détails');
+      console.error('❌ Erreur:', error);
+      alert('❌ Erreur lors du chargement des détails: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
         <div className="space-y-6">
           {/* En-tête avec photo */}
           <div className="flex gap-6">
-            {/* Photo du produit */}
             <div className="flex-shrink-0">
               <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg overflow-hidden border-2 border-gray-200">
                 {imageUrl && !imageError ? (
@@ -98,7 +97,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               </div>
             </div>
 
-            {/* Informations principales */}
             <div className="flex-1">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex-1">
@@ -120,7 +118,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                 </Badge>
               </div>
 
-              {/* Prix rapides */}
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <label className="text-xs text-gray-600">Prix d'achat</label>
@@ -136,7 +133,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                 </div>
               </div>
 
-              {/* Badge promo */}
               {produit.prix_promo && (
                 <div className="mt-3 bg-red-50 border border-red-200 p-3 rounded-lg">
                   <div className="flex items-center justify-between">
@@ -157,7 +153,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
             </div>
           </div>
 
-          {/* Description */}
           {produit.description && (
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-sm text-gray-700">{produit.description}</p>
@@ -200,37 +195,99 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                   </p>
                 </div>
               </div>
-
-              {/* Attributs de la catégorie */}
-              {produit.categorie?.attributs && produit.categorie.attributs.length > 0 && (
-                <div className="border-t pt-4 mt-4">
-                  <label className="text-sm font-medium text-gray-600 mb-2 block">
-                    Attributs configurables pour cette catégorie
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {produit.categorie.attributs.map((attr: any) => (
-                      <div 
-                        key={attr.id}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-blue-50 text-blue-700 border border-blue-200"
-                      >
-                        <Tag className="w-3 h-3 mr-1" />
-                        {attr.nom}
-                        {attr.pivot?.obligatoire && (
-                          <span className="ml-1 text-red-500">*</span>
-                        )}
-                        {attr.unite && (
-                          <span className="ml-1 text-blue-500">({attr.unite})</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 italic">
-                    * Attribut obligatoire
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
+
+          {/* Caractéristiques */}
+          {(() => {
+            const valeursAttributs = produit.valeursAttributs || produit.attributs || [];
+            
+            if (!Array.isArray(valeursAttributs) || valeursAttributs.length === 0) {
+              return null;
+            }
+
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Tag className="w-5 h-5" />
+                    Caractéristiques du produit
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {valeursAttributs.map((va: any) => {
+                      const attribut = va.attribut || { 
+                        id: va.attribut_id,
+                        nom: va.nom, 
+                        type_valeur: va.type_valeur, 
+                        unite: va.unite 
+                      };
+                      const valeur = va.valeur;
+                      const id = va.id || va.attribut_id;
+
+                      return (
+                        <div 
+                          key={id}
+                          className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-100"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <label className="text-sm font-medium text-gray-600 mb-1 block">
+                                {attribut.nom}
+                              </label>
+                              <p className="text-lg font-bold text-gray-900">
+                                {valeur}
+                                {attribut.unite && (
+                                  <span className="text-sm font-normal text-gray-500 ml-1">
+                                    {attribut.unite}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <Badge variant="success">
+                              {attribut.type_valeur}
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {produit.categorie?.attributs && produit.categorie.attributs.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 mb-2">
+                        <strong>Attributs de la catégorie "{produit.categorie.nom}" :</strong>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {produit.categorie.attributs.map((attr: any) => {
+                          const hasValue = valeursAttributs.some((va: any) => 
+                            (va.attribut_id === attr.id) || (va.attribut?.id === attr.id)
+                          );
+                          return (
+                            <span 
+                              key={attr.id}
+                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                hasValue 
+                                  ? 'bg-green-100 text-green-800 border border-green-200' 
+                                  : attr.pivot?.obligatoire
+                                    ? 'bg-red-100 text-red-800 border border-red-200'
+                                    : 'bg-gray-100 text-gray-600 border border-gray-200'
+                              }`}
+                            >
+                              {attr.nom}
+                              {attr.pivot?.obligatoire && <span className="ml-1">*</span>}
+                              {hasValue ? ' ✓' : ' —'}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Prix et marges */}
           <Card>
@@ -289,7 +346,6 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Stock Vente */}
               <div className="border-l-4 border-blue-500 pl-4">
                 <h4 className="font-semibold text-gray-900 mb-2">Stock Vente</h4>
                 <div className="grid grid-cols-3 gap-4">
@@ -306,19 +362,8 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                     <p className="text-lg font-semibold text-red-600">{produit.seuil_critique}</p>
                   </div>
                 </div>
-                {produit.stock_vente <= produit.seuil_critique && (
-                  <div className="mt-2 bg-red-50 border border-red-200 rounded p-2">
-                    <p className="text-sm text-red-700 font-medium">⚠️ Stock critique - Réapprovisionnement urgent</p>
-                  </div>
-                )}
-                {produit.stock_vente > produit.seuil_critique && produit.stock_vente <= produit.seuil_alerte && (
-                  <div className="mt-2 bg-orange-50 border border-orange-200 rounded p-2">
-                    <p className="text-sm text-orange-700 font-medium">⚠️ Stock en alerte</p>
-                  </div>
-                )}
               </div>
 
-              {/* Stock Utilisation */}
               <div className="border-l-4 border-purple-500 pl-4">
                 <h4 className="font-semibold text-gray-900 mb-2">Stock Salon (Utilisation)</h4>
                 <div className="grid grid-cols-3 gap-4">
@@ -335,46 +380,9 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                     <p className="text-lg font-semibold text-red-600">{produit.seuil_critique_utilisation}</p>
                   </div>
                 </div>
-                {produit.stock_utilisation <= produit.seuil_critique_utilisation && (
-                  <div className="mt-2 bg-red-50 border border-red-200 rounded p-2">
-                    <p className="text-sm text-red-700 font-medium">⚠️ Stock critique - Réapprovisionnement urgent</p>
-                  </div>
-                )}
-                {produit.stock_utilisation > produit.seuil_critique_utilisation && produit.stock_utilisation <= produit.seuil_alerte_utilisation && (
-                  <div className="mt-2 bg-orange-50 border border-orange-200 rounded p-2">
-                    <p className="text-sm text-orange-700 font-medium">⚠️ Stock en alerte</p>
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>
-
-          {/* Attributs */}
-          {produit.valeursAttributs && produit.valeursAttributs.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Tag className="w-5 h-5" />
-                  Attributs du produit
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  {produit.valeursAttributs.map((va: any) => (
-                    <div key={va.id} className="bg-gray-50 p-3 rounded-lg">
-                      <label className="text-sm font-medium text-gray-600">
-                        {va.attribut?.nom}
-                        {va.attribut?.unite && (
-                          <span className="text-xs text-gray-500 ml-1">({va.attribut.unite})</span>
-                        )}
-                      </label>
-                      <p className="text-gray-900 font-semibold mt-1">{va.valeur}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Dates */}
           <Card>
@@ -393,22 +401,9 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                 <label className="text-sm font-medium text-gray-600">Dernière modification</label>
                 <p className="text-gray-900 mt-1">{formatDate(produit.updated_at)}</p>
               </div>
-              {produit.date_debut_promo && produit.date_fin_promo && (
-                <>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Début promotion</label>
-                    <p className="text-gray-900 mt-1">{formatDate(produit.date_debut_promo)}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-600">Fin promotion</label>
-                    <p className="text-gray-900 mt-1">{formatDate(produit.date_fin_promo)}</p>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <button
               onClick={onClose}

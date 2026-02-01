@@ -1,6 +1,7 @@
 // src/contexts/NotificationContext.tsx
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { notificationApi, type Notification } from '@/services/notificationApi';
+import { tokenStorage } from '@/utils/tokenStorage';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -24,8 +25,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ Vérifier si l'utilisateur est authentifié
+  const isAuthenticated = useCallback(() => {
+    return !!tokenStorage.getToken();
+  }, []);
+
   // Charger les notifications
   const fetchNotifications = useCallback(async (nonLuesOnly = false) => {
+    if (!isAuthenticated()) return; // ✅ Ne rien faire si non connecté
+
     try {
       setLoading(true);
       setError(null);
@@ -38,17 +46,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Charger le compteur uniquement
   const fetchCount = useCallback(async () => {
+    if (!isAuthenticated()) return; // ✅ Ne rien faire si non connecté
+
     try {
       const newCount = await notificationApi.getCount();
       setCount(newCount);
     } catch (err) {
       console.error('Erreur compteur:', err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Rafraîchir tout
   const refresh = useCallback(async () => {
@@ -57,6 +67,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Marquer comme lu
   const markAsRead = useCallback(async (id: number) => {
+    if (!isAuthenticated()) return;
+
     try {
       await notificationApi.markAsRead(id);
       setNotifications(prev => 
@@ -66,10 +78,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Erreur marquage lu:', err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Marquer toutes comme lues
   const markAllAsRead = useCallback(async () => {
+    if (!isAuthenticated()) return;
+
     try {
       await notificationApi.markAllAsRead();
       setNotifications(prev => 
@@ -79,10 +93,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Erreur marquage tout lu:', err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Supprimer une notification
   const deleteNotification = useCallback(async (id: number) => {
+    if (!isAuthenticated()) return;
+
     try {
       await notificationApi.deleteNotification(id);
       const notification = notifications.find(n => n.id === id);
@@ -93,36 +109,42 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Erreur suppression:', err);
     }
-  }, [notifications]);
+  }, [notifications, isAuthenticated]);
 
   // Supprimer toutes les lues
   const deleteAllRead = useCallback(async () => {
+    if (!isAuthenticated()) return;
+
     try {
       await notificationApi.deleteAllRead();
       setNotifications(prev => prev.filter(n => !n.lu));
     } catch (err) {
       console.error('Erreur suppression lues:', err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  // Charger immédiatement au montage + Polling toutes les 30 secondes
+  // ✅ Charger immédiatement au montage + Polling toutes les 30 secondes
   useEffect(() => {
-    //console.log('🔔 NotificationProvider: Initialisation');
+    // Ne rien faire si non authentifié
+    if (!isAuthenticated()) {
+      setLoading(false);
+      return;
+    }
     
     // Charger immédiatement
     fetchCount();
     
     // Puis continuer le polling
     const interval = setInterval(() => {
-      //console.log('🔄 NotificationProvider: Polling...');
-      fetchCount();
+      if (isAuthenticated()) { // ✅ Vérifier avant chaque polling
+        fetchCount();
+      }
     }, 30000); // 30 secondes
     
     return () => {
-      //console.log('🔔 NotificationProvider: Nettoyage');
       clearInterval(interval);
     };
-  }, [fetchCount]);
+  }, [fetchCount, isAuthenticated]);
 
   const value = {
     notifications,
