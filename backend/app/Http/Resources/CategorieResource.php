@@ -32,9 +32,35 @@ class CategorieResource extends JsonResource
             ),
             'nombre_attributs' => $this->whenCounted('attributs'),
             
-            // Relations (chargées si eager loaded)
-            'attributs' => AttributResource::collection($this->whenLoaded('attributs')),
-            'produits' => ProduitResource::collection($this->whenLoaded('produits')),
+            // Relations - CORRECTION ICI
+            'attributs' => $this->when(
+                $this->relationLoaded('attributs'),
+                function() {
+                    return $this->attributs->map(function($attribut) {
+                        return [
+                            'id' => $attribut->id,
+                            'nom' => $attribut->nom,
+                            'slug' => $attribut->slug,
+                            'type_valeur' => $attribut->type_valeur,
+                            'valeurs_possibles' => $attribut->valeurs_possibles,
+                            'unite' => $attribut->unite,
+                            'obligatoire' => $attribut->obligatoire,
+                            'ordre' => $attribut->ordre,
+                            'pivot' => [
+                                'obligatoire' => $attribut->pivot->obligatoire ?? false,
+                                'ordre' => $attribut->pivot->ordre ?? 0,
+                            ],
+                        ];
+                    });
+                }
+            ),
+            
+            'produits' => $this->when(
+                $this->relationLoaded('produits'),
+                function() {
+                    return ProduitResource::collection($this->produits);
+                }
+            ),
             
             // Timestamps
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),

@@ -28,11 +28,11 @@ class UserSeeder extends Seeder
             ],
             // Gestionnaires
             [
-                'nom' => 'Sawadogo',
-                'prenom' => 'Awa',
-                'telephone' => '+22670234567',
+                'nom' => 'Admin',
+                'prenom' => 'Omar',
+                'telephone' => '+22600000000',
                 'email' => 'awa.sawadogo@salon.bf',
-                'password' => Hash::make('234567'),
+                'password' => Hash::make('123456'),
                 'role' => 'gestionnaire',
                 'photo_url' => null,
                 'specialite' => null,

@@ -12,6 +12,7 @@ import { useCalculsVente } from '../../../hooks/useCalculsVente';
 import { venteApi } from '../../../services/venteApi';
 import { clientApi } from '../../../services/clientApi';
 import { userApi } from '../../../services/userApi';
+import { VenteSuccessModal } from './components/VenteSuccessModal';
 import type {
   Client,
   NouveauClient,
@@ -49,6 +50,8 @@ export const NouvelleVente: React.FC = () => {
   const [pointsUtilises, setPointsUtilises] = useState(0);
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastVente, setLastVente] = useState<{ id: number; numero_facture: string } | null>(null);
 
   // Listes pour les selects
   const [coiffeurs, setCoiffeurs] = useState<Coiffeur[]>([]);
@@ -152,7 +155,7 @@ export const NouvelleVente: React.FC = () => {
     return produit.prix_vente;
   };
 
-  const handleValiderVente = async () => {
+    const handleValiderVente = async () => {
     // Validation
     if (articles.length === 0) {
       alert('Veuillez ajouter au moins un article');
@@ -194,13 +197,14 @@ export const NouvelleVente: React.FC = () => {
       const response = await venteApi.createVente(venteData);
       
       if (response.success) {
-        alert(`Vente enregistrée avec succès! Facture: ${response.data.numero_facture}`);
+        // Sauvegarder les infos de la vente
+        setLastVente({
+          id: response.data.id,
+          numero_facture: response.data.numero_facture
+        });
         
-        // Télécharger le reçu
-        const confirmer = confirm('Voulez-vous télécharger le reçu?');
-        if (confirmer) {
-          await venteApi.downloadReceipt(response.data.id, response.data.numero_facture);
-        }
+        // Afficher le modal de succès
+        setShowSuccessModal(true);
         
         // Réinitialiser le formulaire
         resetForm();
@@ -210,6 +214,14 @@ export const NouvelleVente: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 4. Ajouter cette fonction pour imprimer le reçu
+  const handlePrintReceipt = () => {
+    if (!lastVente) return;
+    
+    const receiptUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/ventes/${lastVente.id}/receipt`;
+    window.open(receiptUrl, '_blank');
   };
 
   const resetForm = () => {
@@ -356,6 +368,14 @@ export const NouvelleVente: React.FC = () => {
           </div>
         </div>
       </div>
+      {/* Modal de succès */}
+      <VenteSuccessModal
+      isOpen={showSuccessModal}
+      onClose={() => setShowSuccessModal(false)}
+      numeroFacture={lastVente?.numero_facture || ''}
+      venteId={lastVente?.id || 0}
+      onPrint={handlePrintReceipt}
+    />
     </div>
   );
 };

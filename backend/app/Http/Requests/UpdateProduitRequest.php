@@ -7,17 +7,11 @@ use Illuminate\Validation\Rule;
 
 class UpdateProduitRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user() && in_array($this->user()->role, ['gerant', 'gestionnaire']);
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         $produitId = $this->route('produit');
@@ -39,11 +33,11 @@ class UpdateProduitRequest extends FormRequest
             'date_debut_promo' => ['nullable', 'date'],
             'date_fin_promo' => ['nullable', 'date', 'after:date_debut_promo'],
 
-            // Stocks (lecture seule, modifiés via mouvements)
-            'seuil_alerte' => ['integer', 'min:0'],
-            'seuil_critique' => ['integer', 'min:0'],
-            'seuil_alerte_utilisation' => ['integer', 'min:0'],
-            'seuil_critique_utilisation' => ['integer', 'min:0'],
+            // Seuils OPTIONNELS (nullable)
+            'seuil_alerte' => ['nullable', 'integer', 'min:0'],
+            'seuil_critique' => ['nullable', 'integer', 'min:0'],
+            'seuil_alerte_utilisation' => ['nullable', 'integer', 'min:0'],
+            'seuil_critique_utilisation' => ['nullable', 'integer', 'min:0'],
 
             // Autres
             'quantite_min_commande' => ['nullable', 'integer', 'min:1'],
@@ -59,9 +53,6 @@ class UpdateProduitRequest extends FormRequest
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
@@ -75,10 +66,10 @@ class UpdateProduitRequest extends FormRequest
             'date_fin_promo.after' => 'La date de fin doit être après la date de début.',
             
             'photo.image' => 'Le fichier doit être une image.',
-            'photo.mimes' => 'L\'image doit être au format : jpeg, png, jpg ou webp.',
+            'photo.mimes' => 'Format accepté : jpeg, png, jpg, webp.',
             'photo.max' => 'L\'image ne doit pas dépasser 2 Mo.',
             
-            'attributs.*.max' => 'La valeur de l\'attribut ne doit pas dépasser 255 caractères.',
+            'attributs.*.max' => 'La valeur de l\'attribut ne peut pas dépasser 255 caractères.',
         ];
     }
 }

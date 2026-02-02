@@ -510,12 +510,21 @@ class VenteController extends Controller
     public function generateReceipt($id)
     {
         try {
-            $vente = Vente::with(['client', 'vendeur', 'details', 'paiements'])
+            $vente = Vente::with(['client', 'vendeur', 'coiffeur', 'details', 'paiements'])
                 ->findOrFail($id);
+            
+            // Récupérer les informations du salon
+            $salon = \App\Models\Salon::first();
 
-            $pdf = Pdf::loadView('receipts.vente', compact('vente'));
+            // Créer le PDF en format A6 (105x148mm)
+            $pdf = Pdf::loadView('receipts.vente', compact('vente', 'salon'))
+                ->setPaper([0, 0, 297.64, 419.53], 'portrait'); // A6 en points
 
-            return $pdf->download("recu_{$vente->numero_facture}.pdf");
+            // Marquer le reçu comme imprimé
+            $vente->update(['recu_imprime' => true]);
+
+            // Afficher le PDF dans le navigateur (stream) au lieu de le télécharger
+            return $pdf->stream("recu_{$vente->numero_facture}.pdf");
 
         } catch (\Exception $e) {
             return response()->json([

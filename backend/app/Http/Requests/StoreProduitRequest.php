@@ -7,17 +7,11 @@ use Illuminate\Validation\Rule;
 
 class StoreProduitRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return $this->user() && in_array($this->user()->role, ['gerant', 'gestionnaire']);
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         return [
@@ -37,13 +31,15 @@ class StoreProduitRequest extends FormRequest
             'date_debut_promo' => ['nullable', 'date', 'required_with:prix_promo'],
             'date_fin_promo' => ['nullable', 'date', 'after:date_debut_promo', 'required_with:prix_promo'],
 
-            // Stocks
-            'stock_actuel' => ['integer', 'min:0'],
-            'stock_utilisation' => ['integer', 'min:0'],
-            'seuil_alerte' => ['integer', 'min:0'],
-            'seuil_critique' => ['integer', 'min:0', 'lte:seuil_alerte'],
-            'seuil_alerte_utilisation' => ['integer', 'min:0'],
-            'seuil_critique_utilisation' => ['integer', 'min:0', 'lte:seuil_alerte_utilisation'],
+            // Stocks - conditionnels selon type_stock_principal
+            'stock_vente' => ['nullable', 'integer', 'min:0'],
+            'stock_utilisation' => ['nullable', 'integer', 'min:0'],
+            
+            // Seuils OPTIONNELS (nullable)
+            'seuil_alerte' => ['nullable', 'integer', 'min:0'],
+            'seuil_critique' => ['nullable', 'integer', 'min:0', 'lte:seuil_alerte'],
+            'seuil_alerte_utilisation' => ['nullable', 'integer', 'min:0'],
+            'seuil_critique_utilisation' => ['nullable', 'integer', 'min:0', 'lte:seuil_alerte_utilisation'],
 
             // Autres
             'quantite_min_commande' => ['nullable', 'integer', 'min:1'],
@@ -59,9 +55,6 @@ class StoreProduitRequest extends FormRequest
         ];
     }
 
-    /**
-     * Get custom messages for validator errors.
-     */
     public function messages(): array
     {
         return [
@@ -70,7 +63,7 @@ class StoreProduitRequest extends FormRequest
             'reference.unique' => 'Cette référence existe déjà.',
             'categorie_id.required' => 'La catégorie est obligatoire.',
             'categorie_id.exists' => 'Cette catégorie n\'existe pas.',
-            'type_stock_principal.required' => 'Le type de stock principal est obligatoire.',
+            'type_stock_principal.required' => 'Le type de stock est obligatoire.',
             'type_stock_principal.in' => 'Le type de stock doit être : vente, utilisation ou mixte.',
             
             'prix_achat.required' => 'Le prix d\'achat est obligatoire.',
@@ -79,19 +72,19 @@ class StoreProduitRequest extends FormRequest
             'prix_vente.min' => 'Le prix de vente doit être positif.',
             'prix_vente.gt' => 'Le prix de vente doit être supérieur au prix d\'achat.',
             'prix_promo.lt' => 'Le prix promo doit être inférieur au prix de vente.',
-            'date_debut_promo.required_with' => 'La date de début de promo est obligatoire.',
+            'date_debut_promo.required_with' => 'La date de début est obligatoire si prix promo défini.',
             'date_fin_promo.after' => 'La date de fin doit être après la date de début.',
             
-            'stock_actuel.min' => 'Le stock vente doit être positif ou nul.',
-            'stock_utilisation.min' => 'Le stock utilisation doit être positif ou nul.',
-            'seuil_critique.lte' => 'Le seuil critique doit être inférieur ou égal au seuil d\'alerte.',
-            'seuil_critique_utilisation.lte' => 'Le seuil critique utilisation doit être ≤ seuil alerte utilisation.',
+            'stock_vente.min' => 'Le stock vente ne peut pas être négatif.',
+            'stock_utilisation.min' => 'Le stock utilisation ne peut pas être négatif.',
+            'seuil_critique.lte' => 'Le seuil critique doit être ≤ au seuil d\'alerte.',
+            'seuil_critique_utilisation.lte' => 'Le seuil critique utilisation doit être ≤ au seuil alerte.',
             
             'photo.image' => 'Le fichier doit être une image.',
-            'photo.mimes' => 'L\'image doit être au format : jpeg, png, jpg ou webp.',
+            'photo.mimes' => 'Format accepté : jpeg, png, jpg, webp.',
             'photo.max' => 'L\'image ne doit pas dépasser 2 Mo.',
             
-            'attributs.*.max' => 'La valeur de l\'attribut ne doit pas dépasser 255 caractères.',
+            'attributs.*.max' => 'La valeur de l\'attribut ne peut pas dépasser 255 caractères.',
         ];
     }
 }

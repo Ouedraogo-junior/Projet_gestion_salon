@@ -106,6 +106,13 @@ class ProduitController extends Controller
         try {
             // Créer le produit
             $produitData = $request->except('attributs');
+            
+            // Gérer les valeurs nullables pour les seuils
+            $produitData['seuil_alerte'] = $request->input('seuil_alerte') ?? null;
+            $produitData['seuil_critique'] = $request->input('seuil_critique') ?? null;
+            $produitData['seuil_alerte_utilisation'] = $request->input('seuil_alerte_utilisation') ?? null;
+            $produitData['seuil_critique_utilisation'] = $request->input('seuil_critique_utilisation') ?? null;
+            
             $produit = Produit::create($produitData);
 
             // Ajouter les attributs si fournis
@@ -128,13 +135,25 @@ class ProduitController extends Controller
                 'message' => 'Produit créé avec succès',
             ], 201);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            
+            // Extraire la première erreur de validation
+            $errors = $e->errors();
+            $firstError = reset($errors)[0] ?? 'Erreur de validation';
+            
+            return response()->json([
+                'success' => false,
+                'message' => $firstError,
+                'errors' => $errors,
+            ], 422);
+            
         } catch (\Exception $e) {
             DB::rollBack();
             
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création du produit',
-                'error' => $e->getMessage(),
+                'message' => 'Impossible de créer le produit : ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -165,49 +184,75 @@ class ProduitController extends Controller
     /**
      * Met à jour un produit
      */
-    public function update(UpdateProduitRequest $request, Produit $produit): JsonResponse
-    {
-        DB::beginTransaction();
-        try {
-            // Mettre à jour le produit
-            $produitData = $request->except('attributs');
-            $produit->update($produitData);
+   public function update(UpdateProduitRequest $request, Produit $produit): JsonResponse
+{
+    DB::beginTransaction();
+    try {
+        // Mettre à jour le produit
+        $produitData = $request->except('attributs');
+        
+        // Gérer les valeurs nullables pour les seuils
+        if ($request->has('seuil_alerte')) {
+            $produitData['seuil_alerte'] = $request->input('seuil_alerte') ?: null;
+        }
+        if ($request->has('seuil_critique')) {
+            $produitData['seuil_critique'] = $request->input('seuil_critique') ?: null;
+        }
+        if ($request->has('seuil_alerte_utilisation')) {
+            $produitData['seuil_alerte_utilisation'] = $request->input('seuil_alerte_utilisation') ?: null;
+        }
+        if ($request->has('seuil_critique_utilisation')) {
+            $produitData['seuil_critique_utilisation'] = $request->input('seuil_critique_utilisation') ?: null;
+        }
+        
+        $produit->update($produitData);
 
-            // Mettre à jour les attributs si fournis
-            if ($request->has('attributs') && is_array($request->attributs)) {
-                // Supprimer les anciennes valeurs
-                ProduitAttributValeur::supprimerPourProduit($produit->id);
-                
-                // Ajouter les nouvelles
-                foreach ($request->attributs as $attributId => $valeur) {
-                    if (!empty($valeur)) {
-                        $produit->setAttribut($attributId, $valeur);
-                    }
+        // Mettre à jour les attributs si fournis
+        if ($request->has('attributs') && is_array($request->attributs)) {
+            // Supprimer les anciennes valeurs
+            ProduitAttributValeur::supprimerPourProduit($produit->id);
+            
+            // Ajouter les nouvelles
+            foreach ($request->attributs as $attributId => $valeur) {
+                if (!empty($valeur)) {
+                    $produit->setAttribut($attributId, $valeur);
                 }
             }
-
-            DB::commit();
-
-            // Recharger les relations
-            $produit->load(['categorie', 'valeursAttributs.attribut']);
-
-            return response()->json([
-                'success' => true,
-                'data' => new ProduitResource($produit),
-                'message' => 'Produit mis à jour avec succès',
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la mise à jour du produit',
-                'error' => $e->getMessage(),
-            ], 500);
         }
-    }
 
+        DB::commit();
+
+        // Recharger les relations
+        $produit->load(['categorie', 'valeursAttributs.attribut']);
+
+        return response()->json([
+            'success' => true,
+            'data' => new ProduitResource($produit),
+            'message' => 'Produit mis à jour avec succès',
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        DB::rollBack();
+        
+        // Extraire la première erreur de validation
+        $errors = $e->errors();
+        $firstError = reset($errors)[0] ?? 'Erreur de validation';
+        
+        return response()->json([
+            'success' => false,
+            'message' => $firstError,
+            'errors' => $errors,
+        ], 422);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Impossible de modifier le produit : ' . $e->getMessage(),
+        ], 500);
+    }
+}
     /**
      * Supprime un produit
      */

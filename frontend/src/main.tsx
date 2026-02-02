@@ -1,14 +1,15 @@
-import { createRoot } from "react-dom/client";
-import App from "./app/App.tsx";
-import "./styles/index.css";
+// src/main.tsx
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './app/App.tsx';
+import './styles/index.css';
 
-createRoot(document.getElementById("root")!).render(<App />);
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Failed to find the root element');
 
-// Enregistrement du Service Worker pour PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('✅ Service Worker enregistré:', reg.scope))
-      .catch(err => console.error('❌ Erreur Service Worker:', err));
-  });
-}
+const root = createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

@@ -9,7 +9,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
 
-function Header() {
+
+
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { count } = useNotifications();
@@ -67,7 +73,10 @@ function Header() {
     <>
       <header className="h-[70px] bg-white border-b border-gray-200 flex items-center px-6 gap-6">
         {/* Menu hamburger (mobile) */}
-        <button className="lg:hidden">
+        <button 
+          onClick={onMenuClick}
+          className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
           <Menu className="w-6 h-6" />
         </button>
 

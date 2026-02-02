@@ -10,6 +10,9 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
+import { useState } from 'react';
+import { Menu } from 'lucide-react';
+
 
 // Pages existantes
 import { Dashboard } from './pages/Dashboard';
@@ -38,6 +41,12 @@ import ConfectionsPage from './pages/Confections/ConfectionPage';
 // Module Rapports
 import RapportsPage from './pages/Rapports/RapportsPage';
 
+// Profil utilisateur
+import Profil from '@/app/pages/Profil';
+
+// Pour l'installation de la PWA
+import { InstallPWA } from './components/InstallPWA';
+
 // Layout avec Header et Sidebar
 import Header from './components/Header';
 import { Sidebar } from './components/Sidebar';
@@ -49,11 +58,21 @@ import { AccueilPage } from './pages/public/AccueilPage';
 import { GaleriePage } from './pages/public/GaleriePage';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen bg-slate-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden ml-64">
-        <Header />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
+        {/* Passer la fonction onMenuClick au Header */}
+        <Header onMenuClick={() => setSidebarOpen(true)} />
+        
+        {/* SUPPRIMER le bouton menu d'ici car il est déjà dans le Header */}
+        {/* <button onClick={() => setSidebarOpen(true)} ...>
+          <Menu size={24} />
+        </button> */}
+
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
@@ -187,16 +206,16 @@ function App() {
                 }
               />
 
-              {/* <Route
-                path="/marketing"
+              <Route
+                path="/profil"
                 element={
                   <PrivateRoute>
                     <MainLayout>
-                      <Marketing />
+                      <Profil />
                     </MainLayout>
                   </PrivateRoute>
                 }
-              /> */}
+              />
 
               <Route
                 path="/rapports"
@@ -223,6 +242,7 @@ function App() {
               {/* Redirection pour les routes inconnues */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <InstallPWA />
           </NotificationProvider>
         </AuthProvider>
       </BrowserRouter>

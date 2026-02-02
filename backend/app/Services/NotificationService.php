@@ -9,7 +9,7 @@ use App\Models\RendezVous;
 
 class NotificationService
 {
-    /**
+     /**
      * Créer une notification
      */
     public function creer(
@@ -40,7 +40,6 @@ class NotificationService
         $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
-            // Vérifier si une notification similaire n'existe pas déjà aujourd'hui
             $existante = Notification::where('user_id', $gerant->id)
                 ->where('type', 'stock_critique')
                 ->whereJsonContains('data->produit_id', $produit->id)
@@ -59,7 +58,7 @@ class NotificationService
                         'stock_utilisation' => $produit->stock_utilisation,
                     ],
                     priorite: 'critique',
-                    lien: "/produits/{$produit->id}"
+                    lien: "/produits?id={$produit->id}" // ← Modifié
                 );
             }
         }
@@ -73,7 +72,6 @@ class NotificationService
         $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
         foreach ($gerants as $gerant) {
-            // Vérifier si une notification similaire n'existe pas déjà aujourd'hui
             $existante = Notification::where('user_id', $gerant->id)
                 ->where('type', 'stock_alerte')
                 ->whereJsonContains('data->produit_id', $produit->id)
@@ -92,7 +90,7 @@ class NotificationService
                         'stock_utilisation' => $produit->stock_utilisation,
                     ],
                     priorite: 'haute',
-                    lien: "/produits/{$produit->id}"
+                    lien: "/produits?id={$produit->id}" // ← Modifié
                 );
             }
         }
@@ -117,7 +115,7 @@ class NotificationService
                     'date_heure' => $rdv->date_heure->toIso8601String(),
                 ],
                 priorite: 'normale',
-                lien: "/rendez-vous/{$rdv->id}"
+                lien: "/rendez-vous?id={$rdv->id}" // ← Modifié
             );
         }
     }
@@ -141,7 +139,7 @@ class NotificationService
                     'date_heure' => $rdv->date_heure->toIso8601String(),
                 ],
                 priorite: 'normale',
-                lien: "/rendez-vous/{$rdv->id}"
+                lien: "/rendez-vous?id={$rdv->id}" // ← Modifié
             );
         }
     }
@@ -165,7 +163,7 @@ class NotificationService
                     'date_heure' => $rdv->date_heure->toIso8601String(),
                 ],
                 priorite: 'haute',
-                lien: "/rendez-vous/{$rdv->id}"
+                lien: "/rendez-vous?id={$rdv->id}" // ← Modifié
             );
         }
     }

@@ -71,6 +71,7 @@ Route::post('/rendez-vous/mes-rendez-vous', [RendezVousController::class, 'mesRe
 Route::post('/rendez-vous/{id}/cancel-public', [RendezVousController::class, 'cancelPublic']);
 Route::get('/types-prestations/public', [TypePrestationController::class, 'indexPublic']);
 Route::get('/salon/public', [SalonController::class, 'show']);
+Route::get('/ventes/{id}/receipt', [VenteController::class, 'generateReceipt']);
 
 // ============================================================
 // ROUTES PROTÉGÉES
@@ -211,7 +212,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/ventes', [VenteController::class, 'store']);
         Route::get('/ventes/{id}', [VenteController::class, 'show']);
         Route::put('/ventes/{id}', [VenteController::class, 'update']);
-        Route::get('/ventes/{id}/receipt', [VenteController::class, 'generateReceipt']);
         Route::post('/ventes/check-stock', [VenteController::class, 'checkStock']);
         Route::post('/ventes/calculate-points', [VenteController::class, 'calculatePointsReduction']);
         
@@ -253,6 +253,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dépenses - Consultation
         Route::get('/depenses', [DepenseController::class, 'index']);
         Route::get('/depenses/{depense}', [DepenseController::class, 'show']);
+
+        // Profil utilisateur (soi-même)
+        Route::prefix('profil')->group(function () {
+            Route::put('/', [UserController::class, 'updateProfil']);
+            Route::post('/change-password', [UserController::class, 'changePassword']);
+            Route::post('/photo', [UserController::class, 'uploadPhoto']);
+            Route::delete('/photo', [UserController::class, 'deletePhoto']);
+        });
     });
 
     // ========================================

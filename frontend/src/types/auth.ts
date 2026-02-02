@@ -4,7 +4,7 @@ export interface User {
   id: number;
   nom: string;
   prenom: string;
-  email: string;
+  email: string | null;
   telephone: string;
   role: 'gerant' | 'coiffeur' | 'gestionnaire';
   photo_url?: string;
@@ -28,6 +28,7 @@ export interface LoginResponse {
 
 export interface AuthContextType {
   user: User | null;
+  setUser: (user: User) => void;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;

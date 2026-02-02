@@ -85,6 +85,20 @@ export interface SalairesResponse {
   nombre_employes: number;
 }
 
+export interface ProfilUpdateData {
+  nom?: string;
+  prenom?: string;
+  telephone?: string;
+  email?: string;
+  specialite?: string;
+}
+
+export interface ChangePasswordData {
+  current_password: string;
+  password: string;
+  password_confirmation: string;
+}
+
 export const userApi = {
   /**
    * Récupérer les coiffeurs actifs
@@ -183,7 +197,7 @@ export const userApi = {
    * Mettre à jour le salaire d'un utilisateur (gérant uniquement)
    */
   async updateSalaire(id: number, salaire_mensuel: number): Promise<ApiResponse<User>> {
-    const response = await api.put(`/users/${id}/salaire`, { salaire_mensuel });
+    const response = await api.patch(`/users/${id}/salaire`, { salaire_mensuel });
     return response.data;
   },
 
@@ -200,6 +214,45 @@ export const userApi = {
    */
   async getCoiffeursActifs(): Promise<ApiResponse<User[]>> {
     const response = await api.get('/users/coiffeurs');
+    return response.data;
+  },
+
+  /**
+   * Mettre à jour son propre profil
+   */
+  async updateProfil(data: ProfilUpdateData): Promise<ApiResponse<User>> {
+    const response = await api.put('/profil', data);
+    return response.data;
+  },
+
+  /**
+   * Changer son propre mot de passe
+   */
+  async changeMyPassword(data: ChangePasswordData): Promise<ApiResponse<void>> {
+    const response = await api.post('/profil/change-password', data);
+    return response.data;
+  },
+
+  /**
+   * Uploader sa photo de profil
+   */
+  async uploadPhoto(file: File): Promise<ApiResponse<User>> {
+    const formData = new FormData();
+    formData.append('photo', file);
+    
+    const response = await api.post('/profil/photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * Supprimer sa photo de profil
+   */
+  async deletePhoto(): Promise<ApiResponse<User>> {
+    const response = await api.delete('/profil/photo');
     return response.data;
   },
   

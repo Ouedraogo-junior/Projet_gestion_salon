@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
 {
@@ -183,27 +184,32 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'current_password' => 'required|string',
             'password' => 'required|string|min:6|confirmed',
+        ], [
+            'current_password.required' => 'Le mot de passe actuel est obligatoire.',
+            'password.required' => 'Le nouveau mot de passe est obligatoire.',
+            'password.min' => 'Le mot de passe doit contenir au moins 6 caractères.',
+            'password.confirmed' => 'Les mots de passe ne correspondent pas.',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur de validation',
+                'message' => $validator->errors()->first(),
                 'errors' => $validator->errors()
             ], 422);
         }
 
-        $user = auth()->user();
+        $user = $request->user();
 
         if (!Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Mot de passe actuel incorrect'
+                'message' => 'Le mot de passe actuel est incorrect'
             ], 422);
         }
 
         $user->update([
-            'password' => $request->password
+            'password' => Hash::make($request->password)
         ]);
 
         return response()->json([
@@ -211,6 +217,7 @@ class UserController extends Controller
             'message' => 'Mot de passe changé avec succès'
         ]);
     }
+
 
     /**
      * Supprimer un utilisateur - soft delete (gérant uniquement)
@@ -353,4 +360,157 @@ class UserController extends Controller
             ], 500);
         }
     }
+
+
+    /**
+     * Mettre à jour son propre profil
+     */
+    public function updateProfil(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'nom' => 'sometimes|string|max:100',
+            'prenom' => 'sometimes|string|max:100',
+            'telephone' => [
+                'sometimes',
+                'string',
+                'max:20',
+                Rule::unique('users')->ignore($user->id)
+            ],
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($user->id)
+            ],
+            'specialite' => 'nullable|string|max:100',
+        ], [
+            'nom.max' => 'Le nom ne peut pas dépasser 100 caractères.',
+            'prenom.max' => 'Le prénom ne peut pas dépasser 100 caractères.',
+            'telephone.unique' => 'Ce numéro de téléphone est déjà utilisé.',
+            'email.email' => 'L\'email doit être valide.',
+            'email.unique' => 'Cet email est déjà utilisé.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user->update($request->only(['nom', 'prenom', 'telephone', 'email', 'specialite']));
+
+            return response()->json([
+                'success' => true,
+                'data' => $user->fresh(),
+                'message' => 'Profil mis à jour avec succès'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour : ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Uploader sa photo de profil
+     */
+    public function uploadPhoto(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB max
+        ], [
+            'photo.required' => 'Veuillez sélectionner une photo.',
+            'photo.image' => 'Le fichier doit être une image.',
+            'photo.mimes' => 'Format accepté : jpeg, png, jpg, webp.',
+            'photo.max' => 'L\'image ne doit pas dépasser 5 MB.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = $request->user();
+
+            // Supprimer l'ancienne photo si elle existe
+            if ($user->photo_url && Storage::disk('public')->exists($user->photo_url)) {
+                Storage::disk('public')->delete($user->photo_url);
+            }
+
+            $file = $request->file('photo');
+            
+            // Nom de fichier sécurisé
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $file->getClientOriginalExtension();
+            $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
+            $filename = 'user_' . $user->id . '_' . time() . '_' . $safeName . '.' . $extension;
+            
+            // Stocker dans public/storage/photos/users
+            $path = $file->storeAs('photos/users', $filename, 'public');
+
+            // Mettre à jour l'utilisateur
+            $user->update(['photo_url' => $path]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Photo de profil mise à jour avec succès',
+                'data' => $user->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'upload : ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Supprimer sa photo de profil
+     */
+    public function deletePhoto(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            if (!$user->photo_url) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune photo à supprimer'
+                ], 404);
+            }
+
+            // Supprimer le fichier physique
+            if (Storage::disk('public')->exists($user->photo_url)) {
+                Storage::disk('public')->delete($user->photo_url);
+            }
+            
+            // Mettre à jour l'utilisateur
+            $user->update(['photo_url' => null]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Photo de profil supprimée avec succès',
+                'data' => $user->fresh()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression : ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

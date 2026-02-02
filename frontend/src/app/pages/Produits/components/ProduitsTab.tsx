@@ -1,5 +1,6 @@
 // src/app/pages/Produits/components/ProduitsTab.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent } from '@/app/components/ui/card';
@@ -15,6 +16,7 @@ import type { Produit } from '@/types/produit.types';
 type ProductSubTab = 'tous' | 'vente' | 'utilisation';
 
 export function ProduitsTab() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<ProductSubTab>('tous');
   const { data: produits, loading, reload } = useProduits();
   const { data: categories } = useCategories();
@@ -24,6 +26,24 @@ export function ProduitsTab() {
   const [selectedProduit, setSelectedProduit] = useState<Produit | null>(null);
   const [editingProduit, setEditingProduit] = useState<Produit | null>(null);
   const [search, setSearch] = useState('');
+
+  // 🔔 Gérer l'ouverture automatique depuis une notification
+  useEffect(() => {
+    const produitId = searchParams.get('id');
+    
+    if (produitId && produits.length > 0 && !loading) {
+      const produit = produits.find((p: Produit) => p.id === Number(produitId));
+      
+      if (produit) {
+        // Ouvrir le modal du produit
+        setSelectedProduit(produit);
+        setShowDetailsModal(true);
+        
+        // Nettoyer l'URL
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, produits, loading, setSearchParams]);
 
   // Filtrage selon l'onglet actif
   const filteredProduits = produits.filter((prod: Produit) => {
