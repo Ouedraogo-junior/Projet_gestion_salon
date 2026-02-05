@@ -66,22 +66,43 @@ export function ProduitFormModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attributsCategorie, setAttributsCategorie] = useState<any[]>([]);
   const [valeursAttributs, setValeursAttributs] = useState<Record<number, string>>({});
+  const [tauxChange, setTauxChange] = useState<number>(1);
 
   // Calcul automatique du prix d'achat unitaire
   useEffect(() => {
-    const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
-    const quantite = parseFloat(formData.quantite_stock_commande) || 0;
-    const fraisCmb = parseFloat(formData.frais_cmb) || 0;
-    const fraisTransit = parseFloat(formData.frais_transit) || 0;
+      const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
+      const quantite = parseFloat(formData.quantite_stock_commande) || 0;
+      const fraisCmb = parseFloat(formData.frais_cmb) || 0;
+      const fraisTransit = parseFloat(formData.frais_transit) || 0;
 
-    if (stockTotal > 0 && quantite > 0) {
-      const prixUnitaire = (stockTotal + fraisCmb + fraisTransit) / quantite;
+      if (stockTotal > 0 && quantite > 0) {
+        const prixUnitaireDeviseOrigine = (stockTotal + fraisCmb + fraisTransit) / quantite;
+        const prixUnitaireFCFA = prixUnitaireDeviseOrigine * tauxChange;
+        
+        setFormData(prev => ({
+          ...prev,
+          prix_achat: prixUnitaireFCFA.toFixed(2)
+        }));
+      }
+    }, [formData.prix_achat_stock_total, formData.quantite_stock_commande, formData.frais_cmb, formData.frais_transit, tauxChange]);
+
+  
+  useEffect(() => {
+    if (formData.type_stock_principal === 'reserve' && formData.quantite_stock_commande) {
       setFormData(prev => ({
         ...prev,
-        prix_achat: prixUnitaire.toFixed(2)
+        stock_reserve: formData.quantite_stock_commande
       }));
     }
-  }, [formData.prix_achat_stock_total, formData.quantite_stock_commande, formData.frais_cmb, formData.frais_transit]);
+  }, [formData.type_stock_principal, formData.quantite_stock_commande]);  
+
+
+  useEffect(() => {
+    const deviseSelectionnee = DEVISES.find(d => d.value === formData.devise_achat);
+    if (deviseSelectionnee) {
+      setTauxChange(deviseSelectionnee.tauxVersFCFA);
+    }
+  }, [formData.devise_achat]);
 
   useEffect(() => {
     if (produit) {
@@ -266,80 +287,97 @@ export function ProduitFormModal({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
+  e.preventDefault();
+  setIsSubmitting(true);
+  setError('');
 
-    try {
-      const isReserve = formData.type_stock_principal === 'reserve';
-      
-      const payload: any = {
-        nom: formData.nom,
-        reference: formData.reference,
-        description: formData.description,
-        categorie_id: parseInt(formData.categorie_id),
-        marque: formData.marque,
-        fournisseur: formData.fournisseur,
-        date_commande: formData.date_commande || null,
-        prix_achat: parseFloat(formData.prix_achat),
-        devise_achat: formData.devise_achat,
-        frais_cmb: formData.frais_cmb ? parseFloat(formData.frais_cmb) : null,
-        frais_transit: formData.frais_transit ? parseFloat(formData.frais_transit) : null,
-        moyen_paiement: formData.moyen_paiement || null,
-        date_reception: formData.date_reception || null,
-        prix_vente: parseFloat(formData.prix_vente),
-        stock_vente: isReserve ? 0 : (parseInt(formData.stock_vente) || 0),
-        stock_utilisation: isReserve ? 0 : (parseInt(formData.stock_utilisation) || 0),
-        stock_reserve: isReserve ? (parseInt(formData.stock_reserve) || 0) : 0,
-        seuil_alerte: isReserve ? null : (formData.seuil_alerte ? parseInt(formData.seuil_alerte) : null),
-        seuil_critique: isReserve ? null : (formData.seuil_critique ? parseInt(formData.seuil_critique) : null),
-        seuil_alerte_utilisation: isReserve ? null : (formData.seuil_alerte_utilisation ? parseInt(formData.seuil_alerte_utilisation) : null),
-        seuil_critique_utilisation: isReserve ? null : (formData.seuil_critique_utilisation ? parseInt(formData.seuil_critique_utilisation) : null),
-        seuil_alerte_reserve: isReserve && formData.seuil_alerte_reserve ? parseInt(formData.seuil_alerte_reserve) : null,
-        seuil_critique_reserve: isReserve && formData.seuil_critique_reserve ? parseInt(formData.seuil_critique_reserve) : null,
-        type_stock_principal: formData.type_stock_principal,
-        is_active: formData.is_active,
-        attributs: valeursAttributs
-      };
+  try {
+    const isReserve = formData.type_stock_principal === 'reserve';
+    
+    // Calculs
+    const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
+    const quantite = parseFloat(formData.quantite_stock_commande) || 0;
+    const fraisCmb = parseFloat(formData.frais_cmb) || 0;
+    const fraisTransit = parseFloat(formData.frais_transit) || 0;
+    
+    const prixUnitaireDeviseOrigine = (stockTotal > 0 && quantite > 0) 
+      ? (stockTotal + fraisCmb + fraisTransit) / quantite 
+      : 0;
+    
+    const montantTotalAchat = stockTotal + fraisCmb + fraisTransit;
+    
+    const payload: any = {
+      nom: formData.nom,
+      reference: formData.reference,
+      description: formData.description,
+      categorie_id: parseInt(formData.categorie_id),
+      marque: formData.marque,
+      fournisseur: formData.fournisseur,
+      date_commande: formData.date_commande || null,
+      prix_achat: parseFloat(formData.prix_achat),
+      devise_achat: formData.devise_achat,
+      taux_change: tauxChange,
+      prix_achat_devise_origine: prixUnitaireDeviseOrigine || null,
+      prix_achat_stock_total: stockTotal || null,
+      quantite_stock_commande: quantite || null,
+      montant_total_achat: montantTotalAchat || null, // ✅ Utilise le champ existant
+      frais_cmb: fraisCmb || null,
+      frais_transit: fraisTransit || null,
+      moyen_paiement: formData.moyen_paiement || null,
+      date_reception: formData.date_reception || null,
+      prix_vente: parseFloat(formData.prix_vente),
+      stock_vente: isReserve ? 0 : (parseInt(formData.stock_vente) || 0),
+      stock_utilisation: isReserve ? 0 : (parseInt(formData.stock_utilisation) || 0),
+      stock_reserve: isReserve ? (parseInt(formData.stock_reserve) || 0) : 0,
+      seuil_alerte: isReserve ? null : (formData.seuil_alerte ? parseInt(formData.seuil_alerte) : null),
+      seuil_critique: isReserve ? null : (formData.seuil_critique ? parseInt(formData.seuil_critique) : null),
+      seuil_alerte_utilisation: isReserve ? null : (formData.seuil_alerte_utilisation ? parseInt(formData.seuil_alerte_utilisation) : null),
+      seuil_critique_utilisation: isReserve ? null : (formData.seuil_critique_utilisation ? parseInt(formData.seuil_critique_utilisation) : null),
+      seuil_alerte_reserve: isReserve && formData.seuil_alerte_reserve ? parseInt(formData.seuil_alerte_reserve) : null,
+      seuil_critique_reserve: isReserve && formData.seuil_critique_reserve ? parseInt(formData.seuil_critique_reserve) : null,
+      type_stock_principal: formData.type_stock_principal,
+      is_active: formData.is_active,
+      attributs: valeursAttributs
+    };
 
-      let produitId: number;
+    let produitId: number;
 
-      if (produit) {
-        await produitsApi.produits.update(produit.id, payload);
-        produitId = produit.id;
-      } else {
-        const response = await produitsApi.produits.create(payload);
-        produitId = response.data.id;
-      }
-
-      // Upload de la photo si présente
-      if (photoFile) {
-        setIsUploadingPhoto(true);
-        await produitsApi.produits.uploadPhoto(produitId, photoFile);
-      }
-
-      onSuccess();
-      onClose();
-      resetForm();
-      
-    } catch (error: any) {
-      console.error('Erreur soumission:', error);
-      
-      if (error.response?.data?.message) {
-        setError(error.response.data.message);
-      } else if (error.response?.data?.errors) {
-        const firstError = Object.values(error.response.data.errors)[0];
-        setError(Array.isArray(firstError) ? firstError[0] as string : 'Erreur de validation');
-      } else if (error.message) {
-        setError(error.message);
-      } else {
-        setError('Une erreur est survenue lors de l\'enregistrement');
-      }
-    } finally {
-      setIsSubmitting(false);
-      setIsUploadingPhoto(false);
+    if (produit) {
+      await produitsApi.produits.update(produit.id, payload);
+      produitId = produit.id;
+    } else {
+      const response = await produitsApi.produits.create(payload);
+      produitId = response.data.id;
     }
-  };
+
+    // Upload de la photo si présente
+    if (photoFile) {
+      setIsUploadingPhoto(true);
+      await produitsApi.produits.uploadPhoto(produitId, photoFile);
+    }
+
+    onSuccess();
+    onClose();
+    resetForm();
+    
+  } catch (error: any) {
+    console.error('Erreur soumission:', error);
+    
+    if (error.response?.data?.message) {
+      setError(error.response.data.message);
+    } else if (error.response?.data?.errors) {
+      const firstError = Object.values(error.response.data.errors)[0];
+      setError(Array.isArray(firstError) ? firstError[0] as string : 'Erreur de validation');
+    } else if (error.message) {
+      setError(error.message);
+    } else {
+      setError('Une erreur est survenue lors de l\'enregistrement');
+    }
+  } finally {
+    setIsSubmitting(false);
+    setIsUploadingPhoto(false);
+  }
+};
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -630,7 +668,43 @@ export function ProduitFormModal({
               </select>
             </div>
           </div>
-        </div>
+
+          {/* NOUVEAU : Champ pour modifier le taux de change */}
+          {formData.devise_achat !== 'FCFA' && (
+            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Taux de change : 1 {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} = ? FCFA
+              </label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="number"
+                  value={tauxChange}
+                  onChange={(e) => setTauxChange(parseFloat(e.target.value) || 1)}
+                  min="0"
+                  step="0.001"
+                  placeholder="600"
+                  className="w-32"
+                />
+                <span className="text-sm text-gray-600">FCFA</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const deviseSelectionnee = DEVISES.find(d => d.value === formData.devise_achat);
+                    if (deviseSelectionnee) {
+                      setTauxChange(deviseSelectionnee.tauxVersFCFA);
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Réinitialiser
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Taux par défaut : {DEVISES.find(d => d.value === formData.devise_achat)?.tauxVersFCFA} FCFA
+              </p>
+            </div>
+          )}
+      </div>
 
         {/* Prix et coûts */}
         <div className="border-t pt-4">
@@ -731,76 +805,101 @@ export function ProduitFormModal({
           </div>
 
           {/* Prix unitaire calculé automatiquement */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire (calculé automatiquement)</h4>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prix d'achat unitaire <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    value={formData.prix_achat}
-                    onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
-                    required
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="flex-1"
-                    readOnly={!!(formData.prix_achat_stock_total && formData.quantite_stock_commande)}
-                  />
-                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {(formData.prix_achat_stock_total && formData.quantite_stock_commande) 
-                    ? 'Calculé à partir du stock total'
-                    : 'Ou saisir manuellement si stock inconnu'}
-                </p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire (calculé automatiquement)</h4>
+          
+          {/* Affichage du prix dans la devise d'origine si différent de FCFA */}
+          {formData.devise_achat !== 'FCFA' && formData.prix_achat_stock_total && formData.quantite_stock_commande && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Prix unitaire en {DEVISES.find(d => d.value === formData.devise_achat)?.label}
+                </span>
+                <span className="text-lg font-bold text-blue-600">
+                  {(() => {
+                    const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
+                    const quantite = parseFloat(formData.quantite_stock_commande) || 0;
+                    const fraisCmb = parseFloat(formData.frais_cmb) || 0;
+                    const fraisTransit = parseFloat(formData.frais_transit) || 0;
+                    const prixUnitaireDevise = (stockTotal + fraisCmb + fraisTransit) / quantite;
+                    return formatCurrency(prixUnitaireDevise);
+                  })()}{' '}
+                  {DEVISES.find(d => d.value === formData.devise_achat)?.symbole}
+                </span>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prix de vente unitaire <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    value={formData.prix_vente}
-                    onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
-                    required
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="flex-1"
-                  />
-                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-                    FCFA
-                  </div>
+              <p className="text-xs text-gray-600">
+                Taux appliqué : 1 {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} = {tauxChange} FCFA
+              </p>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Prix d'achat unitaire (FCFA) <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  value={formData.prix_achat}
+                  onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
+                  required
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  className="flex-1"
+                  readOnly={!!(formData.prix_achat_stock_total && formData.quantite_stock_commande)}
+                />
+                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+                  FCFA
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Prix par unité</p>
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {(formData.prix_achat_stock_total && formData.quantite_stock_commande) 
+                  ? `Converti automatiquement depuis ${DEVISES.find(d => d.value === formData.devise_achat)?.label}`
+                  : 'Ou saisir manuellement si stock inconnu'}
+              </p>
             </div>
 
-            {/* Calcul de la marge */}
-            {formData.prix_achat && formData.prix_vente && (
-              <div className="mt-4 pt-3 border-t border-green-300">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Marge unitaire</span>
-                  <span className="text-base font-bold text-green-600">
-                    {(() => {
-                      const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
-                      const margePct = (marge / parseFloat(formData.prix_achat)) * 100;
-                      return `${formatCurrency(marge)} FCFA (${margePct.toFixed(1)}%)`;
-                    })()}
-                  </span>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Prix de vente unitaire <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  value={formData.prix_vente}
+                  onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
+                  required
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  className="flex-1"
+                />
+                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+                  FCFA
                 </div>
               </div>
-            )}
+              <p className="text-xs text-gray-500 mt-1">Prix par unité</p>
+            </div>
           </div>
+
+          {/* Calcul de la marge */}
+          {formData.prix_achat && formData.prix_vente && (
+            <div className="mt-4 pt-3 border-t border-green-300">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Marge unitaire</span>
+                <span className="text-base font-bold text-green-600">
+                  {(() => {
+                    const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
+                    const margePct = (marge / parseFloat(formData.prix_achat)) * 100;
+                    return `${formatCurrency(marge)} FCFA (${margePct.toFixed(1)}%)`;
+                  })()}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
         </div>
 
         {/* Section Stock Réserve */}

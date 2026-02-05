@@ -38,6 +38,16 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
     }
   };
 
+    useEffect(() => {
+    if (produit) {
+      console.log('📦 Produit complet:', produit);
+      console.log('💰 prix_achat_stock_total:', produit.prix_achat_stock_total);
+      console.log('💰 montant_total_achat:', produit.montant_total_achat);
+      console.log('💰 prix_achat_devise_origine:', produit.prix_achat_devise_origine);
+      console.log('💰 prix_achat (FCFA):', produit.prix_achat);
+    }
+  }, [produit]);
+
   const getImageUrl = (photoUrl?: string) => {
     if (!photoUrl) return null;
     const cleanUrl = photoUrl.replace(/^(storage\/)+/, '');
@@ -199,8 +209,8 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
             </CardContent>
           </Card>
 
-          {/* Informations d'achat */}
-{(produit.date_commande || produit.frais_cmb || produit.frais_transit || produit.moyen_paiement || produit.date_reception) && (
+{/* Informations d'achat */}
+{(produit.date_commande || produit.frais_cmb || produit.frais_transit || produit.moyen_paiement || produit.date_reception || produit.prix_achat_devise_origine) && (
   <Card>
     <CardHeader>
       <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
@@ -233,7 +243,7 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
           </div>
         )}
 
-        {produit.devise_achat && produit.devise_achat !== 'FCFA' && (
+        {produit.devise_achat && (
           <div>
             <label className="text-xs sm:text-sm font-medium text-gray-600">Devise d'achat</label>
             <p className="text-sm sm:text-base text-gray-900 mt-1">
@@ -243,23 +253,69 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
             </p>
           </div>
         )}
+
+        {produit.quantite_stock_commande && (
+          <div>
+            <label className="text-xs sm:text-sm font-medium text-gray-600">Quantité commandée</label>
+            <p className="text-sm sm:text-base text-gray-900 mt-1 font-semibold">
+              {produit.quantite_stock_commande} unités
+            </p>
+          </div>
+        )}
+
+        {produit.taux_change && produit.devise_achat !== 'FCFA' && (
+          <div>
+            <label className="text-xs sm:text-sm font-medium text-gray-600">Taux de change appliqué</label>
+            <p className="text-sm sm:text-base text-gray-900 mt-1">
+              1 {DEVISES.find(d => d.value === produit.devise_achat)?.symbole} = {produit.taux_change} FCFA
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Détails des frais */}
-      {(produit.frais_cmb || produit.frais_transit || produit.montant_total_achat) && (
-        <div className="mt-4 p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">Détails des coûts</h4>
+      {/* Prix unitaire dans les deux devises */}
+      {produit.prix_achat_devise_origine && produit.devise_achat !== 'FCFA' && (
+        <div className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire</h4>
           
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-xs sm:text-sm text-gray-600">Prix d'achat</span>
-              <span className="text-sm sm:text-base font-medium text-gray-900">
-                {formatCurrency(produit.prix_achat)}{' '}
-                {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+              <span className="text-xs sm:text-sm text-gray-600">
+                En {DEVISES.find(d => d.value === produit.devise_achat)?.label}
+              </span>
+              <span className="text-base sm:text-lg font-bold text-purple-600">
+                {formatCurrency(produit.prix_achat_devise_origine)}{' '}
+                {DEVISES.find(d => d.value === produit.devise_achat)?.symbole}
               </span>
             </div>
+
+            <div className="flex justify-between items-center pt-2 border-t border-purple-200">
+              <span className="text-xs sm:text-sm text-gray-600">Converti en FCFA</span>
+              <span className="text-lg sm:text-xl font-bold text-blue-600">
+                {formatCurrency(produit.prix_achat)} FCFA
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Détails des coûts du stock total */}
+      {(produit.prix_achat_stock_total || produit.frais_cmb || produit.frais_transit) && (
+        <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">Coût total du stock commandé</h4>
+          
+          <div className="space-y-2">
+            {produit.prix_achat_stock_total && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-gray-600">Prix d'achat stock total</span>
+                <span className="text-sm sm:text-base font-medium text-gray-900">
+                  {formatCurrency(produit.prix_achat_stock_total)}{' '}
+                  {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+                </span>
+              </div>
+            )}
             
-            {produit.frais_cmb && (
+            {produit.frais_cmb && produit.frais_cmb > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-xs sm:text-sm text-gray-600">Frais CMB</span>
                 <span className="text-sm sm:text-base font-medium text-gray-900">
@@ -269,7 +325,7 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               </div>
             )}
             
-            {produit.frais_transit && (
+            {produit.frais_transit && produit.frais_transit > 0 && (
               <div className="flex justify-between items-center">
                 <span className="text-xs sm:text-sm text-gray-600">Frais transit/douane</span>
                 <span className="text-sm sm:text-base font-medium text-gray-900">
@@ -279,11 +335,11 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               </div>
             )}
             
-            {produit.montant_total_achat && (
+            {produit.montant_total_achat && produit.montant_total_achat > 0 && (
               <>
                 <div className="border-t border-blue-300 my-2"></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base font-semibold text-gray-900">Total</span>
+                  <span className="text-sm sm:text-base font-semibold text-gray-900">Coût total du stock</span>
                   <span className="text-lg sm:text-xl font-bold text-blue-600">
                     {formatCurrency(produit.montant_total_achat)}{' '}
                     {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}

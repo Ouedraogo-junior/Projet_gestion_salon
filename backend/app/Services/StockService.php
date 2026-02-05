@@ -47,6 +47,14 @@ class StockService
             throw new Exception("Produit introuvable pour l'article {$detail->article_nom}");
         }
 
+        // ✅ Les produits en réserve ne peuvent pas être vendus directement
+        if ($produit->type_stock_principal === 'reserve') {
+            throw new Exception(
+                "Le produit {$produit->nom} est en réserve. " .
+                "Veuillez d'abord le transférer vers le stock vente."
+            );
+        }
+
         // Déterminer le stock à décrémenter
         $champStock = $this->determinerChampStock($produit, $detail);
 
@@ -68,7 +76,7 @@ class StockService
         $produit = $detail->produit;
         
         if (!$produit) {
-            return; // Si le produit n'existe plus, on ne peut pas restaurer
+            return;
         }
 
         $champStock = $this->determinerChampStock($produit, $detail);
@@ -95,10 +103,16 @@ class StockService
     protected function creerMouvementStock(VenteDetail $detail, string $type, string $motifCustom = null): void
     {
         $motif = $motifCustom ?? "Vente #{$detail->vente->numero_facture}";
+        $produit = $detail->produit;
+        $champStock = $this->determinerChampStock($produit, $detail);
+        
+        // ✅ Déterminer le type_stock selon le champ utilisé
+        $typeStock = $champStock === 'stock_vente' ? 'vente' : 'utilisation';
 
         MouvementStock::create([
             'produit_id' => $detail->produit_id,
             'vente_id' => $detail->vente_id,
+            'type_stock' => $typeStock, // ✅ AJOUTÉ
             'type_mouvement' => $type,
             'quantite' => $detail->quantite,
             'stock_avant' => $this->getStockAvant($detail),
@@ -139,6 +153,15 @@ class StockService
             return [
                 'disponible' => false,
                 'message' => 'Produit introuvable',
+            ];
+        }
+
+        // ✅ Bloquer les produits en réserve
+        if ($produit->type_stock_principal === 'reserve') {
+            return [
+                'disponible' => false,
+                'message' => 'Ce produit est en réserve. Transférez-le vers le stock vente avant de vendre.',
+                'stock_disponible' => 0,
             ];
         }
 
@@ -186,6 +209,23 @@ class StockService
                 ];
             });
 
-        return array_merge($produitsVenteAlerte->toArray(), $produitsUtilisationAlerte->toArray());
+        // ✅ AJOUT: Alertes pour le stock réserve
+        $produitsReserveAlerte = Produit::whereNotNull('seuil_alerte_reserve')
+            ->whereColumn('stock_reserve', '<=', 'seuil_alerte_reserve')
+            ->where('is_active', true)
+            ->get()
+            ->map(function ($produit) {
+                return [
+                    'produit' => $produit,
+                    'type_stock' => 'reserve',
+                    'niveau' => $produit->stock_reserve <= ($produit->seuil_critique_reserve ?? 0) ? 'critique' : 'alerte',
+                ];
+            });
+
+        return array_merge(
+            $produitsVenteAlerte->toArray(), 
+            $produitsUtilisationAlerte->toArray(),
+            $produitsReserveAlerte->toArray()
+        );
     }
 }

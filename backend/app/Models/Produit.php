@@ -46,6 +46,10 @@ class Produit extends Model
         'moyen_paiement',
         'date_reception',
         'montant_total_achat',
+        'taux_change',
+        'prix_achat_devise_origine',
+        'prix_achat_stock_total',
+        'quantite_stock_commande',
     ];
 
   
@@ -73,6 +77,10 @@ class Produit extends Model
         'frais_cmb' => 'decimal:2',
         'frais_transit' => 'decimal:2',
         'montant_total_achat' => 'decimal:2',
+        'taux_change' => 'decimal:2',
+        'prix_achat_devise_origine' => 'decimal:2',
+        'prix_achat_stock_total' => 'decimal:2',
+        'quantite_stock_commande' => 'integer',
     ];
 
     // Relation avec la catégorie
@@ -103,11 +111,6 @@ class Produit extends Model
         return $this->hasMany(TransfertStock::class);
     }
 
-    // SUPPRIMEZ CET ACCESSEUR car il est redondant
-    // public function getStockVenteAttribute(): int
-    // {
-    //     return $this->stock_vente; // Ceci crée une boucle infinie !
-    // }
 
     public function isStockVenteAlerte(): bool
     {
@@ -149,9 +152,10 @@ class Produit extends Model
     /**
      * Calculer automatiquement le montant total d'achat
      */
-    public function calculerMontantTotal(): float
+   public function calculerMontantTotal(): float
     {
-        $total = (float) $this->prix_achat;
+        // Simple addition SANS conversion
+        $total = (float) ($this->prix_achat_stock_total ?? 0);
         
         if ($this->frais_cmb) {
             $total += (float) $this->frais_cmb;
@@ -161,7 +165,7 @@ class Produit extends Model
             $total += (float) $this->frais_transit;
         }
         
-        return $total;
+        return round($total, 2);
     }
 
     /**

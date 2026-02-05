@@ -71,21 +71,21 @@ export interface Produit {
   categorie?: Categorie;
   marque?: string;
   fournisseur?: string;
-  prix_achat: number;
+  prix_achat: number; // Prix unitaire en FCFA (après conversion)
   prix_vente: number;
   prix_promo?: number;
   date_debut_promo?: string;
   date_fin_promo?: string;
   stock_vente: number;
   stock_utilisation: number;
-  stock_reserve: number; // ✅ AJOUT
+  stock_reserve: number;
   seuil_alerte: number;
   seuil_critique: number;
   seuil_alerte_utilisation: number;
   seuil_critique_utilisation: number;
-  seuil_alerte_reserve?: number; // ✅ AJOUT
-  seuil_critique_reserve?: number; // ✅ AJOUT
-  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve'; // ✅ AJOUT 'reserve'
+  seuil_alerte_reserve?: number;
+  seuil_critique_reserve?: number;
+  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve';
   photo_url?: string;
   quantite_min_commande?: number;
   delai_livraison_jours?: number;
@@ -93,13 +93,19 @@ export interface Produit {
   valeurs_attributs?: ProduitAttributValeur[];
   created_at: string;
   updated_at: string;
+  
+  // Informations d'achat
   date_commande?: string;
   devise_achat?: Devise;
+  taux_change?: number; 
+  prix_achat_devise_origine?: number; 
+  prix_achat_stock_total?: number; 
+  quantite_stock_commande?: number; 
   frais_cmb?: number;
   frais_transit?: number;
   moyen_paiement?: MoyenPaiement;
   date_reception?: string;
-  montant_total_achat?: number;
+  montant_total_achat?: number; 
 }
 
 export interface MouvementStock {
