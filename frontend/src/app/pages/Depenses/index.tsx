@@ -42,15 +42,22 @@ export default function Depenses() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-5 lg:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des dépenses</h1>
-          <p className="text-sm text-gray-500 mt-1">Suivez toutes les dépenses du salon</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
+            Gestion des dépenses
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            Suivez toutes les dépenses du salon
+          </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="whitespace-nowrap">
-          <Plus className="mr-2 h-4 w-4" />
+        <Button 
+          onClick={() => setShowForm(true)} 
+          className="whitespace-nowrap w-full sm:w-auto text-sm sm:text-base h-9 sm:h-10"
+        >
+          <Plus className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
           Nouvelle dépense
         </Button>
       </div>
@@ -59,7 +66,7 @@ export default function Depenses() {
       <DepenseStats mois={mois} annee={annee} />
 
       {/* Filtres */}
-      <div className="bg-white rounded-lg shadow-sm border p-4">
+      <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4">
         <DepenseFilters
           mois={mois}
           annee={annee}
@@ -72,8 +79,8 @@ export default function Depenses() {
 
       {/* Liste des dépenses */}
       {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="flex justify-center items-center py-12 sm:py-16">
+          <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
         </div>
       ) : (
         <DepenseList

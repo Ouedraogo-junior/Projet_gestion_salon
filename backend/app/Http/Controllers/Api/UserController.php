@@ -513,4 +513,76 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Récupérer les utilisateurs désactivés
+     */
+    public function getInactiveUsers()
+    {
+        $users = User::where('is_active', false)
+            ->whereNull('deleted_at')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $users
+        ]);
+    }
+
+
+    /**
+     * Récupérer les utilisateurs supprimés (soft deleted)
+     */
+    public function getDeletedUsers()
+    {
+        $users = User::onlyTrashed()
+            ->orderBy('deleted_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $users
+        ]);
+    }
+
+    /**
+     * Restaurer un utilisateur supprimé
+     */
+    public function restore($id)
+    {
+        $user = User::onlyTrashed()->findOrFail($id);
+        
+        $user->restore();
+        
+        // Réactiver automatiquement l'utilisateur lors de la restauration
+        $user->update(['is_active' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Utilisateur restauré avec succès',
+            'data' => $user->fresh()
+        ]);
+    }
+
+    /**
+     * Supprimer définitivement un utilisateur
+     */
+    public function forceDelete($id)
+    {
+        $user = User::onlyTrashed()->findOrFail($id);
+        
+        // Supprimer la photo si elle existe
+        if ($user->photo_url) {
+            Storage::disk('public')->delete($user->photo_url);
+        }
+        
+        // Suppression définitive
+        $user->forceDelete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Utilisateur supprimé définitivement'
+        ]);
+    }
+
 }

@@ -24,11 +24,14 @@ class Produit extends Model
         'date_fin_promo',
         'stock_vente',
         'stock_utilisation',
+        'stock_reserve',
         'type_stock_principal',
         'seuil_alerte',
         'seuil_critique',
         'seuil_alerte_utilisation',
         'seuil_critique_utilisation',
+        'seuil_alerte_reserve',
+        'seuil_critique_reserve',
         'photo_url',
         'quantite_min_commande',
         'delai_livraison_jours',
@@ -36,9 +39,16 @@ class Produit extends Model
         'sync_status',
         'visible_public',
         'salon_id',
+        'date_commande',
+        'devise_achat',
+        'frais_cmb',
+        'frais_transit',
+        'moyen_paiement',
+        'date_reception',
+        'montant_total_achat',
     ];
 
-    // AJOUTEZ CECI
+  
     protected $casts = [
         'prix_achat' => 'decimal:2',
         'prix_vente' => 'decimal:2',
@@ -47,14 +57,22 @@ class Produit extends Model
         'date_fin_promo' => 'date',
         'stock_vente' => 'integer',
         'stock_utilisation' => 'integer',
+        'stock_reserve' => 'integer',
         'seuil_alerte' => 'integer',
         'seuil_critique' => 'integer',
         'seuil_alerte_utilisation' => 'integer',
         'seuil_critique_utilisation' => 'integer',
+        'seuil_alerte_reserve' => 'integer',
+        'seuil_critique_reserve' => 'integer',
         'quantite_min_commande' => 'integer',
         'delai_livraison_jours' => 'integer',
         'is_active' => 'boolean',
         'visible_public' => 'boolean',
+        'date_commande' => 'date',
+        'date_reception' => 'date',
+        'frais_cmb' => 'decimal:2',
+        'frais_transit' => 'decimal:2',
+        'montant_total_achat' => 'decimal:2',
     ];
 
     // Relation avec la catégorie
@@ -126,5 +144,60 @@ class Produit extends Model
             ->first();
         
         return $valeur ? $valeur->valeur : null;
+    }
+
+    /**
+     * Calculer automatiquement le montant total d'achat
+     */
+    public function calculerMontantTotal(): float
+    {
+        $total = (float) $this->prix_achat;
+        
+        if ($this->frais_cmb) {
+            $total += (float) $this->frais_cmb;
+        }
+        
+        if ($this->frais_transit) {
+            $total += (float) $this->frais_transit;
+        }
+        
+        return $total;
+    }
+
+    /**
+     * Enregistrer et calculer automatiquement le montant total
+     */
+    protected static function booted()
+    {
+        static::saving(function ($produit) {
+            // Calculer automatiquement le montant total avant sauvegarde
+            if ($produit->prix_achat) {
+                $produit->montant_total_achat = $produit->calculerMontantTotal();
+            }
+        });
+    }
+
+
+    // Méthode pour gérer le stock de réserve
+    public function ajusterStockReserve(int $quantite, string $operation = 'entree'): void
+    {
+        if ($operation === 'entree') {
+            $this->increment('stock_reserve', $quantite);
+        } else {
+            $this->decrement('stock_reserve', $quantite);
+        }
+    }
+
+    // Vérifier alerte réserve
+    public function isAlerteReserve(): bool
+    {
+        return $this->seuil_alerte_reserve !== null 
+            && $this->stock_reserve <= $this->seuil_alerte_reserve;
+    }
+
+    public function isCritiqueReserve(): bool
+    {
+        return $this->seuil_critique_reserve !== null 
+            && $this->stock_reserve <= $this->seuil_critique_reserve;
     }
 }

@@ -28,6 +28,15 @@ class ProduitResource extends JsonResource
             
             // Type de stock
             'type_stock_principal' => $this->type_stock_principal,
+
+             // CHAMPS DE COMMANDE
+            'date_commande' => $this->date_commande?->format('Y-m-d'),
+            'date_reception' => $this->date_reception?->format('Y-m-d'),
+            'devise_achat' => $this->devise_achat ?? 'FCFA',
+            'frais_cmb' => $this->frais_cmb ? (float) $this->frais_cmb : null,
+            'frais_transit' => $this->frais_transit ? (float) $this->frais_transit : null,
+            'moyen_paiement' => $this->moyen_paiement,
+            'montant_total_achat' => $this->montant_total_achat ? (float) $this->montant_total_achat : null,
             
             // Prix
             'prix_achat' => (float) $this->prix_achat,
@@ -45,7 +54,8 @@ class ProduitResource extends JsonResource
             // Stocks
             'stock_vente' => $this->stock_vente,
             'stock_utilisation' => $this->stock_utilisation,
-            'stock_total' => $this->stock_vente + $this->stock_utilisation,
+            'stock_reserve' => $this->stock_reserve ?? 0,
+            'stock_total' => $this->stock_vente + $this->stock_utilisation + ($this->stock_reserve ?? 0),
             
             // Seuils vente
             'seuil_alerte' => $this->seuil_alerte,
@@ -54,10 +64,15 @@ class ProduitResource extends JsonResource
             // Seuils utilisation
             'seuil_alerte_utilisation' => $this->seuil_alerte_utilisation ?? 5,
             'seuil_critique_utilisation' => $this->seuil_critique_utilisation ?? 2,
+
+            // Seuils réserve - AJOUTEZ CES LIGNES
+            'seuil_alerte_reserve' => $this->seuil_alerte_reserve,
+            'seuil_critique_reserve' => $this->seuil_critique_reserve,
             
             // Statuts des stocks
             'alerte_stock_vente' => $this->getStatutStockVente(),
             'alerte_stock_utilisation' => $this->getStatutStockUtilisation(),
+            'alerte_stock_reserve' => $this->getStatutStockReserve(),
             'stock_vente_ok' => $this->stock_vente > $this->seuil_alerte,
             'stock_utilisation_ok' => $this->stock_utilisation > ($this->seuil_alerte_utilisation ?? 5),
             
@@ -81,7 +96,8 @@ class ProduitResource extends JsonResource
             // Valorisation stock
             'valeur_stock_vente' => $this->stock_vente * $this->prix_achat,
             'valeur_stock_utilisation' => $this->stock_utilisation * $this->prix_achat,
-            'valeur_stock_total' => ($this->stock_vente + $this->stock_utilisation) * $this->prix_achat,
+            'valeur_stock_reserve' => ($this->stock_reserve ?? 0) * $this->prix_achat,  // ← AJOUTEZ
+            'valeur_stock_total' => ($this->stock_vente + $this->stock_utilisation + ($this->stock_reserve ?? 0)) * $this->prix_achat,
             
             // Relations (si chargées)
             'mouvements_recents' => MouvementStockResource::collection(
@@ -193,5 +209,25 @@ class ProduitResource extends JsonResource
                 'unite' => $valeur->attribut->unite,
             ];
         })->toArray();
+    }
+
+    /**
+     * Obtient le statut du stock réserve
+     */
+    private function getStatutStockReserve(): string
+    {
+        if (!$this->seuil_critique_reserve && !$this->seuil_alerte_reserve) {
+            return 'ok';
+        }
+        
+        if ($this->seuil_critique_reserve && $this->stock_reserve <= $this->seuil_critique_reserve) {
+            return 'critique';
+        }
+        
+        if ($this->seuil_alerte_reserve && $this->stock_reserve <= $this->seuil_alerte_reserve) {
+            return 'alerte';
+        }
+        
+        return 'ok';
     }
 }

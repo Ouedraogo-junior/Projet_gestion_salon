@@ -103,6 +103,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/users/{id}/salaire', [UserController::class, 'updateSalaire']);
         Route::get('/users/salaires', [UserController::class, 'getSalaires']);
         Route::get('/users/coiffeurs', [UserController::class, 'getCoiffeurs']);
+        Route::get('/users/inactive', [UserController::class, 'getInactiveUsers']);
+        Route::get('/users/deleted', [UserController::class, 'getDeletedUsers']);
+        Route::post('/users/{id}/restore', [UserController::class, 'restore']);
+        Route::delete('/users/{id}/force', [UserController::class, 'forceDelete']);
         
         // Salon - Configuration
         Route::put('/salon', [SalonController::class, 'update']);
@@ -199,12 +203,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('check.role:gestionnaire,gerant,coiffeur')->group(function () {
         
         // Clients
+        Route::get('/clients/search', [ClientController::class, 'search']);
         Route::get('/clients', [ClientController::class, 'index']);
         Route::post('/clients', [ClientController::class, 'store']);
         Route::get('/clients/{id}', [ClientController::class, 'show']);
         Route::put('/clients/{id}', [ClientController::class, 'update']);
         Route::post('/clients/{id}/photos', [ClientController::class, 'uploadPhoto']);
         Route::delete('/clients/{clientId}/photos/{photoId}', [ClientController::class, 'deletePhoto']);
+        
         
         // Ventes
         Route::get('/ventes', [VenteController::class, 'index']);
@@ -219,6 +225,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/rendez-vous', [RendezVousController::class, 'index']);
         Route::post('/rendez-vous', [RendezVousController::class, 'store']);
         Route::get('/rendez-vous/{id}', [RendezVousController::class, 'show']);
+        Route::patch('/rendez-vous/{id}/acompte', [RendezVousController::class, 'updateAcompte']);
         Route::put('/rendez-vous/{id}', [RendezVousController::class, 'update']);
         Route::post('/rendez-vous/{id}/confirm', [RendezVousController::class, 'confirm']);
         Route::post('/rendez-vous/{id}/cancel', [RendezVousController::class, 'cancel']);

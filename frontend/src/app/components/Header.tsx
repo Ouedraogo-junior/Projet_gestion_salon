@@ -1,5 +1,5 @@
 // src/app/components/Header.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Menu, RefreshCw, LogOut, User, Settings, ChevronDown } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/app/components/ui/avatar';
@@ -8,8 +8,6 @@ import { Badge } from '@/app/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
-
-
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -22,18 +20,13 @@ function Header({ onMenuClick }: HeaderProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
-  
-  // Fonction de synchronisation
   const handleSync = async () => {
     setIsSyncing(true);
-    // Simuler une synchronisation
-    setTimeout(() => {
-      setIsSyncing(false);
-    }, 2000);
+    setTimeout(() => setIsSyncing(false), 2000);
   };
 
-  // Fonction de déconnexion
   const handleLogout = async () => {
     try {
       await logout();
@@ -43,7 +36,6 @@ function Header({ onMenuClick }: HeaderProps) {
     }
   };
 
-  // Obtenir les initiales de l'utilisateur
   const getInitials = () => {
     if (!user) return 'U';
     const nom = user.nom || '';
@@ -51,16 +43,13 @@ function Header({ onMenuClick }: HeaderProps) {
     return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
   };
 
-  // Formater le nom complet
   const getFullName = () => {
     if (!user) return 'Utilisateur';
     return `${user.prenom} ${user.nom}`;
   };
 
-  // Formater le rôle en français
   const getRoleLabel = () => {
     if (!user?.role) return 'Utilisateur';
-    //console.log('User role:', user?.role);
     const roles: Record<string, string> = {
       'gerant': 'Gerant',
       'coiffeur': 'Coiffeur',
@@ -71,8 +60,8 @@ function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <>
-      <header className="h-[70px] bg-white border-b border-gray-200 flex items-center px-6 gap-6">
-        {/* Menu hamburger (mobile) */}
+      <header className="h-[70px] bg-white border-b border-gray-200 flex items-center px-3 sm:px-6 gap-2 sm:gap-6">
+        {/* Menu hamburger */}
         <button 
           onClick={onMenuClick}
           className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -80,28 +69,33 @@ function Header({ onMenuClick }: HeaderProps) {
           <Menu className="w-6 h-6" />
         </button>
 
-        {/* Barre de recherche */}
-        <div className="flex-1 max-w-2xl relative">
+        {/* Barre de recherche - Desktop */}
+        <div className="hidden md:flex flex-1 max-w-2xl relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <Input
             type="search"
-            placeholder="Rechercher un client, produit, rendez-vous..."
+            placeholder="Rechercher..."
             className="pl-10 bg-gray-50 border-gray-200"
           />
         </div>
 
         {/* Actions droite */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1 sm:gap-4 ml-auto">
+          {/* Recherche mobile */}
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Search className="w-5 h-5 text-gray-600" />
+          </button>
+
           {/* Synchronisation */}
           <button
             onClick={handleSync}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Synchronisation"
             disabled={isSyncing}
           >
-            <RefreshCw
-              className={`w-5 h-5 text-gray-600 ${isSyncing ? 'animate-spin' : ''}`}
-            />
+            <RefreshCw className={`w-5 h-5 text-gray-600 ${isSyncing ? 'animate-spin' : ''}`} />
           </button>
 
           {/* Notifications */}
@@ -118,48 +112,41 @@ function Header({ onMenuClick }: HeaderProps) {
           </button>
 
           {/* Menu utilisateur */}
-          <div className="relative border-l pl-4">
+          <div className="relative border-l pl-2 sm:pl-4">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg transition-colors"
+              className="flex items-center gap-2 sm:gap-3 hover:bg-gray-50 p-1 sm:p-2 rounded-lg transition-colors"
             >
-              <div className="text-right">
+              {/* Nom - caché sur mobile */}
+              <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium">{getFullName()}</p>
                 <p className="text-xs text-gray-500">{getRoleLabel()}</p>
               </div>
-              <Avatar>
-                <AvatarFallback className="bg-blue-600 text-white font-semibold">
+              
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                <AvatarFallback className="bg-blue-600 text-white font-semibold text-xs sm:text-sm">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+              
+              <ChevronDown className="hidden sm:block w-4 h-4 text-gray-400 transition-transform" />
             </button>
 
             {/* Menu déroulant */}
             {showUserMenu && (
               <>
-                {/* Overlay pour fermer le menu */}
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowUserMenu(false)}
-                />
-
-                {/* Dropdown */}
+                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                
                 <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
-                  {/* Infos utilisateur */}
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-medium text-gray-900">{getFullName()}</p>
                     <p className="text-xs text-gray-500 mt-1">{user?.email || 'Pas d\'email'}</p>
                     <p className="text-xs text-gray-500">{user?.telephone}</p>
                   </div>
 
-                  {/* Menu items */}
                   <div className="py-1">
                     <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        navigate('/profil');
-                      }}
+                      onClick={() => { setShowUserMenu(false); navigate('/profil'); }}
                       className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <User className="w-4 h-4" />
@@ -167,10 +154,7 @@ function Header({ onMenuClick }: HeaderProps) {
                     </button>
 
                     <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        navigate('/parametres');
-                      }}
+                      onClick={() => { setShowUserMenu(false); navigate('/parametres'); }}
                       className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       <Settings className="w-4 h-4" />
@@ -178,7 +162,6 @@ function Header({ onMenuClick }: HeaderProps) {
                     </button>
                   </div>
 
-                  {/* Déconnexion */}
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button
                       onClick={handleLogout}
@@ -195,11 +178,22 @@ function Header({ onMenuClick }: HeaderProps) {
         </div>
       </header>
 
-      {/* Panel de notifications */}
-      <NotificationPanel 
-        isOpen={showNotifications} 
-        onClose={() => setShowNotifications(false)} 
-      />
+      {/* Barre de recherche mobile */}
+      {showSearch && (
+        <div className="md:hidden bg-white border-b border-gray-200 px-3 py-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input
+              type="search"
+              placeholder="Rechercher..."
+              className="pl-10 bg-gray-50 border-gray-200"
+              autoFocus
+            />
+          </div>
+        </div>
+      )}
+
+      <NotificationPanel isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
     </>
   );
 }

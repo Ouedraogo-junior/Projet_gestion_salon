@@ -39,12 +39,12 @@ export default function RapportsPage() {
     comparaison.isLoading;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Rapports Comptables</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Rapports Comptables</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Analyse financière et statistiques du salon
           </p>
         </div>
@@ -59,9 +59,9 @@ export default function RapportsPage() {
       {/* Loading global */}
       {isLoading && (
         <Card>
-          <CardContent className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-3 text-lg">Chargement des données...</span>
+          <CardContent className="flex items-center justify-center py-8 sm:py-12">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
+            <span className="ml-3 text-base sm:text-lg">Chargement des données...</span>
           </CardContent>
         </Card>
       )}
@@ -69,26 +69,35 @@ export default function RapportsPage() {
       {/* Contenu principal */}
       {!isLoading && (
         <Tabs defaultValue="global" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="global">Vue Globale</TabsTrigger>
-            <TabsTrigger value="ventes">Détail Ventes</TabsTrigger>
-            <TabsTrigger value="tresorerie">Trésorerie</TabsTrigger>
-            <TabsTrigger value="comparaison">Comparaison</TabsTrigger>
+          {/* Mobile: Tabs scrollables */}
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger value="global" className="text-xs sm:text-sm px-2 py-2">
+              Vue Globale
+            </TabsTrigger>
+            <TabsTrigger value="ventes" className="text-xs sm:text-sm px-2 py-2">
+              Détail Ventes
+            </TabsTrigger>
+            <TabsTrigger value="tresorerie" className="text-xs sm:text-sm px-2 py-2">
+              Trésorerie
+            </TabsTrigger>
+            <TabsTrigger value="comparaison" className="text-xs sm:text-sm px-2 py-2">
+              Comparaison
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="global" className="space-y-4">
+          <TabsContent value="global" className="space-y-4 mt-4">
             <RapportGlobalView data={rapportGlobal.data} />
           </TabsContent>
 
-          <TabsContent value="ventes" className="space-y-4">
+          <TabsContent value="ventes" className="space-y-4 mt-4">
             <VentesDetailView data={ventesDetail.data} />
           </TabsContent>
 
-          <TabsContent value="tresorerie" className="space-y-4">
+          <TabsContent value="tresorerie" className="space-y-4 mt-4">
             <TresorerieView data={tresorerie.data} />
           </TabsContent>
 
-          <TabsContent value="comparaison" className="space-y-4">
+          <TabsContent value="comparaison" className="space-y-4 mt-4">
             <ComparaisonView data={comparaison.data} />
           </TabsContent>
         </Tabs>
@@ -98,7 +107,7 @@ export default function RapportsPage() {
       {(rapportGlobal.error || ventesDetail.error || tresorerie.error || comparaison.error) && (
         <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="text-destructive">Erreur</CardTitle>
+            <CardTitle className="text-destructive text-base sm:text-lg">Erreur</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">

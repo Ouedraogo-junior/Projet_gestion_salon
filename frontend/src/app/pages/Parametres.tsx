@@ -1,5 +1,7 @@
 // src/app/pages/Parametres.tsx
 import { useState, useRef, useEffect } from 'react';
+import { UtilisateursArchives } from '../components/UtilisateursArchives';
+
 import {
   Building,
   Users as UsersIcon,
@@ -11,6 +13,7 @@ import {
   Eye,
   EyeOff,
   DollarSign,
+  UserX,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
@@ -316,42 +319,46 @@ export function Parametres() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Paramètres</h1>
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <h1 className="text-2xl sm:text-3xl font-bold">Paramètres</h1>
 
       <Tabs defaultValue="salon">
-        <TabsList>
-          <TabsTrigger value="salon">
-            <Building className="w-4 h-4 mr-2" />
-            Salon
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="salon" className="text-xs sm:text-sm">
+            <Building className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Salon</span>
           </TabsTrigger>
-          <TabsTrigger value="utilisateurs">
-            <UsersIcon className="w-4 h-4 mr-2" />
-            Utilisateurs
+          <TabsTrigger value="utilisateurs" className="text-xs sm:text-sm">
+            <UsersIcon className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Utilisateurs</span>
           </TabsTrigger>
-          <TabsTrigger value="salaires">
-            <DollarSign className="w-4 h-4 mr-2" />
-            Salaires
+          <TabsTrigger value="salaires" className="text-xs sm:text-sm">
+            <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Salaires</span>
+          </TabsTrigger>
+          <TabsTrigger value="archives" className="text-xs sm:text-sm">
+            <UserX className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Archives</span>
           </TabsTrigger>
         </TabsList>
 
         {/* TAB SALON */}
-        <TabsContent value="salon" className="mt-6">
+        <TabsContent value="salon" className="mt-4 sm:mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Informations du salon</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Informations du salon</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6">
               {/* Logo */}
               <div className="space-y-2">
-                <Label>Logo du salon</Label>
-                <div className="flex items-center gap-4">
+                <Label className="text-sm">Logo du salon</Label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   {salon?.logo_url ? (
                     <div className="relative">
                       <img
-                        src={`http://127.0.0.1:8000/storage/${salon.logo_url}`}
+                        src={`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/storage/${salon.logo_url}`}
                         alt="Logo"
-                        className="w-24 h-24 object-cover rounded-lg border"
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border"
                       />
                       <Button
                         size="sm"
@@ -363,8 +370,8 @@ export function Parametres() {
                       </Button>
                     </div>
                   ) : (
-                    <div className="w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center">
-                      <Upload className="w-8 h-8 text-gray-400" />
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 border-2 border-dashed rounded-lg flex items-center justify-center">
+                      <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                     </div>
                   )}
                   <div>
@@ -377,9 +384,10 @@ export function Parametres() {
                     />
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <Upload className="w-4 h-4 mr-2" />
+                      <Upload className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                       {salon?.logo_url ? 'Changer' : 'Uploader'}
                     </Button>
                     <p className="text-xs text-gray-500 mt-1">
@@ -394,7 +402,7 @@ export function Parametres() {
               {/* Formulaire */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nom">Nom du salon *</Label>
+                  <Label htmlFor="nom" className="text-sm">Nom du salon *</Label>
                   <Input
                     id="nom"
                     value={salonForm.nom}
@@ -403,7 +411,7 @@ export function Parametres() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="adresse">Adresse *</Label>
+                  <Label htmlFor="adresse" className="text-sm">Adresse *</Label>
                   <Input
                     id="adresse"
                     value={salonForm.adresse}
@@ -412,7 +420,7 @@ export function Parametres() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="telephone">Téléphone *</Label>
+                  <Label htmlFor="telephone" className="text-sm">Téléphone *</Label>
                   <Input
                     id="telephone"
                     value={salonForm.telephone}
@@ -421,7 +429,7 @@ export function Parametres() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -431,7 +439,7 @@ export function Parametres() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="horaires">Horaires d'ouverture</Label>
+                  <Label htmlFor="horaires" className="text-sm">Horaires d'ouverture</Label>
                   <Input
                     id="horaires"
                     value={salonForm.horaires}
@@ -442,7 +450,7 @@ export function Parametres() {
               </div>
 
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
                 onClick={handleSalonSubmit}
                 disabled={isUpdating}
               >
@@ -453,27 +461,27 @@ export function Parametres() {
         </TabsContent>
 
         {/* TAB UTILISATEURS */}
-        <TabsContent value="utilisateurs" className="mt-6">
+        <TabsContent value="utilisateurs" className="mt-4 sm:mt-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Gestion des utilisateurs</CardTitle>
-              <Button onClick={openCreateDialog}>
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter un utilisateur
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <CardTitle className="text-lg sm:text-xl">Gestion des utilisateurs</CardTitle>
+              <Button onClick={openCreateDialog} size="sm">
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                Ajouter
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {users.map((user) => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-3"
                   >
-                    <div className="flex-1">
-                      <p className="font-medium">{user.nom_complet}</p>
-                      <p className="text-sm text-gray-600">{user.telephone}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm sm:text-base truncate">{user.nom_complet}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">{user.telephone}</p>
                       {user.email && (
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
                       )}
                       {user.specialite && (
                         <p className="text-xs text-blue-600 mt-1">
@@ -486,50 +494,52 @@ export function Parametres() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 flex-wrap">
                       <span
-                        className={`text-xs px-3 py-1 rounded-full ${getRoleBadgeColor(
+                        className={`text-xs px-2 sm:px-3 py-1 rounded-full ${getRoleBadgeColor(
                           user.role
                         )}`}
                       >
                         {getRoleLabel(user.role)}
                       </span>
-                      <Switch
-                        checked={user.is_active}
-                        onCheckedChange={() => handleToggleActive(user.id)}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openSalaireDialog(user)}
-                        title="Gérer le salaire"
-                      >
-                        <DollarSign className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openPasswordDialog(user.id)}
-                        title="Réinitialiser le mot de passe"
-                      >
-                        <Lock className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(user)}
-                        title="Modifier"
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={user.is_active}
+                          onCheckedChange={() => handleToggleActive(user.id)}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openSalaireDialog(user)}
+                          title="Gérer le salaire"
+                        >
+                          <DollarSign className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openPasswordDialog(user.id)}
+                          title="Réinitialiser le mot de passe"
+                        >
+                          <Lock className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditDialog(user)}
+                          title="Modifier"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.id)}
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -539,33 +549,33 @@ export function Parametres() {
         </TabsContent>
 
         {/* TAB SALAIRES */}
-        <TabsContent value="salaires" className="mt-6">
+        <TabsContent value="salaires" className="mt-4 sm:mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Récapitulatif des salaires</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">Récapitulatif des salaires</CardTitle>
             </CardHeader>
             <CardContent>
               {loadingSalaires ? (
                 <p>Chargement...</p>
               ) : salaires ? (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {/* Statistiques */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Total mensuel</p>
-                      <p className="text-2xl font-bold text-blue-600">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+                      <p className="text-xs sm:text-sm text-gray-600">Total mensuel</p>
+                      <p className="text-xl sm:text-2xl font-bold text-blue-600">
                         {formatCurrency(salaires.total_mensuel)}
                       </p>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Total annuel</p>
-                      <p className="text-2xl font-bold text-green-600">
+                    <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
+                      <p className="text-xs sm:text-sm text-gray-600">Total annuel</p>
+                      <p className="text-xl sm:text-2xl font-bold text-green-600">
                         {formatCurrency(salaires.total_annuel)}
                       </p>
                     </div>
-                    <div className="p-4 bg-purple-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Nombre d'employés</p>
-                      <p className="text-2xl font-bold text-purple-600">
+                    <div className="p-3 sm:p-4 bg-purple-50 rounded-lg">
+                      <p className="text-xs sm:text-sm text-gray-600">Nombre d'employés</p>
+                      <p className="text-xl sm:text-2xl font-bold text-purple-600">
                         {salaires.nombre_employes}
                       </p>
                     </div>
@@ -574,24 +584,26 @@ export function Parametres() {
                   <Separator />
 
                   {/* Liste des employés */}
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {salaires.employes.map((employe) => (
                       <div
                         key={employe.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-3"
                       >
-                        <div>
-                          <p className="font-medium">{employe.nom_complet}</p>
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full ${getRoleBadgeColor(
-                              employe.role
-                            )}`}
-                          >
-                            {getRoleLabel(employe.role)}
-                          </span>
+                        <div className="flex items-center justify-between sm:block">
+                          <div>
+                            <p className="font-medium text-sm sm:text-base">{employe.nom_complet}</p>
+                            <span
+                              className={`inline-block text-xs px-2 py-1 rounded-full mt-1 ${getRoleBadgeColor(
+                                employe.role
+                              )}`}
+                            >
+                              {getRoleLabel(employe.role)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <p className="text-lg font-semibold text-gray-700">
+                        <div className="flex items-center justify-between sm:justify-end gap-3">
+                          <p className="text-base sm:text-lg font-semibold text-gray-700">
                             {formatCurrency(employe.salaire_mensuel || 0)}
                           </p>
                           <Button
@@ -612,20 +624,25 @@ export function Parametres() {
             </CardContent>
           </Card>
         </TabsContent>
+
+          {/* TAB ARCHIVES */}
+          <TabsContent value="archives" className="mt-4 sm:mt-6">
+            <UtilisateursArchives />
+          </TabsContent>
       </Tabs>
 
       {/* Dialog Utilisateur */}
       <Dialog open={userDialog} onOpenChange={setUserDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
               {editingUser ? 'Modifier' : 'Ajouter'} un utilisateur
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Prénom *</Label>
+                <Label className="text-sm">Prénom *</Label>
                 <Input
                   value={userForm.prenom}
                   onChange={(e) => handleUserChange('prenom', e.target.value)}
@@ -633,7 +650,7 @@ export function Parametres() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Nom *</Label>
+                <Label className="text-sm">Nom *</Label>
                 <Input
                   value={userForm.nom}
                   onChange={(e) => handleUserChange('nom', e.target.value)}
@@ -642,7 +659,7 @@ export function Parametres() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Téléphone *</Label>
+              <Label className="text-sm">Téléphone *</Label>
               <Input
                 value={userForm.telephone}
                 onChange={(e) => handleUserChange('telephone', e.target.value)}
@@ -650,7 +667,7 @@ export function Parametres() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label className="text-sm">Email</Label>
               <Input
                 type="email"
                 value={userForm.email}
@@ -660,7 +677,7 @@ export function Parametres() {
             </div>
             {!editingUser && (
               <div className="space-y-2">
-                <Label>Mot de passe *</Label>
+                <Label className="text-sm">Mot de passe *</Label>
                 <div className="relative">
                   <Input
                     type={showPassword ? 'text' : 'password'}
@@ -685,7 +702,7 @@ export function Parametres() {
               </div>
             )}
             <div className="space-y-2">
-              <Label>Rôle *</Label>
+              <Label className="text-sm">Rôle *</Label>
               <Select
                 value={userForm.role}
                 onValueChange={(value) => handleUserChange('role', value)}
@@ -701,7 +718,7 @@ export function Parametres() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Spécialité</Label>
+              <Label className="text-sm">Spécialité</Label>
               <Input
                 value={userForm.specialite}
                 onChange={(e) => handleUserChange('specialite', e.target.value)}
@@ -709,11 +726,11 @@ export function Parametres() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUserDialog(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setUserDialog(false)} className="w-full sm:w-auto">
               Annuler
             </Button>
-            <Button onClick={handleUserSubmit}>
+            <Button onClick={handleUserSubmit} className="w-full sm:w-auto">
               {editingUser ? 'Modifier' : 'Créer'}
             </Button>
           </DialogFooter>
@@ -724,11 +741,11 @@ export function Parametres() {
       <Dialog open={passwordDialog} onOpenChange={setPasswordDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Réinitialiser le mot de passe</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Nouveau mot de passe *</Label>
+              <Label className="text-sm">Nouveau mot de passe *</Label>
               <Input
                 type="password"
                 value={passwordForm.password}
@@ -739,7 +756,7 @@ export function Parametres() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Confirmer le mot de passe *</Label>
+              <Label className="text-sm">Confirmer le mot de passe *</Label>
               <Input
                 type="password"
                 value={passwordForm.password_confirmation}
@@ -753,11 +770,11 @@ export function Parametres() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPasswordDialog(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setPasswordDialog(false)} className="w-full sm:w-auto">
               Annuler
             </Button>
-            <Button onClick={handlePasswordReset}>Réinitialiser</Button>
+            <Button onClick={handlePasswordReset} className="w-full sm:w-auto">Réinitialiser</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -766,11 +783,11 @@ export function Parametres() {
       <Dialog open={salaireDialog} onOpenChange={setSalaireDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Modifier le salaire</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">Modifier le salaire</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Salaire mensuel (FCFA) *</Label>
+              <Label className="text-sm">Salaire mensuel (FCFA) *</Label>
               <Input
                 type="number"
                 min="0"
@@ -783,11 +800,11 @@ export function Parametres() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSalaireDialog(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setSalaireDialog(false)} className="w-full sm:w-auto">
               Annuler
             </Button>
-            <Button onClick={handleSalaireSubmit}>Enregistrer</Button>
+            <Button onClick={handleSalaireSubmit} className="w-full sm:w-auto">Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

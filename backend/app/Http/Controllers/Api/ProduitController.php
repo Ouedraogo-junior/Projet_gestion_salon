@@ -282,9 +282,7 @@ class ProduitController extends Controller
     public function alertes(Request $request): JsonResponse
     {
         $query = Produit::query();
-
-        // Type d'alerte (vente, utilisation, ou les deux)
-        $typeAlerte = $request->input('type', 'all'); // all, vente, utilisation
+        $typeAlerte = $request->input('type', 'all'); // all, vente, utilisation, reserve
 
         if ($typeAlerte === 'vente' || $typeAlerte === 'all') {
             $query->orWhereRaw('stock_vente <= seuil_alerte');
@@ -294,11 +292,13 @@ class ProduitController extends Controller
             $query->orWhereRaw('stock_utilisation <= seuil_alerte_utilisation');
         }
 
-        // Seulement les produits actifs
+        // ✅ AJOUT: Alertes réserve
+        if ($typeAlerte === 'reserve' || $typeAlerte === 'all') {
+            $query->orWhereRaw('stock_reserve <= seuil_alerte_reserve');
+        }
+
         $query->where('is_active', true);
-
         $query->with(['categorie']);
-
         $produits = $query->get();
 
         return response()->json([
@@ -306,10 +306,14 @@ class ProduitController extends Controller
             'data' => ProduitResource::collection($produits),
             'stats' => [
                 'total_alertes' => $produits->count(),
-                'alertes_vente' => $produits->filter(fn($p) => $p->stock_vente <= $p->seuil_alerte)->count(),
-                'alertes_utilisation' => $produits->filter(fn($p) => $p->stock_utilisation <= ($p->seuil_alerte_utilisation ?? 5))->count(),
-                'critiques_vente' => $produits->filter(fn($p) => $p->stock_vente <= $p->seuil_critique)->count(),
-                'critiques_utilisation' => $produits->filter(fn($p) => $p->stock_utilisation <= ($p->seuil_critique_utilisation ?? 2))->count(),
+                'alertes_vente' => $produits->filter(fn($p) => $p->stock_vente <= ($p->seuil_alerte ?? 0))->count(),
+                'alertes_utilisation' => $produits->filter(fn($p) => $p->stock_utilisation <= ($p->seuil_alerte_utilisation ?? 0))->count(),
+                // ✅ AJOUT
+                'alertes_reserve' => $produits->filter(fn($p) => $p->stock_reserve <= ($p->seuil_alerte_reserve ?? 0))->count(),
+                'critiques_vente' => $produits->filter(fn($p) => $p->stock_vente <= ($p->seuil_critique ?? 0))->count(),
+                'critiques_utilisation' => $produits->filter(fn($p) => $p->stock_utilisation <= ($p->seuil_critique_utilisation ?? 0))->count(),
+                // ✅ AJOUT
+                'critiques_reserve' => $produits->filter(fn($p) => $p->stock_reserve <= ($p->seuil_critique_reserve ?? 0))->count(),
             ],
             'message' => 'Produits en alerte récupérés avec succès',
         ]);

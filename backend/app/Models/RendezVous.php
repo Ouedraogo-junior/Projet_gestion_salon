@@ -61,6 +61,16 @@ class RendezVous extends Model
         return $this->belongsTo(User::class, 'coiffeur_id');
     }
 
+    public function coiffeurs()
+    {
+        return $this->belongsToMany(
+            User::class, 
+            'coiffeur_rendez_vous', 
+            'rendez_vous_id', 
+            'user_id'
+        )->withTimestamps();
+    }
+
     /**
      * Relation : Un rendez-vous appartient à un type de prestation
      */

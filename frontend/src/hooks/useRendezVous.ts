@@ -89,6 +89,15 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     },
   });
 
+  // Mettre à jour l'acompte d'un rendez-vous
+  const { mutate: updateAcompte } = useMutation({
+    mutationFn: ({ id, acompte_montant }: { id: number; acompte_montant: number }) =>
+      rendezVousApi.updateAcompte(id, acompte_montant),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rendez-vous'] });
+    },
+  });
+
   // Marquer acompte payé
   const marquerAcomptePayeMutation = useMutation({
     mutationFn: (id: number) => rendezVousApi.marquerAcomptePaye(id),
@@ -115,5 +124,6 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     marquerAcomptePaye: marquerAcomptePayeMutation.mutate,
+    updateAcompte,
   };
 };

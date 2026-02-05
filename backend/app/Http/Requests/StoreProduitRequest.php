@@ -22,7 +22,7 @@ class StoreProduitRequest extends FormRequest
             'categorie_id' => ['required', 'exists:categories,id'],
             'marque' => ['nullable', 'string', 'max:100'],
             'fournisseur' => ['nullable', 'string', 'max:100'],
-            'type_stock_principal' => ['required', Rule::in(['vente', 'utilisation', 'mixte'])],
+            'type_stock_principal' => ['required', Rule::in(['vente', 'utilisation', 'mixte', 'reserve'])],
 
             // Prix
             'prix_achat' => ['required', 'numeric', 'min:0'],
@@ -34,7 +34,16 @@ class StoreProduitRequest extends FormRequest
             // Stocks - conditionnels selon type_stock_principal
             'stock_vente' => ['nullable', 'integer', 'min:0'],
             'stock_utilisation' => ['nullable', 'integer', 'min:0'],
-            
+            'seuil_alerte' => 'nullable|integer|min:0',
+            'seuil_critique' => 'nullable|integer|min:0',
+            'seuil_alerte_utilisation' => 'nullable|integer|min:0',
+            'seuil_critique_utilisation' => 'nullable|integer|min:0',
+
+            // Stock réserve
+            'stock_reserve' => 'nullable|integer|min:0',
+            'seuil_alerte_reserve' => 'nullable|integer|min:0',
+            'seuil_critique_reserve' => 'nullable|integer|min:0',
+                
             // Seuils OPTIONNELS (nullable)
             'seuil_alerte' => ['nullable', 'integer', 'min:0'],
             'seuil_critique' => ['nullable', 'integer', 'min:0', 'lte:seuil_alerte'],
@@ -64,7 +73,7 @@ class StoreProduitRequest extends FormRequest
             'categorie_id.required' => 'La catégorie est obligatoire.',
             'categorie_id.exists' => 'Cette catégorie n\'existe pas.',
             'type_stock_principal.required' => 'Le type de stock est obligatoire.',
-            'type_stock_principal.in' => 'Le type de stock doit être : vente, utilisation ou mixte.',
+            'type_stock_principal.in' => 'Le type de stock doit être : vente, utilisation, mixte ou reserve.',
             
             'prix_achat.required' => 'Le prix d\'achat est obligatoire.',
             'prix_achat.min' => 'Le prix d\'achat doit être positif.',
@@ -87,4 +96,5 @@ class StoreProduitRequest extends FormRequest
             'attributs.*.max' => 'La valeur de l\'attribut ne peut pas dépasser 255 caractères.',
         ];
     }
+
 }

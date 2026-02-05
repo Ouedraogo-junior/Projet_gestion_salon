@@ -20,8 +20,8 @@ return [
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:3000',
-        // Ajouter votre domaine de production ici
-        // 'https://votre-domaine.com',
+        'https://salon.millaicecream.com',
+        'https://api.millaicecream.com',
     ],
 
     'allowed_origins_patterns' => [],

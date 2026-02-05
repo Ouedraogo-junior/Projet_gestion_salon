@@ -46,16 +46,16 @@ export default function ConfectionsPage() {
   };
 
   return (
-    <div className="flex h-full flex-col space-y-6 p-6">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Confections</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Confections</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gérez la production de vos produits personnalisés
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} size="lg">
+        <Button onClick={() => setDialogOpen(true)} size="lg" className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Nouvelle confection
         </Button>
@@ -68,7 +68,7 @@ export default function ConfectionsPage() {
       <ConfectionFilters filters={filters} onFilterChange={handleFilterChange} />
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden rounded-lg border bg-card">
+      <div className="rounded-lg border bg-card">
         <ConfectionTable
           data={data?.data || []}
           isLoading={isLoading}
@@ -84,7 +84,6 @@ export default function ConfectionsPage() {
         onClose={handleCloseDialog}
         confectionId={selectedConfectionId}
       />
-
       <ConfectionDetailDialog
         open={detailDialogOpen}
         onClose={handleCloseDetailDialog}

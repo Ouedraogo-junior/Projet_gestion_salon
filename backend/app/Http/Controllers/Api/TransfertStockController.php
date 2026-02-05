@@ -89,51 +89,73 @@ class TransfertStockController extends Controller
         DB::beginTransaction();
         try {
             $produit = Produit::findOrFail($request->produit_id);
-
-            // Vérifier le stock source disponible
-            $stockSource = $request->type_transfert === 'vente_vers_utilisation'
-                ? $produit->stock_vente
-                : $produit->stock_utilisation;
-
+            
+            // Vérifier stock source
+            $stockSource = match($request->type_transfert) {
+                'vente_vers_utilisation', 'vente_vers_reserve' => $produit->stock_vente,
+                'utilisation_vers_vente', 'utilisation_vers_reserve' => $produit->stock_utilisation,
+                'reserve_vers_vente', 'reserve_vers_utilisation' => $produit->stock_reserve,
+                default => throw new \Exception("Type invalide")
+            };
+            
             if ($stockSource < $request->quantite) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Stock source insuffisant',
                     'stock_disponible' => $stockSource,
-                    'quantite_demandee' => $request->quantite,
                 ], 422);
             }
-
-            // ✅ MODIFICATION: Tous les transferts sont validés automatiquement
-            $autoValider = true;
-
-            // Créer le transfert
+            
+            // ✅ AJOUT: Définir seuils si transfert depuis réserve vers stock opérationnel
+            if (in_array($request->type_transfert, ['reserve_vers_vente', 'reserve_vers_utilisation'])) {
+                $updates = [];
+                
+                if ($request->type_transfert === 'reserve_vers_vente') {
+                    if ($request->filled('seuil_alerte')) {
+                        $updates['seuil_alerte'] = $request->seuil_alerte;
+                    }
+                    if ($request->filled('seuil_critique')) {
+                        $updates['seuil_critique'] = $request->seuil_critique;
+                    }
+                } else {
+                    if ($request->filled('seuil_alerte_utilisation')) {
+                        $updates['seuil_alerte_utilisation'] = $request->seuil_alerte_utilisation;
+                    }
+                    if ($request->filled('seuil_critique_utilisation')) {
+                        $updates['seuil_critique_utilisation'] = $request->seuil_critique_utilisation;
+                    }
+                }
+                
+                if (!empty($updates)) {
+                    $produit->update($updates);
+                }
+            }
+            
+            // Créer le transfert (auto-validé)
             $transfert = TransfertStock::creerTransfert(
                 produitId: $request->produit_id,
                 typeTransfert: $request->type_transfert,
                 quantite: $request->quantite,
                 motif: $request->motif,
                 userId: auth()->id(),
-                autoValider: $autoValider
+                autoValider: true
             );
-
+            
             DB::commit();
-
+            
             $transfert->load(['produit', 'user', 'valideur', 'mouvements']);
-
+            
             return response()->json([
                 'success' => true,
                 'data' => new TransfertStockResource($transfert),
                 'message' => 'Transfert créé et validé avec succès',
             ], 201);
-
+            
         } catch (\Exception $e) {
             DB::rollBack();
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création du transfert',
-                'error' => $e->getMessage(),
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

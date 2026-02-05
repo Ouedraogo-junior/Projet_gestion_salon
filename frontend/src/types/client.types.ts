@@ -38,8 +38,8 @@ export interface PhotoClient {
 }
 
 export interface CreateClientDTO {
-  nom: string;
-  prenom: string;
+  nom?: string;
+  prenom?: string;
   telephone: string;
   email?: string;
   date_naissance?: string;

@@ -86,13 +86,14 @@ public function index(Request $request)
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nom' => 'required|string|max:100',
-            'prenom' => 'required|string|max:100',
+            'nom' => 'nullable|string|max:100',
+            'prenom' => 'nullable|string|max:100',
             'telephone' => 'required|string|max:20|unique:clients,telephone',
             'email' => 'nullable|email|max:255',
             'date_naissance' => 'nullable|date',
             'adresse' => 'nullable|string',
             'notes' => 'nullable|string',
+            'source' => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -105,7 +106,18 @@ public function index(Request $request)
 
         try {
             $data = $validator->validated();
+            
+            // Valeurs par défaut si nom/prénom vides
+            if (empty($data['nom'])) {
+                $data['nom'] = 'Client';
+            }
+            if (empty($data['prenom'])) {
+                $data['prenom'] = '';
+            }
+            
             $data['date_premiere_visite'] = now()->toDateString();
+            $data['points_fidelite'] = 0;
+            $data['historique_visites'] = 0;
             
             $client = Client::create($data);
 
@@ -323,5 +335,39 @@ public function index(Request $request)
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+
+    /**
+     * Recherche rapide de clients (pour autocomplete)
+     */
+    public function search(Request $request)
+    {
+        $search = $request->get('search', '');
+        
+        if (strlen($search) < 2) {
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+        }
+        
+        // Nettoyer le numéro de téléphone pour la recherche
+        $searchClean = preg_replace('/[^0-9]/', '', $search);
+        
+        $clients = Client::where(function($query) use ($search, $searchClean) {
+            $query->where('nom', 'LIKE', "%{$search}%")
+                ->orWhere('prenom', 'LIKE', "%{$search}%")
+                ->orWhere('email', 'LIKE', "%{$search}%")
+                ->orWhere('telephone', 'LIKE', "%{$searchClean}%");
+        })
+        ->orderBy('nom')
+        ->limit(10)
+        ->get();
+        
+        return response()->json([
+            'success' => true,
+            'data' => $clients
+        ]);
     }
 }

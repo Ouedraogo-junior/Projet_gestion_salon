@@ -155,7 +155,7 @@ export const NouvelleVente: React.FC = () => {
     return produit.prix_vente;
   };
 
-    const handleValiderVente = async () => {
+  const handleValiderVente = async () => {
     // Validation
     if (articles.length === 0) {
       alert('Veuillez ajouter au moins un article');
@@ -216,7 +216,6 @@ export const NouvelleVente: React.FC = () => {
     }
   };
 
-  // 4. Ajouter cette fonction pour imprimer le reçu
   const handlePrintReceipt = () => {
     if (!lastVente) return;
     
@@ -236,34 +235,37 @@ export const NouvelleVente: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-2 sm:p-3 lg:p-4">
       <div className="max-w-7xl mx-auto">
         {/* En-tête */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Nouvelle Vente</h1>
-          <div className="flex gap-2">
-            <button
-              onClick={resetForm}
-              className="px-4 py-2 border rounded hover:bg-gray-100 flex items-center gap-2"
-            >
-              <X size={18} />
-              Annuler
-            </button>
-            <button
-              onClick={handleValiderVente}
-              disabled={isLoading || articles.length === 0}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 flex items-center gap-2"
-            >
-              <Save size={18} />
-              {isLoading ? 'Enregistrement...' : 'Valider la vente'}
-            </button>
+        <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-3 sm:mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold">Nouvelle Vente</h1>
+            <div className="flex gap-2">
+              <button
+                onClick={resetForm}
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border rounded hover:bg-gray-100 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+              >
+                <X size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <span>Annuler</span>
+              </button>
+              <button
+                onClick={handleValiderVente}
+                disabled={isLoading || articles.length === 0}
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+              >
+                <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <span className="hidden sm:inline">{isLoading ? 'Enregistrement...' : 'Valider la vente'}</span>
+                <span className="sm:hidden">{isLoading ? 'Envoi...' : 'Valider'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Contenu principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Colonne gauche - Client et Articles */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
             {/* Sélection client */}
             <ClientSelector
               onClientSelect={handleClientSelect}
@@ -271,11 +273,11 @@ export const NouvelleVente: React.FC = () => {
             />
 
             {/* Sélection articles - Onglets */}
-            <div className="bg-white rounded-lg border">
+            <div className="bg-white rounded-lg border overflow-hidden">
               <div className="border-b flex">
                 <button
                   onClick={() => setActiveTab('prestations')}
-                  className={`flex-1 py-3 font-medium transition ${
+                  className={`flex-1 py-2.5 sm:py-3 font-medium transition text-sm sm:text-base ${
                     activeTab === 'prestations'
                       ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500'
                       : 'text-gray-600 hover:bg-gray-50'
@@ -285,7 +287,7 @@ export const NouvelleVente: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('produits')}
-                  className={`flex-1 py-3 font-medium transition ${
+                  className={`flex-1 py-2.5 sm:py-3 font-medium transition text-sm sm:text-base ${
                     activeTab === 'produits'
                       ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
                       : 'text-gray-600 hover:bg-gray-50'
@@ -295,7 +297,7 @@ export const NouvelleVente: React.FC = () => {
                 </button>
               </div>
 
-              <div className="p-4">
+              <div className="p-3 sm:p-4">
                 {activeTab === 'prestations' ? (
                   <PrestationsList onSelect={handleSelectPrestation} />
                 ) : (
@@ -305,14 +307,14 @@ export const NouvelleVente: React.FC = () => {
             </div>
 
             {/* Coiffeur (optionnel) */}
-            <div className="bg-white p-4 rounded-lg border">
-              <h3 className="font-semibold mb-3">
+            <div className="bg-white p-3 sm:p-4 rounded-lg border">
+              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
                 Coiffeur / Employé (optionnel)
               </h3>
               <select
                 value={coiffeurId || ''}
                 onChange={(e) => setCoiffeurId(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm sm:text-base"
                 disabled={isLoadingCoiffeurs}
               >
                 <option value="">
@@ -325,19 +327,19 @@ export const NouvelleVente: React.FC = () => {
                 ))}
               </select>
               {coiffeurs.length === 0 && !isLoadingCoiffeurs && (
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-xs sm:text-sm text-gray-500">
                   Aucun employé disponible
                 </p>
               )}
             </div>
 
             {/* Notes */}
-            <div className="bg-white p-4 rounded-lg border">
-              <h3 className="font-semibold mb-3">Notes (optionnel)</h3>
+            <div className="bg-white p-3 sm:p-4 rounded-lg border">
+              <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Notes (optionnel)</h3>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm sm:text-base resize-none"
                 rows={3}
                 placeholder="Remarques, instructions particulières..."
               />
@@ -345,7 +347,7 @@ export const NouvelleVente: React.FC = () => {
           </div>
 
           {/* Colonne droite - Panier et Paiement */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {/* Panier */}
             <Panier
               articles={articles}
@@ -368,14 +370,15 @@ export const NouvelleVente: React.FC = () => {
           </div>
         </div>
       </div>
+      
       {/* Modal de succès */}
       <VenteSuccessModal
-      isOpen={showSuccessModal}
-      onClose={() => setShowSuccessModal(false)}
-      numeroFacture={lastVente?.numero_facture || ''}
-      venteId={lastVente?.id || 0}
-      onPrint={handlePrintReceipt}
-    />
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        numeroFacture={lastVente?.numero_facture || ''}
+        venteId={lastVente?.id || 0}
+        onPrint={handlePrintReceipt}
+      />
     </div>
   );
 };

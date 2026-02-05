@@ -123,43 +123,49 @@ export const VenteHistorique: React.FC = () => {
     });
   };
 
+  const formatDateShort = (date: string) => {
+    return new Date(date).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    });
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* En-tête avec filtres */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Historique des ventes</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-2 rounded flex items-center gap-2 ${
-                showFilters ? 'bg-blue-500 text-white' : 'border hover:bg-gray-50'
-              }`}
-            >
-              <Filter size={18} />
-              Filtres
-            </button>
-          </div>
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-3 sm:mb-4">
+          <h2 className="text-lg sm:text-xl font-bold">Historique des ventes</h2>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-3 sm:px-4 py-2 rounded flex items-center justify-center gap-2 text-sm sm:text-base ${
+              showFilters ? 'bg-blue-500 text-white' : 'border hover:bg-gray-50'
+            }`}
+          >
+            <Filter size={16} className="sm:w-[18px] sm:h-[18px]" />
+            Filtres
+          </button>
         </div>
 
         {/* Barre de recherche */}
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1 relative">
             <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={16}
+              className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             />
             <input
               type="text"
-              placeholder="Rechercher par N° facture ou client..."
+              placeholder="N° facture ou client..."
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              className="w-full pl-10 pr-3 py-2 border rounded"
+              className="w-full pl-9 sm:pl-10 pr-2 sm:pr-3 py-2 border rounded text-sm sm:text-base"
             />
           </div>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm sm:text-base"
           >
             Rechercher
           </button>
@@ -167,15 +173,15 @@ export const VenteHistorique: React.FC = () => {
 
         {/* Filtres avancés */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
             <div>
-              <label className="block text-sm font-medium mb-1">Statut paiement</label>
+              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-1.5">Statut paiement</label>
               <select
                 value={filters.statut_paiement || ''}
                 onChange={(e) =>
                   handleFilterChange('statut_paiement', e.target.value || undefined)
                 }
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base"
               >
                 <option value="">Tous</option>
                 <option value="paye">Payé</option>
@@ -185,13 +191,13 @@ export const VenteHistorique: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Mode paiement</label>
+              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-1.5">Mode paiement</label>
               <select
                 value={filters.mode_paiement || ''}
                 onChange={(e) =>
                   handleFilterChange('mode_paiement', e.target.value || undefined)
                 }
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base"
               >
                 <option value="">Tous</option>
                 <option value="especes">Espèces</option>
@@ -203,41 +209,103 @@ export const VenteHistorique: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Date début</label>
+              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-1.5">Date début</label>
               <input
                 type="date"
                 value={filters.date_debut}
                 onChange={(e) => handleFilterChange('date_debut', e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Date fin</label>
+              <label className="block text-xs sm:text-sm font-medium mb-1 sm:mb-1.5">Date fin</label>
               <input
                 type="date"
                 value={filters.date_fin}
                 onChange={(e) => handleFilterChange('date_fin', e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-2 sm:px-3 py-1.5 sm:py-2 text-sm sm:text-base"
               />
             </div>
           </div>
         )}
       </div>
 
-      {/* Tableau des ventes */}
+      {/* Liste des ventes */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center">
-            <p className="text-gray-500">Chargement...</p>
+            <p className="text-sm sm:text-base text-gray-500">Chargement...</p>
           </div>
         ) : ventes.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-gray-500">Aucune vente trouvée</p>
+            <p className="text-sm sm:text-base text-gray-500">Aucune vente trouvée</p>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Version mobile (cards) */}
+            <div className="block lg:hidden divide-y">
+              {ventes.map((vente) => (
+                <div key={vente.id} className="p-3 sm:p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-blue-600 text-sm sm:text-base truncate">
+                        {vente.numero_facture}
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        {formatDateShort(vente.date_vente)}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatutBadgeColor(
+                        vente.statut_paiement
+                      )}`}
+                    >
+                      {vente.statut_paiement}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="font-medium text-sm sm:text-base truncate">
+                      {vente.client
+                        ? `${vente.client.prenom} ${vente.client.nom}`
+                        : vente.client_nom || 'Client anonyme'}
+                    </p>
+                    <p className="text-xs sm:text-sm text-gray-500">
+                      {vente.client?.telephone || vente.client_telephone || '-'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div>
+                      <p className="text-xs text-gray-500">Montant</p>
+                      <p className="font-bold text-sm sm:text-base">
+                        {formatMontant(vente.montant_total_ttc)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleVoirDetails(vente)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Voir détails"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleTelechargerRecu(vente)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded"
+                        title="Télécharger reçu"
+                      >
+                        <Download size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Version desktop (table) */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
@@ -333,27 +401,27 @@ export const VenteHistorique: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 border-t flex items-center justify-between">
-              <div className="text-sm text-gray-600">
+            <div className="px-3 sm:px-4 py-3 border-t flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs sm:text-sm text-gray-600">
                 Total: {total} vente{total > 1 ? 's' : ''}
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 sm:p-2 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
-                <span className="text-sm">
-                  Page {currentPage} sur {totalPages}
+                <span className="text-xs sm:text-sm px-2">
+                  Page {currentPage} / {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 sm:p-2 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronRight size={18} />
+                  <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
               </div>
             </div>
@@ -363,29 +431,29 @@ export const VenteHistorique: React.FC = () => {
 
       {/* Modal détails vente */}
       {showDetails && venteSelectionnee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h3 className="text-xl font-bold">
-                Détails vente - {venteSelectionnee.numero_facture}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h3 className="text-base sm:text-xl font-bold truncate pr-2">
+                Vente - {venteSelectionnee.numero_facture}
               </h3>
               <button
                 onClick={() => setShowDetails(false)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 hover:bg-gray-100 rounded flex-shrink-0"
               >
-                <X size={20} />
+                <X size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
               {/* Informations générales */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Date</p>
-                  <p className="font-medium">{formatDate(venteSelectionnee.date_vente)}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Date</p>
+                  <p className="font-medium text-sm sm:text-base">{formatDate(venteSelectionnee.date_vente)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Statut</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Statut</p>
                   <span
                     className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatutBadgeColor(
                       venteSelectionnee.statut_paiement
@@ -395,53 +463,55 @@ export const VenteHistorique: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Client</p>
-                  <p className="font-medium">
+                  <p className="text-xs sm:text-sm text-gray-500">Client</p>
+                  <p className="font-medium text-sm sm:text-base truncate">
                     {venteSelectionnee.client
                       ? `${venteSelectionnee.client.prenom} ${venteSelectionnee.client.nom}`
                       : venteSelectionnee.client_nom || 'Client anonyme'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Vendeur</p>
-                  <p className="font-medium">{venteSelectionnee.vendeur?.name || '-'}</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Vendeur</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{venteSelectionnee.vendeur?.name || '-'}</p>
                 </div>
               </div>
 
               {/* Articles */}
               <div>
-                <h4 className="font-semibold mb-3">Articles</h4>
+                <h4 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Articles</h4>
                 <div className="border rounded overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Article</th>
-                        <th className="px-3 py-2 text-center">Qté</th>
-                        <th className="px-3 py-2 text-right">Prix unit.</th>
-                        <th className="px-3 py-2 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {venteSelectionnee.details?.map((detail) => (
-                        <tr key={detail.id}>
-                          <td className="px-3 py-2">{detail.article_nom}</td>
-                          <td className="px-3 py-2 text-center">{detail.quantite}</td>
-                          <td className="px-3 py-2 text-right">
-                            {formatMontant(detail.prix_unitaire)}
-                          </td>
-                          <td className="px-3 py-2 text-right font-medium">
-                            {formatMontant(detail.prix_total)}
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs sm:text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-2 sm:px-3 py-2 text-left">Article</th>
+                          <th className="px-2 sm:px-3 py-2 text-center">Qté</th>
+                          <th className="px-2 sm:px-3 py-2 text-right">Prix unit.</th>
+                          <th className="px-2 sm:px-3 py-2 text-right">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y">
+                        {venteSelectionnee.details?.map((detail) => (
+                          <tr key={detail.id}>
+                            <td className="px-2 sm:px-3 py-2">{detail.article_nom}</td>
+                            <td className="px-2 sm:px-3 py-2 text-center">{detail.quantite}</td>
+                            <td className="px-2 sm:px-3 py-2 text-right">
+                              {formatMontant(detail.prix_unitaire)}
+                            </td>
+                            <td className="px-2 sm:px-3 py-2 text-right font-medium">
+                              {formatMontant(detail.prix_total)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
               {/* Totaux */}
-              <div className="border-t pt-4">
-                <div className="space-y-2">
+              <div className="border-t pt-3 sm:pt-4">
+                <div className="space-y-1.5 sm:space-y-2 text-sm sm:text-base">
                   <div className="flex justify-between">
                     <span>Sous-total HT</span>
                     <span className="font-medium">
@@ -454,7 +524,7 @@ export const VenteHistorique: React.FC = () => {
                       <span>-{formatMontant(venteSelectionnee.montant_reduction)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <div className="flex justify-between text-base sm:text-lg font-bold border-t pt-2">
                     <span>Total TTC</span>
                     <span>{formatMontant(venteSelectionnee.montant_total_ttc)}</span>
                   </div>
@@ -473,9 +543,9 @@ export const VenteHistorique: React.FC = () => {
 
               {/* Notes */}
               {venteSelectionnee.notes && (
-                <div className="bg-gray-50 p-4 rounded">
-                  <p className="text-sm font-medium mb-1">Notes</p>
-                  <p className="text-sm text-gray-600">{venteSelectionnee.notes}</p>
+                <div className="bg-gray-50 p-3 sm:p-4 rounded">
+                  <p className="text-xs sm:text-sm font-medium mb-1">Notes</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{venteSelectionnee.notes}</p>
                 </div>
               )}
 
@@ -483,10 +553,11 @@ export const VenteHistorique: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleTelechargerRecu(venteSelectionnee)}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
+                  className="flex-1 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                 >
-                  <Download size={18} />
-                  Télécharger le reçu
+                  <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Télécharger le reçu</span>
+                  <span className="sm:hidden">Télécharger</span>
                 </button>
               </div>
             </div>

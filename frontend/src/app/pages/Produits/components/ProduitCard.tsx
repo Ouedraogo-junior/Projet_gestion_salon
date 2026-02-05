@@ -13,6 +13,7 @@ interface ProduitCardProps {
   onViewDetails: (produit: Produit) => void;
   showStockVente?: boolean;
   showStockSalon?: boolean;
+  showStockReserve?: boolean;
 }
 
 export function ProduitCard({
@@ -22,7 +23,8 @@ export function ProduitCard({
   onToggleActive,
   onViewDetails,
   showStockVente = true,
-  showStockSalon = true
+  showStockSalon = true,
+  showStockReserve = false
 }: ProduitCardProps) {
   const [imageError, setImageError] = useState(false);
 
@@ -54,9 +56,20 @@ export function ProduitCard({
     produit.seuil_critique_utilisation
   );
 
+   const statusReserve = (produit.seuil_alerte_reserve && produit.seuil_critique_reserve) 
+    ? getStockStatus(
+        produit.stock_reserve || 0,
+        produit.seuil_alerte_reserve,
+        produit.seuil_critique_reserve
+      )
+    : { variant: 'success', label: 'Normal', icon: CheckCircle, color: 'text-green-500' }; // ← Valeur par défaut
+
+    
+
   const imageUrl = produit.photo_url ? getImageUrl(produit.photo_url) : null;
   const StatusIconVente = statusVente.icon;
   const StatusIconUtilisation = statusUtilisation.icon;
+  const StatusIconReserve = statusReserve?.icon;
 
   return (
     <div
@@ -136,7 +149,11 @@ export function ProduitCard({
         </div>
 
         {/* Stocks */}
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+        <div className={`grid ${
+        [showStockVente, showStockSalon, showStockReserve].filter(Boolean).length === 3 
+          ? 'grid-cols-3' 
+          : 'grid-cols-2'
+          } gap-2 pt-2 border-t`}>
           {showStockVente && (
             <div className="bg-blue-50 p-2 rounded">
               <div className="flex items-center gap-1 mb-0.5">
@@ -159,6 +176,19 @@ export function ProduitCard({
               </p>
             </div>
           )}
+
+          {showStockReserve && (
+              <div className="bg-amber-50 p-2 rounded">
+                <div className="flex items-center gap-1 mb-0.5">
+                  <span className="text-xs text-gray-600">Réserve</span>
+                  {statusReserve && <StatusIconReserve size={14} className={statusReserve.color} />}
+                </div>
+                <p className="text-lg font-bold text-amber-600">
+                  {produit.stock_reserve || 0}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Statut */}
@@ -214,6 +244,5 @@ export function ProduitCard({
           </button>
         </div>
       </div>
-    </div>
   );
 }

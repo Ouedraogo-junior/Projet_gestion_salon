@@ -39,7 +39,8 @@ export function RapportGlobalView({ data }: RapportGlobalViewProps) {
             {data.periode.libelle}
           </CardTitle>
           <CardDescription>
-            Du {data.periode.date_debut} au {data.periode.date_fin} ({data.periode.jours} jours)
+            Du {data.periode.date_debut} au {data.periode.date_fin} 
+            {/* ({data.periode.jours} jours) */}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -169,7 +170,8 @@ export function RapportGlobalView({ data }: RapportGlobalViewProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Briefcase className="h-5 w-5" />
-              Salaires ({data.periode.jours} jours)
+              Salaires 
+              {/* ({data.periode.jours} jours) */}
             </CardTitle>
             <CardDescription>
               {data.salaires_detail.nombre_employes} employé(s) · 

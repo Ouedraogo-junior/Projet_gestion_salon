@@ -54,60 +54,60 @@ export const ListeEmployesPointage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Résumé */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-600 font-medium">Pointés</p>
-              <p className="text-3xl font-bold text-green-700">{pointes.length}</p>
+              <p className="text-xs sm:text-sm text-green-600 font-medium">Pointés</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-700">{pointes.length}</p>
             </div>
-            <CheckCircle className="w-10 h-10 text-green-500" />
+            <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-green-500" />
           </div>
         </div>
 
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-red-600 font-medium">Non pointés</p>
-              <p className="text-3xl font-bold text-red-700">{nonPointes.length}</p>
+              <p className="text-xs sm:text-sm text-red-600 font-medium">Non pointés</p>
+              <p className="text-2xl sm:text-3xl font-bold text-red-700">{nonPointes.length}</p>
             </div>
-            <XCircle className="w-10 h-10 text-red-500" />
+            <XCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-600 font-medium">Total employés</p>
-              <p className="text-3xl font-bold text-blue-700">{employees.length}</p>
+              <p className="text-xs sm:text-sm text-blue-600 font-medium">Total employés</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-700">{employees.length}</p>
             </div>
-            <Clock className="w-10 h-10 text-blue-500" />
+            <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500" />
           </div>
         </div>
       </div>
 
       {/* Liste des employés */}
-      <div className="space-y-4">
+      <div className="space-y-4 sm:space-y-6">
         {/* Non pointés */}
         {nonPointes.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
               À pointer ({nonPointes.length})
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {nonPointes.map((employee) => (
                 <div
                   key={employee.id}
-                  className="bg-white border-2 border-red-200 rounded-lg p-4 hover:shadow-md transition"
+                  className="bg-white border-2 border-red-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{employee.nom_complet}</h4>
-                      <p className="text-sm text-gray-600 capitalize">{employee.role}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 truncate">{employee.nom_complet}</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 capitalize">{employee.role}</p>
                     </div>
                     <button
                       onClick={() => handlePointer(employee)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition"
+                      className="px-3 sm:px-4 py-2 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 transition whitespace-nowrap"
                     >
                       Pointer
                     </button>
@@ -121,18 +121,19 @@ export const ListeEmployesPointage: React.FC = () => {
         {/* Déjà pointés */}
         {pointes.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
               Déjà pointés ({pointes.length})
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:space-y-3">
               {pointes.map((employee) => {
                 const pointage = employee.pointage!;
                 return (
                   <div
                     key={employee.id}
-                    className="bg-white border border-gray-200 rounded-lg p-4"
+                    className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4"
                   >
-                    <div className="flex items-center justify-between">
+                    {/* Desktop */}
+                    <div className="hidden md:flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div>
                           <h4 className="font-semibold text-gray-900">{employee.nom_complet}</h4>
@@ -155,6 +156,38 @@ export const ListeEmployesPointage: React.FC = () => {
                         <button
                           onClick={() => handleModifier(pointage)}
                           className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
+                        >
+                          Modifier
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mobile */}
+                    <div className="md:hidden space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900">{employee.nom_complet}</h4>
+                          <p className="text-sm text-gray-600 capitalize">{employee.role}</p>
+                        </div>
+                        {getStatutBadge(pointage.statut)}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100">
+                        <div className="flex gap-4">
+                          <div>
+                            <p className="text-xs text-gray-600">Arrivée</p>
+                            <p className="text-sm font-medium text-gray-900">{pointage.heure_arrivee}</p>
+                          </div>
+                          {pointage.heure_depart && (
+                            <div>
+                              <p className="text-xs text-gray-600">Départ</p>
+                              <p className="text-sm font-medium text-gray-900">{pointage.heure_depart}</p>
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleModifier(pointage)}
+                          className="px-3 py-1.5 border border-gray-300 text-gray-700 text-sm rounded-lg font-medium hover:bg-gray-50 transition whitespace-nowrap"
                         >
                           Modifier
                         </button>

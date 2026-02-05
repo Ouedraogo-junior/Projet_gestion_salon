@@ -201,32 +201,35 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Modifier la confection' : 'Nouvelle confection'}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh] w-[calc(100vw-2rem)] sm:w-[calc(100vw-4rem)] lg:w-full p-0 overflow-hidden">
+        <DialogHeader className="px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6 flex-shrink-0">
+          <DialogTitle className="text-base sm:text-lg lg:text-xl">
+            {isEdit ? 'Modifier la confection' : 'Nouvelle confection'}
+          </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <ScrollArea className="max-h-[calc(90vh-100px)] px-3 sm:px-4 lg:px-6 pb-3 sm:pb-4 lg:pb-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-5 lg:space-y-6">
             {/* Informations générales */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Informations générales</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="font-semibold text-sm sm:text-base">Informations générales</h3>
               
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="nom_produit">Nom du produit *</Label>
+              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="nom_produit" className="text-xs sm:text-sm">Nom du produit *</Label>
                   <Input
                     id="nom_produit"
                     {...register('nom_produit', { required: 'Ce champ est requis' })}
                     placeholder="Ex: Crème capillaire maison"
+                    className="text-xs sm:text-sm h-9 sm:h-10"
                   />
                   {errors.nom_produit && (
-                    <p className="text-sm text-red-500">{errors.nom_produit.message}</p>
+                    <p className="text-xs text-red-500">{errors.nom_produit.message}</p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="categorie_id">Catégorie *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="categorie_id" className="text-xs sm:text-sm">Catégorie *</Label>
                   <Select
                     value={selectedCategorie?.toString() || ''}
                     onValueChange={(value) => {
@@ -235,12 +238,12 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                     }}
                     disabled={isEdit}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-xs sm:text-sm h-9 sm:h-10">
                       <SelectValue placeholder="Sélectionner une catégorie" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat: any) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
+                        <SelectItem key={cat.id} value={cat.id.toString()} className="text-xs sm:text-sm">
                           {cat.nom}
                         </SelectItem>
                       ))}
@@ -248,8 +251,8 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="quantite_produite">Quantité produite *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="quantite_produite" className="text-xs sm:text-sm">Quantité produite *</Label>
                   <Input
                     id="quantite_produite"
                     type="number"
@@ -259,43 +262,45 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                       required: 'Ce champ est requis',
                       min: { value: 1, message: 'Minimum 1' }
                     })}
+                    className="text-xs sm:text-sm h-9 sm:h-10"
                   />
                   {errors.quantite_produite && (
-                    <p className="text-sm text-red-500">{errors.quantite_produite.message}</p>
+                    <p className="text-xs text-red-500">{errors.quantite_produite.message}</p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="date_confection">Date de confection *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="date_confection" className="text-xs sm:text-sm">Date de confection *</Label>
                   <Input
                     id="date_confection"
                     type="date"
                     {...register('date_confection', { required: 'Ce champ est requis' })}
+                    className="text-xs sm:text-sm h-9 sm:h-10"
                   />
                   {errors.date_confection && (
-                    <p className="text-sm text-red-500">{errors.date_confection.message}</p>
+                    <p className="text-xs text-red-500">{errors.date_confection.message}</p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="destination">Destination *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="destination" className="text-xs sm:text-sm">Destination *</Label>
                   <Select
                     value={destination}
                     onValueChange={(value) => setValue('destination', value as any)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-xs sm:text-sm h-9 sm:h-10">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="vente">Vente</SelectItem>
-                      <SelectItem value="utilisation">Utilisation</SelectItem>
-                      <SelectItem value="mixte">Mixte</SelectItem>
+                      <SelectItem value="vente" className="text-xs sm:text-sm">Vente</SelectItem>
+                      <SelectItem value="utilisation" className="text-xs sm:text-sm">Utilisation</SelectItem>
+                      <SelectItem value="mixte" className="text-xs sm:text-sm">Mixte</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cout_main_oeuvre">Coût main d'œuvre</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="cout_main_oeuvre" className="text-xs sm:text-sm">Coût main d'œuvre</Label>
                   <Input
                     id="cout_main_oeuvre"
                     type="number"
@@ -303,12 +308,13 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                     step="0.01"
                     {...register('cout_main_oeuvre')}
                     placeholder="0"
+                    className="text-xs sm:text-sm h-9 sm:h-10"
                   />
                 </div>
 
                 {(destination === 'vente' || destination === 'mixte') && (
-                  <div className="space-y-2">
-                    <Label htmlFor="prix_vente_unitaire">Prix de vente unitaire *</Label>
+                  <div className="space-y-1.5 sm:space-y-2 sm:col-span-2">
+                    <Label htmlFor="prix_vente_unitaire" className="text-xs sm:text-sm">Prix de vente unitaire *</Label>
                     <Input
                       id="prix_vente_unitaire"
                       type="number"
@@ -318,21 +324,23 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                         required: destination === 'vente' || destination === 'mixte' ? 'Ce champ est requis' : false
                       })}
                       placeholder="0"
+                      className="text-xs sm:text-sm h-9 sm:h-10"
                     />
                     {errors.prix_vente_unitaire && (
-                      <p className="text-sm text-red-500">{errors.prix_vente_unitaire.message}</p>
+                      <p className="text-xs text-red-500">{errors.prix_vente_unitaire.message}</p>
                     )}
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="description" className="text-xs sm:text-sm">Description</Label>
                 <Textarea
                   id="description"
                   {...register('description')}
                   placeholder="Description du produit..."
                   rows={3}
+                  className="text-xs sm:text-sm resize-none"
                 />
               </div>
             </div>
@@ -340,42 +348,44 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
             <Separator />
 
             {/* Liste des produits utilisés */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Produits utilisés *</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                <h3 className="font-semibold text-sm sm:text-base">Produits utilisés *</h3>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleAddDetail}
                   disabled={!selectedCategorie}
+                  className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   Ajouter un produit
                 </Button>
               </div>
 
               {details.length === 0 && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Aucun produit ajouté. Cliquez sur "Ajouter un produit" pour commencer.
                 </p>
               )}
 
               <div className="space-y-3">
                 {details.map((detail, index) => (
-                  <div key={index} className="flex gap-3 items-end border rounded-lg p-3">
-                    <div className="flex-1 space-y-2">
-                      <Label>Produit</Label>
+                  <div key={index} className="border rounded-lg p-2.5 sm:p-3 space-y-2.5 sm:space-y-3 bg-white">
+                    {/* Sélection du produit - Toujours en pleine largeur */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm font-medium">Produit</Label>
                       <Select
                         value={detail.produit_id.toString()}
                         onValueChange={(value) => handleUpdateDetail(index, 'produit_id', Number(value))}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner" />
+                        <SelectTrigger className="text-xs sm:text-sm h-9 w-full">
+                          <SelectValue placeholder="Sélectionner un produit" />
                         </SelectTrigger>
                         <SelectContent>
                           {produits.map((prod: any) => (
-                            <SelectItem key={prod.id} value={prod.id.toString()}>
+                            <SelectItem key={prod.id} value={prod.id.toString()} className="text-xs sm:text-sm">
                               {prod.nom} ({prod.quantite_stock} en stock)
                             </SelectItem>
                           ))}
@@ -383,55 +393,63 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                       </Select>
                     </div>
 
-                    <div className="w-28 space-y-2">
-                      <Label>Quantité</Label>
-                      <Input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={detail.quantite_utilisee}
-                        onChange={(e) => handleUpdateDetail(index, 'quantite_utilisee', Number(e.target.value))}
-                      />
-                    </div>
+                    {/* Quantité, Prix, Total en ligne sur desktop, colonne sur mobile */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs sm:text-sm">Quantité</Label>
+                        <Input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={detail.quantite_utilisee}
+                          onChange={(e) => handleUpdateDetail(index, 'quantite_utilisee', Number(e.target.value))}
+                          className="text-xs sm:text-sm h-9 w-full"
+                        />
+                      </div>
 
-                    <div className="w-32 space-y-2">
-                      <Label>Prix unitaire</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={detail.prix_unitaire}
-                        onChange={(e) => handleUpdateDetail(index, 'prix_unitaire', Number(e.target.value))}
-                      />
-                    </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs sm:text-sm">Prix unit.</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={detail.prix_unitaire}
+                          onChange={(e) => handleUpdateDetail(index, 'prix_unitaire', Number(e.target.value))}
+                          className="text-xs sm:text-sm h-9 w-full"
+                        />
+                      </div>
 
-                    <div className="w-32 space-y-2">
-                      <Label>Total</Label>
-                      <Input
-                        value={(detail.quantite_utilisee * detail.prix_unitaire).toFixed(2)}
-                        disabled
-                        className="bg-muted"
-                      />
-                    </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs sm:text-sm">Total</Label>
+                        <Input
+                          value={(detail.quantite_utilisee * detail.prix_unitaire).toFixed(2)}
+                          disabled
+                          className="bg-muted text-xs sm:text-sm h-9 w-full"
+                        />
+                      </div>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveDetail(index)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <div className="space-y-1.5 sm:space-y-0 sm:flex sm:items-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveDetail(index)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full sm:w-auto h-9 text-xs sm:text-sm"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1.5 sm:mr-0" />
+                          <span className="sm:hidden">Supprimer</span>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
 
               {details.length > 0 && (
-                <div className="flex justify-end">
-                  <div className="text-right space-y-1">
-                    <p className="text-sm text-muted-foreground">Coût matières premières</p>
-                    <p className="text-2xl font-bold">{coutMatierePremiere.toFixed(2)} FCFA</p>
+                <div className="flex justify-end pt-2">
+                  <div className="text-right space-y-0.5 sm:space-y-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Coût matières premières</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold">{coutMatierePremiere.toFixed(2)} FCFA</p>
                   </div>
                 </div>
               )}
@@ -440,35 +458,36 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
             <Separator />
 
             {/* Attributs */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Attributs (optionnel)</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                <h3 className="font-semibold text-sm sm:text-base">Attributs (optionnel)</h3>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleAddAttribut}
+                  className="w-full sm:w-auto text-xs sm:text-sm h-8 sm:h-9"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   Ajouter un attribut
                 </Button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {confectionAttributs.map((attr, index) => (
-                  <div key={index} className="flex gap-3 items-end">
-                    <div className="flex-1 space-y-2">
-                      <Label>Attribut</Label>
+                  <div key={index} className="border rounded-lg p-2.5 sm:p-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-[1fr_1fr_auto] sm:gap-2 sm:items-end bg-white">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm">Attribut</Label>
                       <Select
                         value={attr.attribut_id.toString()}
                         onValueChange={(value) => handleUpdateAttribut(index, 'attribut_id', Number(value))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="text-xs sm:text-sm h-9 w-full">
                           <SelectValue placeholder="Sélectionner" />
                         </SelectTrigger>
                         <SelectContent>
                           {attributs.map((at: any) => (
-                            <SelectItem key={at.id} value={at.id.toString()}>
+                            <SelectItem key={at.id} value={at.id.toString()} className="text-xs sm:text-sm">
                               {at.nom}
                             </SelectItem>
                           ))}
@@ -476,23 +495,25 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                       </Select>
                     </div>
 
-                    <div className="flex-1 space-y-2">
-                      <Label>Valeur</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs sm:text-sm">Valeur</Label>
                       <Input
                         value={attr.valeur}
                         onChange={(e) => handleUpdateAttribut(index, 'valeur', e.target.value)}
                         placeholder="Valeur de l'attribut"
+                        className="text-xs sm:text-sm h-9 w-full"
                       />
                     </div>
 
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
+                      size="sm"
                       onClick={() => handleRemoveAttribut(index)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 w-full sm:w-auto h-9 text-xs sm:text-sm"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1.5 sm:mr-0" />
+                      <span className="sm:hidden">Supprimer</span>
                     </Button>
                   </div>
                 ))}
@@ -500,13 +521,19 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={handleClose}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleClose} 
+                className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm"
+              >
                 Annuler
               </Button>
               <Button
                 type="submit"
                 disabled={create.isPending || update.isPending}
+                className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm"
               >
                 {create.isPending || update.isPending ? 'Enregistrement...' : (isEdit ? 'Mettre à jour' : 'Créer la confection')}
               </Button>

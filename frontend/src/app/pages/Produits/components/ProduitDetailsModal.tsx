@@ -5,6 +5,7 @@ import { Modal } from './ui/Modal';
 import { Badge } from './ui/Badge';
 import { produitsApi } from '@/services/produitsApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
+import { DEVISES, MOYENS_PAIEMENT } from '@/constants/devises';
 
 interface ProduitDetailsModalProps {
   isOpen: boolean;
@@ -76,11 +77,11 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
           <p className="mt-2 text-gray-600">Chargement des détails...</p>
         </div>
       ) : produit ? (
-        <div className="space-y-6">
-          {/* En-tête avec photo */}
-          <div className="flex gap-6">
-            <div className="flex-shrink-0">
-              <div className="w-48 h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg overflow-hidden border-2 border-gray-200">
+        <div className="space-y-4 sm:space-y-6">
+          {/* En-tête avec photo - Responsive */}
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+            <div className="flex-shrink-0 mx-auto sm:mx-0">
+              <div className="w-32 h-32 sm:w-48 sm:h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg overflow-hidden border-2 border-gray-200">
                 {imageUrl && !imageError ? (
                   <img
                     src={imageUrl}
@@ -90,60 +91,60 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center">
-                    <ImageOff size={64} className="text-gray-300 mb-2" />
-                    <p className="text-sm text-gray-400">Aucune photo</p>
+                    <ImageOff size={48} className="sm:w-16 sm:h-16 text-gray-300 mb-2" />
+                    <p className="text-xs sm:text-sm text-gray-400">Aucune photo</p>
                   </div>
                 )}
               </div>
             </div>
 
             <div className="flex-1">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900">{produit.nom}</h2>
-                  <p className="text-sm text-gray-500 mt-1">Réf: {produit.reference || 'N/A'}</p>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{produit.nom}</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">Réf: {produit.reference || 'N/A'}</p>
                   {produit.marque && (
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-600 mt-1">
                       <span className="font-medium">Marque:</span> {produit.marque}
                     </p>
                   )}
                   {produit.fournisseur && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600">
                       <span className="font-medium">Fournisseur:</span> {produit.fournisseur}
                     </p>
                   )}
                 </div>
-                <Badge variant={produit.is_active ? 'success' : 'danger'}>
+                <Badge variant={produit.is_active ? 'success' : 'danger'} className="self-start">
                   {produit.is_active ? 'Actif' : 'Inactif'}
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3 mt-3 sm:mt-4">
+                <div className="bg-gray-50 p-2 sm:p-3 rounded-lg">
                   <label className="text-xs text-gray-600">Prix d'achat</label>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">
                     {formatCurrency(produit.prix_achat)} FCFA
                   </p>
                 </div>
-                <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="bg-blue-50 p-2 sm:p-3 rounded-lg">
                   <label className="text-xs text-gray-600">Prix de vente</label>
-                  <p className="text-lg font-bold text-blue-600">
+                  <p className="text-base sm:text-lg font-bold text-blue-600">
                     {formatCurrency(produit.prix_vente)} FCFA
                   </p>
                 </div>
               </div>
 
               {produit.prix_promo && (
-                <div className="mt-3 bg-red-50 border border-red-200 p-3 rounded-lg">
+                <div className="mt-3 bg-red-50 border border-red-200 p-2 sm:p-3 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-xs text-red-600 font-medium">PROMOTION</span>
-                      <p className="text-lg font-bold text-red-600">
+                      <p className="text-base sm:text-lg font-bold text-red-600">
                         {formatCurrency(produit.prix_promo)} FCFA
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-2xl font-bold text-red-600">
+                      <span className="text-xl sm:text-2xl font-bold text-red-600">
                         -{Math.round(((produit.prix_vente - produit.prix_promo) / produit.prix_vente) * 100)}%
                       </span>
                     </div>
@@ -154,24 +155,24 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
           </div>
 
           {produit.description && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-700">{produit.description}</p>
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+              <p className="text-xs sm:text-sm text-gray-700">{produit.description}</p>
             </div>
           )}
 
           {/* Informations générales */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Info className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Info className="w-4 h-4 sm:w-5 sm:h-5" />
                 Informations générales
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Catégorie</label>
-                  <p className="text-gray-900 mt-1 font-semibold">
+                  <label className="text-xs sm:text-sm font-medium text-gray-600">Catégorie</label>
+                  <p className="text-sm sm:text-base text-gray-900 mt-1 font-semibold">
                     {produit.categorie?.nom || 'Non définie'}
                   </p>
                   {produit.categorie?.description && (
@@ -181,14 +182,14 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                   )}
                   {produit.categorie?.couleur && (
                     <div 
-                      className="w-24 h-2 rounded mt-2" 
+                      className="w-20 sm:w-24 h-2 rounded mt-2" 
                       style={{ backgroundColor: produit.categorie.couleur }}
                     />
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Type de stock</label>
-                  <p className="text-gray-900 mt-1 capitalize">
+                  <label className="text-xs sm:text-sm font-medium text-gray-600">Type de stock</label>
+                  <p className="text-sm sm:text-base text-gray-900 mt-1 capitalize">
                     {produit.type_stock_principal === 'vente' && 'Vente uniquement'}
                     {produit.type_stock_principal === 'utilisation' && 'Utilisation salon'}
                     {produit.type_stock_principal === 'mixte' && 'Mixte (vente + salon)'}
@@ -197,6 +198,105 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               </div>
             </CardContent>
           </Card>
+
+          {/* Informations d'achat */}
+{(produit.date_commande || produit.frais_cmb || produit.frais_transit || produit.moyen_paiement || produit.date_reception) && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+        <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+        Informations d'achat
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {produit.date_commande && (
+          <div>
+            <label className="text-xs sm:text-sm font-medium text-gray-600">Date de commande</label>
+            <p className="text-sm sm:text-base text-gray-900 mt-1">{formatDate(produit.date_commande)}</p>
+          </div>
+        )}
+        
+        {produit.date_reception && (
+          <div>
+            <label className="text-xs sm:text-sm font-medium text-gray-600">Date de réception</label>
+            <p className="text-sm sm:text-base text-gray-900 mt-1">{formatDate(produit.date_reception)}</p>
+          </div>
+        )}
+
+        {produit.moyen_paiement && (
+          <div>
+            <label className="text-xs sm:text-sm font-medium text-gray-600">Moyen de paiement</label>
+            <p className="text-sm sm:text-base text-gray-900 mt-1 capitalize">
+              {MOYENS_PAIEMENT.find(mp => mp.value === produit.moyen_paiement)?.label || produit.moyen_paiement}
+            </p>
+          </div>
+        )}
+
+        {produit.devise_achat && produit.devise_achat !== 'FCFA' && (
+          <div>
+            <label className="text-xs sm:text-sm font-medium text-gray-600">Devise d'achat</label>
+            <p className="text-sm sm:text-base text-gray-900 mt-1">
+              {DEVISES.find(d => d.value === produit.devise_achat)?.label || produit.devise_achat}
+              {' '}
+              ({DEVISES.find(d => d.value === produit.devise_achat)?.symbole})
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Détails des frais */}
+      {(produit.frais_cmb || produit.frais_transit || produit.montant_total_achat) && (
+        <div className="mt-4 p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">Détails des coûts</h4>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs sm:text-sm text-gray-600">Prix d'achat</span>
+              <span className="text-sm sm:text-base font-medium text-gray-900">
+                {formatCurrency(produit.prix_achat)}{' '}
+                {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+              </span>
+            </div>
+            
+            {produit.frais_cmb && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-gray-600">Frais CMB</span>
+                <span className="text-sm sm:text-base font-medium text-gray-900">
+                  +{formatCurrency(produit.frais_cmb)}{' '}
+                  {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+                </span>
+              </div>
+            )}
+            
+            {produit.frais_transit && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs sm:text-sm text-gray-600">Frais transit/douane</span>
+                <span className="text-sm sm:text-base font-medium text-gray-900">
+                  +{formatCurrency(produit.frais_transit)}{' '}
+                  {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+                </span>
+              </div>
+            )}
+            
+            {produit.montant_total_achat && (
+              <>
+                <div className="border-t border-blue-300 my-2"></div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm sm:text-base font-semibold text-gray-900">Total</span>
+                  <span className="text-lg sm:text-xl font-bold text-blue-600">
+                    {formatCurrency(produit.montant_total_achat)}{' '}
+                    {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+)}
 
           {/* Caractéristiques */}
           {(() => {
@@ -209,13 +309,13 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
             return (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Tag className="w-5 h-5" />
-                    Caractéristiques du produit
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Caractéristiques
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {valeursAttributs.map((va: any) => {
                       const attribut = va.attribut || { 
                         id: va.attribut_id,
@@ -229,23 +329,23 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                       return (
                         <div 
                           key={id}
-                          className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-100"
+                          className="bg-gradient-to-br from-blue-50 to-purple-50 p-3 sm:p-4 rounded-lg border border-blue-100"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <label className="text-sm font-medium text-gray-600 mb-1 block">
+                            <div className="flex-1 min-w-0">
+                              <label className="text-xs sm:text-sm font-medium text-gray-600 mb-1 block">
                                 {attribut.nom}
                               </label>
-                              <p className="text-lg font-bold text-gray-900">
+                              <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
                                 {valeur}
                                 {attribut.unite && (
-                                  <span className="text-sm font-normal text-gray-500 ml-1">
+                                  <span className="text-xs sm:text-sm font-normal text-gray-500 ml-1">
                                     {attribut.unite}
                                   </span>
                                 )}
                               </p>
                             </div>
-                            <Badge variant="success">
+                            <Badge variant="success" className="text-xs ml-2 flex-shrink-0">
                               {attribut.type_valeur}
                             </Badge>
                           </div>
@@ -267,7 +367,7 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
                           return (
                             <span 
                               key={attr.id}
-                              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                              className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
                                 hasValue 
                                   ? 'bg-green-100 text-green-800 border border-green-200' 
                                   : attr.pivot?.obligatoire
@@ -292,35 +392,35 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
           {/* Prix et marges */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
                 Prix et marges
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-600">Prix d'achat</label>
-                <p className="text-xl font-bold text-gray-900 mt-1">
+                <label className="text-xs sm:text-sm font-medium text-gray-600">Prix d'achat</label>
+                <p className="text-lg sm:text-xl font-bold text-gray-900 mt-1">
                   {formatCurrency(produit.prix_achat)} FCFA
                 </p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Prix de vente</label>
-                <p className="text-xl font-bold text-blue-600 mt-1">
+                <label className="text-xs sm:text-sm font-medium text-gray-600">Prix de vente</label>
+                <p className="text-lg sm:text-xl font-bold text-blue-600 mt-1">
                   {formatCurrency(produit.prix_vente)} FCFA
                 </p>
               </div>
               {produit.prix_promo && (
                 <>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Prix promo</label>
-                    <p className="text-xl font-bold text-red-600 mt-1">
+                    <label className="text-xs sm:text-sm font-medium text-gray-600">Prix promo</label>
+                    <p className="text-lg sm:text-xl font-bold text-red-600 mt-1">
                       {formatCurrency(produit.prix_promo)} FCFA
                     </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-600">Réduction</label>
-                    <p className="text-lg font-semibold text-red-600 mt-1">
+                    <label className="text-xs sm:text-sm font-medium text-gray-600">Réduction</label>
+                    <p className="text-base sm:text-lg font-semibold text-red-600 mt-1">
                       -{Math.round(((produit.prix_vente - produit.prix_promo) / produit.prix_vente) * 100)}%
                     </p>
                   </div>
@@ -328,8 +428,8 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               )}
               {produit.marge_montant !== undefined && (
                 <div>
-                  <label className="text-sm font-medium text-gray-600">Marge unitaire</label>
-                  <p className="text-lg font-semibold text-green-600 mt-1">
+                  <label className="text-xs sm:text-sm font-medium text-gray-600">Marge unitaire</label>
+                  <p className="text-base sm:text-lg font-semibold text-green-600 mt-1">
                     {formatCurrency(produit.marge_montant)} FCFA ({produit.marge_pourcentage?.toFixed(1)}%)
                   </p>
                 </div>
@@ -340,66 +440,91 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
           {/* Stocks */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
                 Gestion des stocks
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border-l-4 border-blue-500 pl-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Stock Vente</h4>
-                <div className="grid grid-cols-3 gap-4">
+              <div className="border-l-4 border-blue-500 pl-3 sm:pl-4">
+                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Stock Vente</h4>
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div>
-                    <label className="text-xs text-gray-600">Quantité actuelle</label>
-                    <p className="text-2xl font-bold text-blue-600">{produit.stock_vente}</p>
+                    <label className="text-xs text-gray-600">Actuelle</label>
+                    <p className="text-xl sm:text-2xl font-bold text-blue-600">{produit.stock_vente}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600">Seuil d'alerte</label>
-                    <p className="text-lg font-semibold text-orange-600">{produit.seuil_alerte}</p>
+                    <label className="text-xs text-gray-600">Alerte</label>
+                    <p className="text-base sm:text-lg font-semibold text-orange-600">{produit.seuil_alerte}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600">Seuil critique</label>
-                    <p className="text-lg font-semibold text-red-600">{produit.seuil_critique}</p>
+                    <label className="text-xs text-gray-600">Critique</label>
+                    <p className="text-base sm:text-lg font-semibold text-red-600">{produit.seuil_critique}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-l-4 border-purple-500 pl-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Stock Salon (Utilisation)</h4>
-                <div className="grid grid-cols-3 gap-4">
+              <div className="border-l-4 border-purple-500 pl-3 sm:pl-4">
+                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Stock Salon</h4>
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div>
-                    <label className="text-xs text-gray-600">Quantité actuelle</label>
-                    <p className="text-2xl font-bold text-purple-600">{produit.stock_utilisation}</p>
+                    <label className="text-xs text-gray-600">Actuelle</label>
+                    <p className="text-xl sm:text-2xl font-bold text-purple-600">{produit.stock_utilisation}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600">Seuil d'alerte</label>
-                    <p className="text-lg font-semibold text-orange-600">{produit.seuil_alerte_utilisation}</p>
+                    <label className="text-xs text-gray-600">Alerte</label>
+                    <p className="text-base sm:text-lg font-semibold text-orange-600">{produit.seuil_alerte_utilisation}</p>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-600">Seuil critique</label>
-                    <p className="text-lg font-semibold text-red-600">{produit.seuil_critique_utilisation}</p>
+                    <label className="text-xs text-gray-600">Critique</label>
+                    <p className="text-base sm:text-lg font-semibold text-red-600">{produit.seuil_critique_utilisation}</p>
                   </div>
                 </div>
               </div>
+
+              {/* Stock Réserve - SI EXISTE */}
+              {produit.type_stock_principal === 'reserve' && (
+                <div className="border-l-4 border-amber-500 pl-3 sm:pl-4">
+                  <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Stock Réserve</h4>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                    <div>
+                      <label className="text-xs text-gray-600">Actuelle</label>
+                      <p className="text-xl sm:text-2xl font-bold text-amber-600">{produit.stock_reserve || 0}</p>
+                    </div>
+                    {produit.seuil_alerte_reserve && (
+                      <div>
+                        <label className="text-xs text-gray-600">Alerte</label>
+                        <p className="text-base sm:text-lg font-semibold text-orange-600">{produit.seuil_alerte_reserve}</p>
+                      </div>
+                    )}
+                    {produit.seuil_critique_reserve && (
+                      <div>
+                        <label className="text-xs text-gray-600">Critique</label>
+                        <p className="text-base sm:text-lg font-semibold text-red-600">{produit.seuil_critique_reserve}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Dates */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                 Informations temporelles
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-600">Date de création</label>
-                <p className="text-gray-900 mt-1">{formatDate(produit.created_at)}</p>
+                <label className="text-xs sm:text-sm font-medium text-gray-600">Création</label>
+                <p className="text-xs sm:text-sm text-gray-900 mt-1">{formatDate(produit.created_at)}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Dernière modification</label>
-                <p className="text-gray-900 mt-1">{formatDate(produit.updated_at)}</p>
+                <label className="text-xs sm:text-sm font-medium text-gray-600">Modification</label>
+                <p className="text-xs sm:text-sm text-gray-900 mt-1">{formatDate(produit.updated_at)}</p>
               </div>
             </CardContent>
           </Card>
@@ -407,7 +532,7 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
           <div className="flex justify-end gap-2 pt-4 border-t">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              className="w-full sm:w-auto px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base"
             >
               Fermer
             </button>

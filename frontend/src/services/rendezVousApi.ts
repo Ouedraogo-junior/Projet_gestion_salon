@@ -186,6 +186,21 @@ export const rendezVousApi = {
     return response.data;
   },
 
+  /**
+   * Mettre à jour l'acompte d'un rendez-vous
+   */
+
+  async updateAcompte(id: number, acompte_montant: number): Promise<ApiResponse<RendezVous>> {
+  const response = await apiAuth.patch(`/rendez-vous/${id}/acompte`, {
+    acompte_montant,
+  });
+  return response.data;
+},
+
+  /**
+   * Marquer l'acompte comme payé
+   */
+
   marquerAcomptePaye: async (id: number) => {
     const response = await apiAuth.post(`/rendez-vous/${id}/marquer-acompte-paye`);
     return response.data;

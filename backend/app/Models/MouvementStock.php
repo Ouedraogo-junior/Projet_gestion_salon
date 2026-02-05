@@ -176,6 +176,7 @@ class MouvementStock extends Model
         return match($this->type_stock) {
             'vente' => 'Stock Vente',
             'utilisation' => 'Stock Utilisation',
+            'reserve' => 'Stock Réserve', // ✅ AJOUT
             default => 'Inconnu',
         };
     }
@@ -196,10 +197,13 @@ class MouvementStock extends Model
     ): self {
         $produit = Produit::findOrFail($produitId);
         
-        // ✅ CORRECTION: Utiliser stock_vente au lieu de stock_actuel
-        $stockAvant = $typeStock === 'vente' 
-            ? $produit->stock_vente          // ← CORRIGÉ
-            : $produit->stock_utilisation;
+        // ✅ MODIFICATION - Gérer les 3 types de stock
+        $stockAvant = match($typeStock) {
+            'vente' => $produit->stock_vente,
+            'utilisation' => $produit->stock_utilisation,
+            'reserve' => $produit->stock_reserve, // ← AJOUT
+            default => 0,
+        };
 
         // Calculer le nouveau stock
         $stockApres = match($typeMouvement) {
@@ -224,12 +228,13 @@ class MouvementStock extends Model
             'user_id' => $userId ?? auth()->id(),
         ]);
 
-        // ✅ CORRECTION: Mettre à jour le bon champ de stock
-        if ($typeStock === 'vente') {
-            $produit->update(['stock_vente' => $stockApres]);  // ← CORRIGÉ
-        } else {
-            $produit->update(['stock_utilisation' => $stockApres]);
-        }
+        // ✅ MODIFICATION - Mettre à jour le bon champ de stock
+        match($typeStock) {
+            'vente' => $produit->update(['stock_vente' => $stockApres]),
+            'utilisation' => $produit->update(['stock_utilisation' => $stockApres]),
+            'reserve' => $produit->update(['stock_reserve' => $stockApres]), // ← AJOUT
+            default => null,
+        };
 
         return $mouvement;
     }

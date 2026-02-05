@@ -19,7 +19,7 @@ export const ModalPointerEmploye: React.FC<ModalPointerEmployeProps> = ({
   onSuccess,
 }) => {
   const { create, isCreating } = usePointages();
-  const [heureArrivee, setHeureArrivee] = useState(
+  const [heureArrivee] = useState(
     new Date().toTimeString().slice(0, 5)
   );
   const [statut, setStatut] = useState<'present' | 'retard' | 'absent' | 'conge'>('present');
@@ -73,9 +73,8 @@ export const ModalPointerEmploye: React.FC<ModalPointerEmployeProps> = ({
             <input
               type="time"
               value={heureArrivee}
-              onChange={(e) => setHeureArrivee(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              required
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
             />
           </div>
 

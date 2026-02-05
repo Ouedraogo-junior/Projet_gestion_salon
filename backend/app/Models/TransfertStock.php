@@ -130,11 +130,16 @@ class TransfertStock extends Model
     /**
      * Obtient le libellé du type de transfert
      */
-    public function getTypeTransfertLibelleAttribute(): string
+     public function getTypeTransfertLibelleAttribute(): string
     {
         return match($this->type_transfert) {
             'vente_vers_utilisation' => 'Stock Vente → Stock Utilisation',
             'utilisation_vers_vente' => 'Stock Utilisation → Stock Vente',
+            // ✅ AJOUT - Nouveaux types
+            'reserve_vers_vente' => 'Stock Réserve → Stock Vente',
+            'reserve_vers_utilisation' => 'Stock Réserve → Stock Utilisation',
+            'vente_vers_reserve' => 'Stock Vente → Stock Réserve',
+            'utilisation_vers_reserve' => 'Stock Utilisation → Stock Réserve',
             default => 'Inconnu',
         };
     }
@@ -144,7 +149,13 @@ class TransfertStock extends Model
      */
     public function getStockSourceAttribute(): string
     {
-        return $this->type_transfert === 'vente_vers_utilisation' ? 'vente' : 'utilisation';
+        return match($this->type_transfert) {
+            'vente_vers_utilisation', 'vente_vers_reserve' => 'vente',
+            'utilisation_vers_vente', 'utilisation_vers_reserve' => 'utilisation',
+            // ✅ AJOUT
+            'reserve_vers_vente', 'reserve_vers_utilisation' => 'reserve',
+            default => 'vente',
+        };
     }
 
     /**
@@ -152,13 +163,22 @@ class TransfertStock extends Model
      */
     public function getStockDestinationAttribute(): string
     {
-        return $this->type_transfert === 'vente_vers_utilisation' ? 'utilisation' : 'vente';
+        return match($this->type_transfert) {
+            'vente_vers_utilisation' => 'utilisation',
+            'utilisation_vers_vente' => 'vente',
+            // ✅ AJOUT
+            'reserve_vers_vente', 'utilisation_vers_reserve', 'vente_vers_reserve' => 
+                str_contains($this->type_transfert, 'vers_vente') ? 'vente' :
+                (str_contains($this->type_transfert, 'vers_utilisation') ? 'utilisation' : 'reserve'),
+            'reserve_vers_utilisation' => 'utilisation',
+            default => 'vente',
+        };
     }
 
     /**
      * Valide le transfert et effectue les mouvements de stock
      */
-    public function valider(?int $valideurId = null): bool
+     public function valider(?int $valideurId = null): bool
     {
         if ($this->valide) {
             return false; // Déjà validé
@@ -168,10 +188,13 @@ class TransfertStock extends Model
         try {
             $produit = $this->produit;
 
-            // ✅ CORRECTION: Utiliser stock_vente et stock_utilisation
-            $stockSource = $this->stock_source === 'vente' 
-                ? $produit->stock_vente          // ← CORRIGÉ
-                : $produit->stock_utilisation;
+            // ✅ MODIFICATION - Gérer les 3 types de stock
+            $stockSource = match($this->stock_source) {
+                'vente' => $produit->stock_vente,
+                'utilisation' => $produit->stock_utilisation,
+                'reserve' => $produit->stock_reserve, // ← AJOUT
+                default => 0,
+            };
 
             if ($stockSource < $this->quantite) {
                 throw new \Exception("Stock insuffisant pour le transfert");

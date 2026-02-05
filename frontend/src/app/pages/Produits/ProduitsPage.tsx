@@ -38,24 +38,26 @@ export function ProduitsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Produits</h1>
-          <p className="text-gray-600 mt-1">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
+            Gestion des Produits
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
             Gérez vos produits, catégories, stocks et mouvements
           </p>
         </div>
 
         {/* Tabs Navigation */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="bg-white rounded-lg shadow mb-4 sm:mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-4 px-6" aria-label="Tabs">
+            {/* Desktop tabs */}
+            <nav className="hidden md:flex space-x-4 px-6" aria-label="Tabs">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
-                
                 return (
                   <button
                     key={tab.id}
@@ -74,6 +76,21 @@ export function ProduitsPage() {
                 );
               })}
             </nav>
+
+            {/* Mobile dropdown */}
+            <div className="md:hidden px-3 py-3">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value as TabType)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {tabs.map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

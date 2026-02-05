@@ -4,6 +4,12 @@ export interface RendezVous {
   id: number;
   client_id: number;
   coiffeur_id: number | null;
+  coiffeurs?: Array<{ // Nouveau champ pour multiple
+    id: number;
+    nom: string;
+    prenom: string;
+    specialite?: string;
+  }>;
   type_prestation_id: number;
   date_heure: string;
   duree_minutes: number;
@@ -93,6 +99,7 @@ export interface CreateRendezVousDTO {
 export interface CreateRendezVousGerantDTO {
   client_id: number;
   coiffeur_id?: number;
+  coiffeur_ids?: number[];
   type_prestation_id: number;
   date_heure: string;
   duree_minutes: number;

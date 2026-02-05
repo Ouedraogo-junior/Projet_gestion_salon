@@ -121,12 +121,9 @@ export const clientApi = {
    * Recherche rapide de clients (pour autocomplete)
    */
   async searchClients(search: string): Promise<ApiResponse<Client[]>> {
-    const { data } = await axios.get('/clients', {
-      params: { search, per_page: 10 }
+    const { data } = await axios.get('/clients/search', {
+      params: { search }
     });
-    return {
-      success: data.success,
-      data: data.data.data, // Extraire le tableau de clients de la pagination
-    };
+    return data;
   },
 };

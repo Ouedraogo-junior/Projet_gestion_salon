@@ -24,7 +24,7 @@ class UpdateProduitRequest extends FormRequest
             'categorie_id' => ['sometimes', 'exists:categories,id'],
             'marque' => ['nullable', 'string', 'max:100'],
             'fournisseur' => ['nullable', 'string', 'max:100'],
-            'type_stock_principal' => ['sometimes', Rule::in(['vente', 'utilisation', 'mixte'])],
+            'type_stock_principal' => ['sometimes', Rule::in(['vente', 'utilisation', 'mixte', 'reserve'])],
 
             // Prix
             'prix_achat' => ['sometimes', 'numeric', 'min:0'],
@@ -59,7 +59,7 @@ class UpdateProduitRequest extends FormRequest
             'nom.max' => 'Le nom ne peut pas dépasser 255 caractères.',
             'reference.unique' => 'Cette référence existe déjà.',
             'categorie_id.exists' => 'Cette catégorie n\'existe pas.',
-            'type_stock_principal.in' => 'Le type de stock doit être : vente, utilisation ou mixte.',
+            'type_stock_principal.in' => 'Le type de stock doit être : vente, utilisation, mixte ou reserve.',
             
             'prix_achat.min' => 'Le prix d\'achat doit être positif.',
             'prix_vente.min' => 'Le prix de vente doit être positif.',

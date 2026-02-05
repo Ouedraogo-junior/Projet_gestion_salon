@@ -13,7 +13,7 @@ import { ProduitFormModal } from './ProduitFormModal';
 import { ProduitDetailsModal } from './ProduitDetailsModal';
 import type { Produit } from '@/types/produit.types';
 
-type ProductSubTab = 'tous' | 'vente' | 'utilisation';
+type ProductSubTab = 'tous' | 'vente' | 'utilisation' | 'reserve';
 
 export function ProduitsTab() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,12 +54,16 @@ export function ProduitsTab() {
     if (activeTab === 'utilisation') {
       return prod.type_stock_principal === 'utilisation' || prod.type_stock_principal === 'mixte';
     }
+    if (activeTab === 'reserve') {  
+      return prod.type_stock_principal === 'reserve';
+    }
     return true;
   });
 
   // Colonnes conditionnelles
   const shouldShowStockVente = activeTab === 'tous' || activeTab === 'vente';
   const shouldShowStockSalon = activeTab === 'tous' || activeTab === 'utilisation';
+  const shouldShowStockReserve = activeTab === 'tous' || activeTab === 'reserve';
 
   const handleDelete = async (id: number) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
@@ -143,6 +147,7 @@ export function ProduitsTab() {
         loading={loading}
         showStockVente={shouldShowStockVente}
         showStockSalon={shouldShowStockSalon}
+        showStockReserve={shouldShowStockReserve}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onToggleActive={handleToggleActive}

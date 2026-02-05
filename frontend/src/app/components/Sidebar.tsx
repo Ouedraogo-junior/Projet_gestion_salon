@@ -40,9 +40,11 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const isOnline = navigator.onLine;
   const { salon, isLoading } = useSalon();
 
+  // ✅ CORRECTION : Utiliser la variable d'environnement
   const getLogoUrl = (logoPath: string | null) => {
     if (!logoPath) return null;
-    return `http://127.0.0.1:8000/storage/${logoPath}`;
+    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    return `${API_URL}/storage/${logoPath}`;
   };
 
   return (

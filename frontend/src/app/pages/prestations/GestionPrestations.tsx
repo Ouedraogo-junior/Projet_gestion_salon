@@ -66,42 +66,42 @@ export const GestionPrestations: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-4xl font-black text-gray-900 mb-2">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 mb-1 sm:mb-2">
                 Types de Prestations
               </h1>
-              <p className="text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 Gérez les prestations disponibles dans votre salon
               </p>
             </div>
             <button
               onClick={handleOpenCreateModal}
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
+              className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
             >
-              <Plus size={20} />
-              Nouvelle Prestation
+              <Plus size={18} className="sm:w-5 sm:h-5" />
+              <span className="whitespace-nowrap">Nouvelle Prestation</span>
             </button>
           </div>
 
           {/* Stats rapides */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl border-2 border-purple-200 p-4">
-              <div className="text-sm font-medium text-gray-600">Total</div>
-              <div className="text-3xl font-black text-purple-600">{total}</div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="bg-white rounded-lg sm:rounded-xl border-2 border-purple-200 p-3 sm:p-4">
+              <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Total</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-purple-600">{total}</div>
             </div>
-            <div className="bg-white rounded-xl border-2 border-green-200 p-4">
-              <div className="text-sm font-medium text-gray-600">Actives</div>
-              <div className="text-3xl font-black text-green-600">
+            <div className="bg-white rounded-lg sm:rounded-xl border-2 border-green-200 p-3 sm:p-4">
+              <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Actives</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-green-600">
                 {prestations.filter((p) => p.actif).length}
               </div>
             </div>
-            <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
-              <div className="text-sm font-medium text-gray-600">Inactives</div>
-              <div className="text-3xl font-black text-gray-600">
+            <div className="bg-white rounded-lg sm:rounded-xl border-2 border-gray-200 p-3 sm:p-4">
+              <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1">Inactives</div>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-gray-600">
                 {prestations.filter((p) => !p.actif).length}
               </div>
             </div>
@@ -109,7 +109,7 @@ export const GestionPrestations: React.FC = () => {
         </div>
 
         {/* Filtres */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <PrestationFilters
             filters={filters}
             onFilterChange={updateFilters}
@@ -119,40 +119,42 @@ export const GestionPrestations: React.FC = () => {
 
         {/* Contenu */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-12 h-12 text-purple-600 animate-spin mb-4" />
-            <p className="text-gray-600 font-medium">Chargement des prestations...</p>
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 lg:py-20">
+            <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-purple-600 animate-spin mb-3 sm:mb-4" />
+            <p className="text-sm sm:text-base text-gray-600 font-medium text-center px-4">
+              Chargement des prestations...
+            </p>
           </div>
         ) : error ? (
-          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6 flex items-start gap-4">
-            <AlertCircle className="text-red-600 flex-shrink-0" size={24} />
-            <div>
-              <h3 className="font-bold text-red-900 mb-1">Erreur</h3>
-              <p className="text-red-700">{error}</p>
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg sm:rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            <AlertCircle className="text-red-600 flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-red-900 mb-1 text-sm sm:text-base">Erreur</h3>
+              <p className="text-red-700 text-sm sm:text-base break-words">{error}</p>
             </div>
           </div>
         ) : prestations.length === 0 ? (
-          <div className="bg-white rounded-xl border-2 border-dashed border-gray-300 p-12 text-center">
+          <div className="bg-white rounded-lg sm:rounded-xl border-2 border-dashed border-gray-300 p-6 sm:p-8 lg:p-12 text-center">
             <div className="max-w-md mx-auto">
-              <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="text-purple-600" size={40} />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Plus className="text-purple-600 w-8 h-8 sm:w-10 sm:h-10" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                 Aucune prestation
               </h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 Commencez par créer votre première prestation
               </p>
               <button
                 onClick={handleOpenCreateModal}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition"
+                className="w-full sm:w-auto px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition text-sm sm:text-base"
               >
                 Créer une prestation
               </button>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
             {prestations.map((prestation) => (
               <PrestationCard
                 key={prestation.id}

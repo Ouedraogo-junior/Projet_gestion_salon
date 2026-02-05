@@ -28,8 +28,8 @@ class UserSeeder extends Seeder
             ],
             // Gestionnaires
             [
-                'nom' => 'Admin',
-                'prenom' => 'Omar',
+                'nom' => 'Sawadogo',
+                'prenom' => 'Awa',
                 'telephone' => '+22600000000',
                 'email' => 'awa.sawadogo@salon.bf',
                 'password' => Hash::make('123456'),

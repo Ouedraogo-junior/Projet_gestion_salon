@@ -67,7 +67,7 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardContent className="pt-4 sm:pt-6">
         <div className="space-y-4">
           {/* Mode sélection */}
           <div className="flex gap-2">
@@ -75,6 +75,7 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
               variant={mode === 'preset' ? 'default' : 'outline'}
               onClick={() => setMode('preset')}
               size="sm"
+              className="text-xs sm:text-sm flex-1 sm:flex-none"
             >
               Périodes prédéfinies
             </Button>
@@ -82,6 +83,7 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
               variant={mode === 'custom' ? 'default' : 'outline'}
               onClick={() => setMode('custom')}
               size="sm"
+              className="text-xs sm:text-sm flex-1 sm:flex-none"
             >
               Période personnalisée
             </Button>
@@ -89,12 +91,12 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
 
           {/* Périodes prédéfinies */}
           {mode === 'preset' && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {/* Raccourcis rapides */}
               <div className="space-y-2">
-                <Label>Raccourcis</Label>
+                <Label className="text-xs sm:text-sm">Raccourcis</Label>
                 <Select onValueChange={handlePresetChange} defaultValue="mois">
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs sm:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -108,9 +110,9 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
 
               {/* Sélection mois */}
               <div className="space-y-2">
-                <Label>Par mois</Label>
+                <Label className="text-xs sm:text-sm">Par mois</Label>
                 <Select onValueChange={handleMoisChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs sm:text-sm">
                     <SelectValue placeholder="Choisir un mois" />
                   </SelectTrigger>
                   <SelectContent>
@@ -132,9 +134,9 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
 
               {/* Sélection année */}
               <div className="space-y-2">
-                <Label>Par année</Label>
+                <Label className="text-xs sm:text-sm">Par année</Label>
                 <Select onValueChange={handleAnneeChange}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs sm:text-sm">
                     <SelectValue placeholder="Choisir une année" />
                   </SelectTrigger>
                   <SelectContent>
@@ -147,11 +149,11 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
               </div>
 
               {/* Période actuelle */}
-              <div className="space-y-2">
-                <Label>Période actuelle</Label>
-                <div className="flex h-10 items-center rounded-md border px-3 text-sm">
-                  <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                <Label className="text-xs sm:text-sm">Période actuelle</Label>
+                <div className="flex h-10 items-center rounded-md border px-3 text-xs sm:text-sm">
+                  <Calendar className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground truncate">
                     {currentFilters.date_debut} au {currentFilters.date_fin}
                   </span>
                 </div>
@@ -161,14 +163,17 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
 
           {/* Période personnalisée */}
           {mode === 'custom' && (
-            <div className="flex items-end gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
               {/* Date début */}
-              <div className="space-y-2">
-                <Label>Date début</Label>
+              <div className="space-y-2 flex-1">
+                <Label className="text-xs sm:text-sm">Date début</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start text-left">
-                      <Calendar className="mr-2 h-4 w-4" />
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-[200px] justify-start text-left text-xs sm:text-sm"
+                    >
+                      <Calendar className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                       {dateDebut ? format(dateDebut, 'PPP', { locale: fr }) : 'Sélectionner'}
                     </Button>
                   </PopoverTrigger>
@@ -184,12 +189,15 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
               </div>
 
               {/* Date fin */}
-              <div className="space-y-2">
-                <Label>Date fin</Label>
+              <div className="space-y-2 flex-1">
+                <Label className="text-xs sm:text-sm">Date fin</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[200px] justify-start text-left">
-                      <Calendar className="mr-2 h-4 w-4" />
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-[200px] justify-start text-left text-xs sm:text-sm"
+                    >
+                      <Calendar className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                       {dateFin ? format(dateFin, 'PPP', { locale: fr }) : 'Sélectionner'}
                     </Button>
                   </PopoverTrigger>
@@ -205,7 +213,11 @@ export function PeriodeSelector({ currentFilters, onPeriodeChange }: PeriodeSele
               </div>
 
               {/* Bouton valider */}
-              <Button onClick={handleCustomPeriode} disabled={!dateDebut || !dateFin}>
+              <Button 
+                onClick={handleCustomPeriode} 
+                disabled={!dateDebut || !dateFin}
+                className="w-full sm:w-auto text-xs sm:text-sm"
+              >
                 Appliquer
               </Button>
             </div>

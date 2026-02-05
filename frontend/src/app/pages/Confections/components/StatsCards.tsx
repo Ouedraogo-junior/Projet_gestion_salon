@@ -44,11 +44,11 @@ export default function StatsCards({ filters }: StatsCardsProps) {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
-            <CardContent className="p-6">
-              <div className="h-20 animate-pulse rounded bg-muted"></div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="h-16 sm:h-20 animate-pulse rounded bg-muted"></div>
             </CardContent>
           </Card>
         ))}
@@ -57,17 +57,17 @@ export default function StatsCards({ filters }: StatsCardsProps) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
       {stats.map((stat) => (
         <Card key={stat.label}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <p className="mt-2 text-3xl font-bold">{stat.value}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{stat.label}</p>
+                <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold">{stat.value}</p>
               </div>
-              <div className={`rounded-full p-3 ${stat.bgColor}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              <div className={`rounded-full p-2 sm:p-3 ${stat.bgColor} flex-shrink-0 ml-2`}>
+                <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${stat.color}`} />
               </div>
             </div>
           </CardContent>

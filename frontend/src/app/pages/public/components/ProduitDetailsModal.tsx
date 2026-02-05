@@ -1,7 +1,9 @@
 // src/app/pages/public/components/ProduitDetailsModal.tsx
 import { useEffect, useState } from 'react';
-import { X, Package, ShoppingCart, ImageOff, Sparkles, Tag } from 'lucide-react';
+import { X, Package, ShoppingCart, ImageOff, Sparkles, Tag, ArrowLeftRight } from 'lucide-react';
 import { publicApiService } from '@/services/publicApi';
+import { useCurrency } from '@/hooks/useCurrency';
+import { CurrencySelector } from './CurrencySelector';
 
 interface ProduitDetailsModalProps {
   isOpen: boolean;
@@ -21,6 +23,15 @@ export function ProduitDetailsModal({
   const [produit, setProduit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  
+  const { 
+    selectedCurrency, 
+    changeCurrency, 
+    convertAmount, 
+    formatCurrency,
+    getCurrencyInfo,
+    loading: currencyLoading 
+  } = useCurrency();
 
   useEffect(() => {
     if (isOpen && produitId) {
@@ -33,20 +44,18 @@ export function ProduitDetailsModal({
       setLoading(true);
       const response = await publicApiService.getProduitDetails(produitId);
       
-      console.log('📦 Réponse API:', response);
-      
       if (response.success && response.data) {
         setProduit(response.data);
         setImageError(false);
       }
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      //console.error('❌ Erreur:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (value: number | null | undefined) => {
+  const formatCurrencyXOF = (value: number | null | undefined) => {
     return new Intl.NumberFormat('fr-FR').format(value ?? 0);
   };
 
@@ -57,6 +66,9 @@ export function ProduitDetailsModal({
   };
 
   if (!isOpen) return null;
+
+  const currencyInfo = getCurrencyInfo();
+  const convertedPrice = produit ? convertAmount(produit.prix_vente) : 0;
 
   return (
     <div 
@@ -71,12 +83,18 @@ export function ProduitDetailsModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
           <h3 className="text-xl font-bold text-gray-900">Détails du produit</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2"
-          >
-            <X size={24} />
-          </button>
+          <div className="flex items-center gap-3">
+            <CurrencySelector 
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={changeCurrency}
+            />
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+            >
+              <X size={24} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -118,7 +136,7 @@ export function ProduitDetailsModal({
                         Marque: <span className="font-semibold">{produit.marque}</span>
                       </p>
                     )}
-                    {produit.categorie && (
+                    {/* {produit.categorie && (
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm text-gray-500">Catégorie:</span>
                         <span 
@@ -128,14 +146,38 @@ export function ProduitDetailsModal({
                           {produit.categorie.nom}
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
 
                   {/* Prix */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl">
-                    <div className="text-3xl font-bold text-indigo-600">
-                      {formatCurrency(produit.prix_vente)} FCFA
+                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl space-y-3">
+                    {/* Prix en FCFA */}
+                    <div>
+                      <div className="text-sm text-gray-600 mb-1">Prix en FCFA</div>
+                      <div className="text-2xl font-bold text-indigo-600">
+                        {formatCurrencyXOF(produit.prix_vente)} FCFA
+                      </div>
                     </div>
+
+                    {/* Prix converti */}
+                    {selectedCurrency !== 'XOF' && (
+                      <>
+                        <div className="flex items-center justify-center">
+                          <ArrowLeftRight size={16} className="text-gray-400" />
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-600 mb-1 flex items-center gap-2">
+                            <span>Prix en {currencyInfo?.name}</span>
+                            {currencyLoading && (
+                              <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-indigo-600 border-r-transparent"></div>
+                            )}
+                          </div>
+                          <div className="text-2xl font-bold text-purple-600">
+                            {currencyInfo?.symbol} {formatCurrency(convertedPrice)}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Description */}
@@ -149,7 +191,9 @@ export function ProduitDetailsModal({
                   <div className="flex items-center gap-2">
                     <Package size={18} className="text-gray-500" />
                     <span className="text-gray-600">
-                      Stock: <span className="font-semibold text-green-600">{produit.stock_vente} unités</span>
+                      Stock: <span className={`font-semibold ${produit.stock_vente === 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {produit.stock_vente === 0 ? 'Épuisé' : 'En stock'}
+                      </span>
                     </span>
                   </div>
 

@@ -255,5 +255,37 @@ export const userApi = {
     const response = await api.delete('/profil/photo');
     return response.data;
   },
+
+  /**
+   * Récupérer les utilisateurs désactivés
+   */
+  async getInactiveUsers(): Promise<ApiResponse<User[]>> {
+    const response = await api.get('/users/inactive');
+    return response.data;
+  },
+
+  /**
+   * Récupérer les utilisateurs supprimés (soft deleted)
+   */
+  async getDeletedUsers(): Promise<ApiResponse<User[]>> {
+    const response = await api.get('/users/deleted');
+    return response.data;
+  },
+
+  /**
+   * Restaurer un utilisateur supprimé
+   */
+  async restoreUser(id: number): Promise<ApiResponse<User>> {
+    const response = await api.post(`/users/${id}/restore`);
+    return response.data;
+  },
+
+  /**
+   * Supprimer définitivement un utilisateur
+   */
+  async permanentlyDelete(id: number): Promise<ApiResponse<void>> {
+    const response = await api.delete(`/users/${id}/force`);
+    return response.data;
+  },
   
 };

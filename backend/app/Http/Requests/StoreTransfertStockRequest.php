@@ -23,11 +23,16 @@ class StoreTransfertStockRequest extends FormRequest
     {
         return [
             'produit_id' => ['required', 'exists:produits,id'],
-            'type_transfert' => ['required', Rule::in(['vente_vers_utilisation', 'utilisation_vers_vente'])],
+            'type_transfert' => ['required', Rule::in(['vente_vers_utilisation', 'utilisation_vers_vente', 'reserve_vers_vente', 'reserve_vers_utilisation', 'vente_vers_reserve', 'utilisation_vers_reserve'])],
             'quantite' => ['required', 'integer', 'min:1'],
             'motif' => ['nullable', 'string', 'max:500'],
             'auto_valider' => ['boolean'],
-        ];
+             // ✅ AJOUT: Seuils conditionnels pour transferts depuis réserve
+            'seuil_alerte' => 'nullable|integer|min:0',
+            'seuil_critique' => 'nullable|integer|min:0',
+            'seuil_alerte_utilisation' => 'nullable|integer|min:0',
+            'seuil_critique_utilisation' => 'nullable|integer|min:0',
+            ];
     }
 
     /**
@@ -53,23 +58,33 @@ class StoreTransfertStockRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            // Vérifier la disponibilité du stock source
             $produit = Produit::find($this->produit_id);
             
-            if ($produit) {
-                // ✅ CORRECTION: Utiliser stock_vente au lieu de stock_actuel
-                $stockSource = $this->type_transfert === 'vente_vers_utilisation' 
-                    ? $produit->stock_vente      // ← CORRIGÉ
-                    : $produit->stock_utilisation;
+            if (!$produit) {
+                return;
+            }
+            
+            // Déterminer le stock source selon le type de transfert
+            $stockSource = match($this->type_transfert) {
+                'vente_vers_utilisation', 'vente_vers_reserve' => $produit->stock_vente,
+                'utilisation_vers_vente', 'utilisation_vers_reserve' => $produit->stock_utilisation,
+                'reserve_vers_vente', 'reserve_vers_utilisation' => $produit->stock_reserve,
+                default => 0
+            };
+            
+            // Vérifier que le stock source est suffisant
+            if ($stockSource < $this->quantite) {
+                $typeStock = match($this->type_transfert) {
+                    'vente_vers_utilisation', 'vente_vers_reserve' => 'vente',
+                    'utilisation_vers_vente', 'utilisation_vers_reserve' => 'utilisation',
+                    'reserve_vers_vente', 'reserve_vers_utilisation' => 'réserve',
+                    default => 'source'
+                };
                 
-                if ($stockSource < $this->quantite) {
-                    $typeStock = $this->type_transfert === 'vente_vers_utilisation' ? 'vente' : 'utilisation';
-                    
-                    $validator->errors()->add(
-                        'quantite', 
-                        "Stock {$typeStock} insuffisant. Disponible : {$stockSource}"
-                    );
-                }
+                $validator->errors()->add(
+                    'quantite', 
+                    "Stock {$typeStock} insuffisant. Disponible : {$stockSource}"
+                );
             }
         });
     }
