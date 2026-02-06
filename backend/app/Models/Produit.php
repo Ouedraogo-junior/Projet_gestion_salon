@@ -50,6 +50,11 @@ class Produit extends Model
         'prix_achat_devise_origine',
         'prix_achat_stock_total',
         'quantite_stock_commande',
+        'cbm',
+        'poids_kg',
+        'frais_bancaires',
+        'frais_courtier',
+        'frais_transport_local',
     ];
 
   
@@ -81,6 +86,11 @@ class Produit extends Model
         'prix_achat_devise_origine' => 'decimal:2',
         'prix_achat_stock_total' => 'decimal:2',
         'quantite_stock_commande' => 'integer',
+        'cbm' => 'decimal:4',
+        'poids_kg' => 'decimal:2',
+        'frais_bancaires' => 'decimal:2',
+        'frais_courtier' => 'decimal:2',
+        'frais_transport_local' => 'decimal:2',
     ];
 
     // Relation avec la catégorie
@@ -154,19 +164,31 @@ class Produit extends Model
      */
    public function calculerMontantTotal(): float
     {
-        // Simple addition SANS conversion
         $total = (float) ($this->prix_achat_stock_total ?? 0);
         
-        if ($this->frais_cmb) {
-            $total += (float) $this->frais_cmb;
-        }
-        
-        if ($this->frais_transit) {
-            $total += (float) $this->frais_transit;
-        }
+        $total += (float) ($this->frais_cmb ?? 0);
+        $total += (float) ($this->frais_transit ?? 0);
+        $total += (float) ($this->frais_bancaires ?? 0);
+        $total += (float) ($this->frais_courtier ?? 0);
+        $total += (float) ($this->frais_transport_local ?? 0);
         
         return round($total, 2);
     }
+
+
+    // Calculer le prix d'achat unitaire en tenant compte du taux de change
+    public function calculerPrixAchatUnitaire(): ?float
+    {
+        if (!$this->quantite_stock_commande || $this->quantite_stock_commande <= 0) {
+            return null;
+        }
+        
+        $totalDeviseOrigine = $this->calculerMontantTotal();
+        $prixUnitaireDevise = $totalDeviseOrigine / $this->quantite_stock_commande;
+        
+        return round($prixUnitaireDevise * ($this->taux_change ?? 1), 2);
+    }
+
 
     /**
      * Enregistrer et calculer automatiquement le montant total
@@ -174,9 +196,13 @@ class Produit extends Model
     protected static function booted()
     {
         static::saving(function ($produit) {
-            // Calculer automatiquement le montant total avant sauvegarde
-            if ($produit->prix_achat) {
-                $produit->montant_total_achat = $produit->calculerMontantTotal();
+            // Calculer montant total
+            $produit->montant_total_achat = $produit->calculerMontantTotal();
+            
+            // Calculer prix unitaire automatiquement
+            $prixCalcule = $produit->calculerPrixAchatUnitaire();
+            if ($prixCalcule !== null) {
+                $produit->prix_achat = $prixCalcule;
             }
         });
     }

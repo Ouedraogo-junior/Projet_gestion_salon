@@ -168,6 +168,13 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Transferts - Suppression
         Route::delete('/transferts/{transfert}', [TransfertStockController::class, 'destroy']);
+
+        // Rapports - Accès complet
+        Route::get('/rapports/global', [RapportController::class, 'global']);
+        Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
+        Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
+        Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
+        
     });
 
     // ========================================
@@ -180,11 +187,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/transferts/{transfert}/valider', [TransfertStockController::class, 'valider']);
         Route::post('/transferts/valider-masse', [TransfertStockController::class, 'validerEnMasse']);
         
-        // Rapports - Accès complet
-        Route::get('/rapports/global', [RapportController::class, 'global']);
-        Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
-        Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
-        Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
         
         // Dépenses - Consultation stats
         Route::get('/depenses/stats/total-mois', [DepenseController::class, 'totalMois']);

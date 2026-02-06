@@ -42,7 +42,8 @@ class UpdateProduitRequest extends FormRequest
             // Autres
             'quantite_min_commande' => ['nullable', 'integer', 'min:1'],
             'delai_livraison_jours' => ['nullable', 'integer', 'min:1'],
-            'is_active' => ['boolean'],
+            'is_active' => 'sometimes|boolean',
+            'visible_public' => 'sometimes|boolean',
 
             // Attributs dynamiques
             'attributs' => ['nullable', 'array'],

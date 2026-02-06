@@ -226,14 +226,14 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
                       <ShoppingCart size={12} />
                       Vente
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => handleAjouterProduit(produit, 'utilisation')}
                       disabled={produit.stock_utilisation < 1}
                       className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
                     >
                       <ShoppingCart size={12} />
                       Util
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

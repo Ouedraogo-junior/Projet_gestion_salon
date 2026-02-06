@@ -1,8 +1,9 @@
 // src/app/pages/ventes/components/Panier.tsx
 
 import React from 'react';
-import { ShoppingCart, Trash2, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Trash2, Minus, Plus, User } from 'lucide-react';
 import type { ArticlePanier } from '../../../../types/vente.types';
+import type { Client } from '../../../../types/vente.types';
 
 interface PanierProps {
   articles: ArticlePanier[];
@@ -13,6 +14,7 @@ interface PanierProps {
   montantHT: number;
   montantReduction: number;
   montantTTC: number;
+  clientSelectionne?: Client | null;
 }
 
 export const Panier: React.FC<PanierProps> = ({
@@ -24,7 +26,11 @@ export const Panier: React.FC<PanierProps> = ({
   montantHT,
   montantReduction,
   montantTTC,
+  clientSelectionne,
 }) => {
+  // LOG DE DEBUG - À RETIRER APRÈS
+  //console.log('Panier - clientSelectionne:', clientSelectionne);
+
   const formaterMontant = (montant: number): string => {
     return montant.toLocaleString('fr-FR') + ' F';
   };
@@ -35,6 +41,30 @@ export const Panier: React.FC<PanierProps> = ({
 
   return (
     <div className="bg-white p-4 rounded-lg border h-full flex flex-col">
+      {/* Affichage client sélectionné */}
+      {clientSelectionne && (
+        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              {clientSelectionne.prenom.charAt(0)}{clientSelectionne.nom.charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-blue-900 truncate">
+                {clientSelectionne.prenom} {clientSelectionne.nom}
+              </p>
+              <p className="text-xs text-blue-700">{clientSelectionne.telephone}</p>
+            </div>
+            {clientSelectionne.points_fidelite > 0 && (
+              <div className="text-right">
+                <p className="text-xs text-blue-600 font-medium">
+                  {clientSelectionne.points_fidelite} pts
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <h3 className="font-semibold mb-3 flex items-center gap-2">
         <ShoppingCart size={18} />
         Panier ({articles.length})

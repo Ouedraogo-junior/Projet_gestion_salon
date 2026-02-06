@@ -24,13 +24,13 @@ class StoreVenteRequest extends FormRequest
             // Client (un seul type requis)
             'client_id' => 'nullable|exists:clients,id',
             'nouveau_client' => 'nullable|array',
-            'nouveau_client.nom' => 'required_with:nouveau_client|string|max:100',
-            'nouveau_client.prenom' => 'required_with:nouveau_client|string|max:100',
+            'nouveau_client.nom' => 'nullable|string|max:100', // MODIFIÉ: required_with → nullable
+            'nouveau_client.prenom' => 'nullable|string|max:100', // MODIFIÉ: required_with → nullable
             'nouveau_client.telephone' => 'required_with:nouveau_client|string|max:20',
             'nouveau_client.email' => 'nullable|email|max:255',
             'client_anonyme' => 'nullable|array',
-            'client_anonyme.nom' => 'required_with:client_anonyme|string|max:100',
-            'client_anonyme.telephone' => 'nullable|string|max:20',
+            'client_anonyme.nom' => 'nullable|string|max:100', // MODIFIÉ: required_with → nullable
+            'client_anonyme.telephone' => 'required_with:client_anonyme|string|max:20', // MODIFIÉ: nullable → required_with
 
             // Personnel
             'coiffeur_id' => 'nullable|exists:users,id',
@@ -77,9 +77,8 @@ class StoreVenteRequest extends FormRequest
             'paiements.min' => 'Au moins un mode de paiement est requis',
             'client_id.exists' => 'Client introuvable',
             'coiffeur_id.exists' => 'Coiffeur introuvable',
-            'nouveau_client.nom.required_with' => 'Le nom du client est requis',
-            'nouveau_client.prenom.required_with' => 'Le prénom du client est requis',
             'nouveau_client.telephone.required_with' => 'Le téléphone du client est requis',
+            'client_anonyme.telephone.required_with' => 'Le téléphone est requis', // AJOUTÉ
         ];
     }
 

@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth'; // AJOUT: Import du hook d'authentification
 
 // Composants rapports
 import { PeriodeSelector } from './components/PeriodeSelector';
@@ -17,6 +18,9 @@ import { useRapportGlobal, useVentesDetail, useTresorerie, useComparaisonPeriode
 import { rapportApi } from '@/services/rapportApi';
 
 export default function RapportsPage() {
+  // AJOUT: Vérification du rôle utilisateur
+  const { user } = useAuth();
+
   // État pour la période sélectionnée
   const [filters, setFilters] = useState(() => rapportApi.getPeriodePreset('mois'));
 
@@ -37,6 +41,23 @@ export default function RapportsPage() {
     ventesDetail.isLoading || 
     tresorerie.isLoading || 
     comparaison.isLoading;
+
+  // AJOUT: Vérification accès - seuls les gestionnaires peuvent voir cette page
+  if (!user || user.role !== 'gestionnaire') {
+    return (
+      <div className="container mx-auto p-3 sm:p-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <ShieldAlert className="h-16 w-16 text-red-500 mb-4" />
+            <h2 className="text-xl font-bold text-red-900 mb-2">Accès refusé</h2>
+            <p className="text-red-700 max-w-md">
+              Cette page est réservée aux gestionnaires. Vous n'avez pas les permissions nécessaires pour accéder aux rapports comptables.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6">

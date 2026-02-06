@@ -26,7 +26,6 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
   const [selectedCategorie, setSelectedCategorie] = useState<number | undefined>();
   const [selectedProduit, setSelectedProduit] = useState<Produit | null>(null);
   const [quantite, setQuantite] = useState(1);
-  const [sourceStock, setSourceStock] = useState<SourceStock>('vente');
   const [stockError, setStockError] = useState<string | null>(null);
 
   // Charger les catégories au montage
@@ -85,11 +84,11 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
     }
   };
 
-  const verifierStock = async (produit: Produit, qty: number, source: SourceStock) => {
+  const verifierStock = async (produit: Produit, qty: number) => {
     setStockError(null);
     
-    // Vérification côté client d'abord
-    const stockDisponible = source === 'vente' ? produit.stock_vente : produit.stock_utilisation;
+    // Vérifier uniquement le stock de vente
+    const stockDisponible = produit.stock_vente;
     if (stockDisponible < qty) {
       setStockError(`Stock insuffisant. Disponible: ${stockDisponible}`);
       return false;
@@ -101,7 +100,6 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
   const handleSelectProduit = (produit: Produit) => {
     setSelectedProduit(produit);
     setQuantite(1);
-    setSourceStock('vente');
     setStockError(null);
   };
 
@@ -109,11 +107,11 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
     if (!selectedProduit) return;
 
     // Vérifier le stock
-    const stockOk = await verifierStock(selectedProduit, quantite, sourceStock);
+    const stockOk = await verifierStock(selectedProduit, quantite);
     if (!stockOk) return;
 
-    // Ajouter au panier
-    onSelect(selectedProduit, quantite, sourceStock);
+    // Ajouter au panier - toujours avec source 'vente'
+    onSelect(selectedProduit, quantite, 'vente');
     
     // Réinitialiser et fermer
     resetModal();
@@ -123,7 +121,6 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
   const resetModal = () => {
     setSelectedProduit(null);
     setQuantite(1);
-    setSourceStock('vente');
     setStockError(null);
     setSearchTerm('');
     setSelectedCategorie(undefined);
@@ -132,10 +129,6 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
   const handleClose = () => {
     resetModal();
     onClose();
-  };
-
-  const getStockDisponible = (produit: Produit, source: SourceStock) => {
-    return source === 'vente' ? produit.stock_vente : produit.stock_utilisation;
   };
 
   const getPrixAffichage = (produit: Produit) => {
@@ -304,12 +297,9 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
                         </div>
 
                         {/* Stock */}
-                        <div className="mt-2 flex gap-3 text-sm">
-                          <div className={`${produit.stock_vente <= produit.seuil_critique ? 'text-red-600' : 'text-gray-600'}`}>
-                            <span className="font-medium">Vente:</span> {produit.stock_vente}
-                          </div>
-                          <div className={`${produit.stock_utilisation <= produit.seuil_critique_utilisation ? 'text-red-600' : 'text-gray-600'}`}>
-                            <span className="font-medium">Util:</span> {produit.stock_utilisation}
+                        <div className="mt-2 text-sm">
+                          <div className={`${produit.stock_vente <= produit.seuil_critique ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                            <span className="font-medium">Stock disponible:</span> {produit.stock_vente}
                           </div>
                         </div>
                       </div>
@@ -326,7 +316,7 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
           <div className="border-t p-4 bg-gray-50">
             <h3 className="font-semibold mb-3">Configuration</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Quantité */}
               <div>
                 <label className="block text-sm font-medium mb-1">Quantité</label>
@@ -337,19 +327,6 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
                   onChange={(e) => setQuantite(Math.max(1, parseInt(e.target.value) || 1))}
                   className="w-full border rounded px-3 py-2"
                 />
-              </div>
-
-              {/* Source stock */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Source stock</label>
-                <select
-                  value={sourceStock}
-                  onChange={(e) => setSourceStock(e.target.value as SourceStock)}
-                  className="w-full border rounded px-3 py-2"
-                >
-                  <option value="vente">Vente ({getStockDisponible(selectedProduit, 'vente')} dispo)</option>
-                  <option value="utilisation">Utilisation ({getStockDisponible(selectedProduit, 'utilisation')} dispo)</option>
-                </select>
               </div>
 
               {/* Prix unitaire */}

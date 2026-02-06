@@ -71,7 +71,7 @@ export interface Produit {
   categorie?: Categorie;
   marque?: string;
   fournisseur?: string;
-  prix_achat: number; // Prix unitaire en FCFA (après conversion)
+  prix_achat: number; // Prix unitaire en FCFA (calculé automatiquement par le backend)
   prix_vente: number;
   prix_promo?: number;
   date_debut_promo?: string;
@@ -90,22 +90,32 @@ export interface Produit {
   quantite_min_commande?: number;
   delai_livraison_jours?: number;
   is_active: boolean;
+  visible_public: boolean;
   valeurs_attributs?: ProduitAttributValeur[];
   created_at: string;
   updated_at: string;
   
-  // Informations d'achat
+  // Informations d'achat et commande
   date_commande?: string;
   devise_achat?: Devise;
   taux_change?: number; 
-  prix_achat_devise_origine?: number; 
-  prix_achat_stock_total?: number; 
+  prix_achat_devise_origine?: number; // Prix unitaire dans la devise d'origine
+  prix_achat_stock_total?: number; // Prix total du stock (devise achat)
   quantite_stock_commande?: number; 
-  frais_cmb?: number;
-  frais_transit?: number;
   moyen_paiement?: MoyenPaiement;
   date_reception?: string;
-  montant_total_achat?: number; 
+  montant_total_achat?: number; // Somme de tous les frais (devise achat)
+  
+  // Informations physiques (informatif)
+  cbm?: number; // Volume en m³
+  poids_kg?: number; // Poids total en kg
+  
+  // Frais d'importation (tous en devise d'achat)
+  frais_cmb?: number;
+  frais_transit?: number;
+  frais_bancaires?: number;
+  frais_courtier?: number;
+  frais_transport_local?: number;
 }
 
 export interface MouvementStock {

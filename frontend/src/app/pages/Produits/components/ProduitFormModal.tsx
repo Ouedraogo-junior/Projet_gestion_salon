@@ -40,6 +40,11 @@ export function ProduitFormModal({
     frais_cmb: '',
     frais_transit: '',
     moyen_paiement: '',
+    cbm: '',
+    poids_kg: '',
+    frais_bancaires: '',
+    frais_courtier: '',
+    frais_transport_local: '',
     date_reception: '',
     prix_achat: '', // Prix d'achat unitaire (calculé automatiquement)
     prix_vente: '',
@@ -68,25 +73,45 @@ export function ProduitFormModal({
   const [valeursAttributs, setValeursAttributs] = useState<Record<number, string>>({});
   const [tauxChange, setTauxChange] = useState<number>(1);
 
+
   // Calcul automatique du prix d'achat unitaire
   useEffect(() => {
-      const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
-      const quantite = parseFloat(formData.quantite_stock_commande) || 0;
-      const fraisCmb = parseFloat(formData.frais_cmb) || 0;
-      const fraisTransit = parseFloat(formData.frais_transit) || 0;
+    const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
+    const quantite = parseFloat(formData.quantite_stock_commande) || 0;
+    const fraisCmb = parseFloat(formData.frais_cmb) || 0;
+    const fraisTransit = parseFloat(formData.frais_transit) || 0;
+    const fraisBancaires = parseFloat(formData.frais_bancaires) || 0;
+    const fraisCourtier = parseFloat(formData.frais_courtier) || 0;
+    const fraisLocal = parseFloat(formData.frais_transport_local) || 0;
 
-      if (stockTotal > 0 && quantite > 0) {
-        const prixUnitaireDeviseOrigine = (stockTotal + fraisCmb + fraisTransit) / quantite;
-        const prixUnitaireFCFA = prixUnitaireDeviseOrigine * tauxChange;
-        
-        setFormData(prev => ({
-          ...prev,
-          prix_achat: prixUnitaireFCFA.toFixed(2)
-        }));
-      }
-    }, [formData.prix_achat_stock_total, formData.quantite_stock_commande, formData.frais_cmb, formData.frais_transit, tauxChange]);
-
+    if (quantite > 0) {
+      const totalFrais = stockTotal + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
+      const prixUnitaireDevise = totalFrais / quantite;
+      const prixUnitaireFCFA = prixUnitaireDevise * tauxChange;
+      
+      setFormData(prev => ({
+        ...prev,
+        prix_achat: prixUnitaireFCFA.toFixed(2)
+      }));
+    } else if (stockTotal === 0 && fraisCmb === 0 && fraisTransit === 0 && fraisBancaires === 0 && fraisCourtier === 0 && fraisLocal === 0) {
+      // Réinitialiser si tous les champs sont vides
+      setFormData(prev => ({
+        ...prev,
+        prix_achat: ''
+      }));
+    }
+  }, [
+    formData.prix_achat_stock_total, 
+    formData.quantite_stock_commande, 
+    formData.frais_cmb, 
+    formData.frais_transit,
+    formData.frais_bancaires,
+    formData.frais_courtier,
+    formData.frais_transport_local,
+    tauxChange
+  ]);
   
+
   useEffect(() => {
     if (formData.type_stock_principal === 'reserve' && formData.quantite_stock_commande) {
       setFormData(prev => ({
@@ -120,6 +145,11 @@ export function ProduitFormModal({
         devise_achat: produit.devise_achat || 'FCFA',
         frais_cmb: produit.frais_cmb?.toString() || '',
         frais_transit: produit.frais_transit?.toString() || '',
+        frais_bancaires: produit.frais_bancaires?.toString() || '',
+        frais_courtier: produit.frais_courtier?.toString() || '',
+        frais_transport_local: produit.frais_transport_local?.toString() || '',
+        cbm: produit.cbm?.toString() || '',
+        poids_kg: produit.poids_kg?.toString() || '',
         moyen_paiement: produit.moyen_paiement || '',
         date_reception: produit.date_reception || '',
         prix_vente: produit.prix_vente?.toString() || '',
@@ -219,6 +249,11 @@ export function ProduitFormModal({
       frais_cmb: '',
       frais_transit: '',
       moyen_paiement: '',
+      cbm: '',
+      poids_kg: '',
+      frais_bancaires: '',
+      frais_courtier: '',
+      frais_transport_local: '',
       date_reception: '',
       prix_achat: '',
       prix_vente: '',
@@ -324,6 +359,11 @@ export function ProduitFormModal({
       frais_cmb: fraisCmb || null,
       frais_transit: fraisTransit || null,
       moyen_paiement: formData.moyen_paiement || null,
+      cbm: formData.cbm ? parseFloat(formData.cbm) : null,
+      poids_kg: formData.poids_kg ? parseFloat(formData.poids_kg) : null,
+      frais_bancaires: formData.frais_bancaires ? parseFloat(formData.frais_bancaires) : null,
+      frais_courtier: formData.frais_courtier ? parseFloat(formData.frais_courtier) : null,
+      frais_transport_local: formData.frais_transport_local ? parseFloat(formData.frais_transport_local) : null,
       date_reception: formData.date_reception || null,
       prix_vente: parseFloat(formData.prix_vente),
       stock_vente: isReserve ? 0 : (parseInt(formData.stock_vente) || 0),
@@ -712,194 +752,278 @@ export function ProduitFormModal({
           
           {/* Prix d'achat du stock total */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">Stock commandé</h4>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prix d'achat total du stock
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    value={formData.prix_achat_stock_total}
-                    onChange={(e) => setFormData({ ...formData, prix_achat_stock_total: e.target.value })}
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    className="flex-1"
-                  />
-                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Montant total payé pour le stock</p>
-              </div>
+  <h4 className="text-sm font-semibold text-gray-900 mb-3">Stock commandé</h4>
+  
+  {/* Informations physiques */}
+  <div className="grid grid-cols-3 gap-4 mb-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Prix d'achat total du stock
+      </label>
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          value={formData.prix_achat_stock_total}
+          onChange={(e) => setFormData({ ...formData, prix_achat_stock_total: e.target.value })}
+          min="0"
+          step="0.01"
+          placeholder="0"
+          className="flex-1"
+        />
+        <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+          {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
+        </div>
+      </div>
+    </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quantité commandée
-                </label>
-                <Input
-                  type="number"
-                  value={formData.quantite_stock_commande}
-                  onChange={(e) => setFormData({ ...formData, quantite_stock_commande: e.target.value })}
-                  min="0"
-                  step="1"
-                  placeholder="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Nombre d'unités</p>
-              </div>
-            </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Quantité commandée
+      </label>
+      <Input
+        type="number"
+        value={formData.quantite_stock_commande}
+        onChange={(e) => setFormData({ ...formData, quantite_stock_commande: e.target.value })}
+        min="0"
+        step="1"
+        placeholder="0"
+      />
+    </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais CMB
-                </label>
-                <Input
-                  type="number"
-                  value={formData.frais_cmb}
-                  onChange={(e) => setFormData({ ...formData, frais_cmb: e.target.value })}
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Frais totaux CMB</p>
-              </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        CBM <span className="text-gray-400">(m³)</span>
+      </label>
+      <Input
+        type="number"
+        value={formData.cbm}
+        onChange={(e) => setFormData({ ...formData, cbm: e.target.value })}
+        min="0"
+        step="0.0001"
+        placeholder="0.0000"
+      />
+      <p className="text-xs text-gray-500 mt-1">Volume informatif</p>
+    </div>
+  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais de transit/douane
-                </label>
-                <Input
-                  type="number"
-                  value={formData.frais_transit}
-                  onChange={(e) => setFormData({ ...formData, frais_transit: e.target.value })}
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                />
-                <p className="text-xs text-gray-500 mt-1">Frais totaux transit/douane</p>
-              </div>
-            </div>
+  {/* Poids */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Poids total <span className="text-gray-400">(kg)</span>
+    </label>
+    <Input
+      type="number"
+      value={formData.poids_kg}
+      onChange={(e) => setFormData({ ...formData, poids_kg: e.target.value })}
+      min="0"
+      step="0.01"
+      placeholder="0"
+      className="w-48"
+    />
+    <p className="text-xs text-gray-500 mt-1">Poids informatif</p>
+  </div>
 
-            {/* Calcul coût total du stock */}
-            {(formData.prix_achat_stock_total || formData.frais_cmb || formData.frais_transit) && (
-              <div className="mt-4 pt-3 border-t border-blue-300">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Coût total du stock</span>
-                  <span className="text-lg font-bold text-blue-600">
-                    {(() => {
-                      const total = 
-                        (parseFloat(formData.prix_achat_stock_total) || 0) +
-                        (parseFloat(formData.frais_cmb) || 0) +
-                        (parseFloat(formData.frais_transit) || 0);
-                      return formatCurrency(total);
-                    })()}{' '}
-                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+  {/* Tous les frais */}
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Frais CMB
+      </label>
+      <Input
+        type="number"
+        value={formData.frais_cmb}
+        onChange={(e) => setFormData({ ...formData, frais_cmb: e.target.value })}
+        min="0"
+        step="0.01"
+        placeholder="0"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Frais transit/douane
+      </label>
+      <Input
+        type="number"
+        value={formData.frais_transit}
+        onChange={(e) => setFormData({ ...formData, frais_transit: e.target.value })}
+        min="0"
+        step="0.01"
+        placeholder="0"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Frais bancaires
+      </label>
+      <Input
+        type="number"
+        value={formData.frais_bancaires}
+        onChange={(e) => setFormData({ ...formData, frais_bancaires: e.target.value })}
+        min="0"
+        step="0.01"
+        placeholder="0"
+      />
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Frais courtier
+      </label>
+      <Input
+        type="number"
+        value={formData.frais_courtier}
+        onChange={(e) => setFormData({ ...formData, frais_courtier: e.target.value })}
+        min="0"
+        step="0.01"
+        placeholder="0"
+      />
+    </div>
+
+    <div className="col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Frais transport local
+      </label>
+      <Input
+        type="number"
+        value={formData.frais_transport_local}
+        onChange={(e) => setFormData({ ...formData, frais_transport_local: e.target.value })}
+        min="0"
+        step="0.01"
+        placeholder="0"
+      />
+      <p className="text-xs text-gray-500 mt-1">Du port jusqu'au salon</p>
+    </div>
+  </div>
+
+  {/* Calcul coût total */}
+  {(formData.prix_achat_stock_total || formData.frais_cmb || formData.frais_transit || 
+    formData.frais_bancaires || formData.frais_courtier || formData.frais_transport_local) && (
+    <div className="mt-4 pt-3 border-t border-blue-300">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700">Coût total du stock</span>
+        <span className="text-lg font-bold text-blue-600">
+          {(() => {
+            const total = 
+              (parseFloat(formData.prix_achat_stock_total) || 0) +
+              (parseFloat(formData.frais_cmb) || 0) +
+              (parseFloat(formData.frais_transit) || 0) +
+              (parseFloat(formData.frais_bancaires) || 0) +
+              (parseFloat(formData.frais_courtier) || 0) +
+              (parseFloat(formData.frais_transport_local) || 0);
+            return formatCurrency(total);
+          })()}{' '}
+          {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
+        </span>
+      </div>
+    </div>
+  )}
+</div>
 
           {/* Prix unitaire calculé automatiquement */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire (calculé automatiquement)</h4>
-          
-          {/* Affichage du prix dans la devise d'origine si différent de FCFA */}
-          {formData.devise_achat !== 'FCFA' && formData.prix_achat_stock_total && formData.quantite_stock_commande && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Prix unitaire en {DEVISES.find(d => d.value === formData.devise_achat)?.label}
-                </span>
-                <span className="text-lg font-bold text-blue-600">
-                  {(() => {
-                    const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
-                    const quantite = parseFloat(formData.quantite_stock_commande) || 0;
-                    const fraisCmb = parseFloat(formData.frais_cmb) || 0;
-                    const fraisTransit = parseFloat(formData.frais_transit) || 0;
-                    const prixUnitaireDevise = (stockTotal + fraisCmb + fraisTransit) / quantite;
-                    return formatCurrency(prixUnitaireDevise);
-                  })()}{' '}
-                  {DEVISES.find(d => d.value === formData.devise_achat)?.symbole}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600">
-                Taux appliqué : 1 {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} = {tauxChange} FCFA
-              </p>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prix d'achat unitaire (FCFA) <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={formData.prix_achat}
-                  onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
-                  required
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  className="flex-1"
-                  readOnly={!!(formData.prix_achat_stock_total && formData.quantite_stock_commande)}
-                />
-                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-                  FCFA
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {(formData.prix_achat_stock_total && formData.quantite_stock_commande) 
-                  ? `Converti automatiquement depuis ${DEVISES.find(d => d.value === formData.devise_achat)?.label}`
-                  : 'Ou saisir manuellement si stock inconnu'}
-              </p>
-            </div>
+<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+  <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire</h4>
+  
+  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+    <p className="text-sm text-amber-800">
+      ℹ️ Le prix d'achat unitaire sera calculé automatiquement par le système en fonction des frais saisis ci-dessus.
+    </p>
+  </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prix de vente unitaire <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={formData.prix_vente}
-                  onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
-                  required
-                  min="0"
-                  step="0.01"
-                  placeholder="0"
-                  className="flex-1"
-                />
-                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-                  FCFA
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Prix par unité</p>
-            </div>
-          </div>
-
-          {/* Calcul de la marge */}
-          {formData.prix_achat && formData.prix_vente && (
-            <div className="mt-4 pt-3 border-t border-green-300">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Marge unitaire</span>
-                <span className="text-base font-bold text-green-600">
-                  {(() => {
-                    const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
-                    const margePct = (marge / parseFloat(formData.prix_achat)) * 100;
-                    return `${formatCurrency(marge)} FCFA (${margePct.toFixed(1)}%)`;
-                  })()}
-                </span>
-              </div>
-            </div>
-          )}
+  {/* Affichage du prix dans la devise d'origine */}
+  {formData.devise_achat !== 'FCFA' && formData.prix_achat_stock_total && formData.quantite_stock_commande && (
+    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-700">
+          Prix unitaire estimé en {DEVISES.find(d => d.value === formData.devise_achat)?.label}
+        </span>
+        <span className="text-lg font-bold text-blue-600">
+          {(() => {
+            const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
+            const quantite = parseFloat(formData.quantite_stock_commande) || 0;
+            const fraisCmb = parseFloat(formData.frais_cmb) || 0;
+            const fraisTransit = parseFloat(formData.frais_transit) || 0;
+            const fraisBancaires = parseFloat(formData.frais_bancaires) || 0;
+            const fraisCourtier = parseFloat(formData.frais_courtier) || 0;
+            const fraisLocal = parseFloat(formData.frais_transport_local) || 0;
+            
+            const total = stockTotal + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
+            const prixUnitaireDevise = quantite > 0 ? total / quantite : 0;
+            return formatCurrency(prixUnitaireDevise);
+          })()}{' '}
+          {DEVISES.find(d => d.value === formData.devise_achat)?.symbole}
+        </span>
+      </div>
+      <p className="text-xs text-gray-600">
+        Taux appliqué : 1 {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} = {tauxChange} FCFA
+      </p>
+    </div>
+  )}
+  
+  <div className="grid grid-cols-2 gap-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Prix d'achat unitaire (FCFA) <span className="text-red-500">*</span>
+      </label>
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          value={formData.prix_achat}
+          onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
+          required
+          min="0"
+          step="0.01"
+          placeholder="Calculé automatiquement"
+          className="flex-1"
+        />
+        <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+          FCFA
         </div>
+      </div>
+      <p className="text-xs text-gray-500 mt-1">
+        Calculé automatiquement ou saisir manuellement
+      </p>
+    </div>
+
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Prix de vente unitaire <span className="text-red-500">*</span>
+      </label>
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          value={formData.prix_vente}
+          onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
+          required
+          min="0"
+          step="0.01"
+          placeholder="0"
+          className="flex-1"
+        />
+        <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+          FCFA
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Calcul de la marge */}
+  {formData.prix_achat && formData.prix_vente && (
+    <div className="mt-4 pt-3 border-t border-green-300">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700">Marge unitaire</span>
+        <span className="text-base font-bold text-green-600">
+          {(() => {
+            const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
+            const margePct = (marge / parseFloat(formData.prix_achat)) * 100;
+            return `${formatCurrency(marge)} FCFA (${margePct.toFixed(1)}%)`;
+          })()}
+        </span>
+      </div>
+    </div>
+  )}
+</div>
         </div>
 
         {/* Section Stock Réserve */}

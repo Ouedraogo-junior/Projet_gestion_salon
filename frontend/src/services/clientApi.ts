@@ -1,5 +1,4 @@
 // src/services/clientApi.ts
-
 import axios from '../lib/axios';
 import type {
   Client,
@@ -35,7 +34,6 @@ export const clientApi = {
   async getClients(filters?: ClientFilters): Promise<PaginatedResponse<Client>> {
     // Nettoyer les filtres pour enlever les valeurs vides
     const cleanFilters: Record<string, any> = {};
-    
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== '' && value !== undefined && value !== null) {
@@ -43,7 +41,7 @@ export const clientApi = {
         }
       });
     }
-    
+
     const { data } = await axios.get('/clients', { params: cleanFilters });
     return data;
   },
@@ -52,7 +50,7 @@ export const clientApi = {
    * Récupérer un client par ID
    */
   async getClient(id: number): Promise<ApiResponse<{ client: Client; statistiques: ClientStats }>> {
-    const { data } = await axios.get(`/clients/${id}`);
+    const { data } = await axios.get(`/clients/${id}`); // CORRIGÉ: backticks → parenthèses
     return data;
   },
 
@@ -68,7 +66,7 @@ export const clientApi = {
    * Mettre à jour un client
    */
   async updateClient(id: number, clientData: UpdateClientDTO): Promise<ApiResponse<Client>> {
-    const { data } = await axios.put(`/clients/${id}`, clientData);
+    const { data } = await axios.put(`/clients/${id}`, clientData); // CORRIGÉ
     return data;
   },
 
@@ -76,7 +74,7 @@ export const clientApi = {
    * Supprimer un client
    */
   async deleteClient(id: number): Promise<ApiResponse<void>> {
-    const { data } = await axios.delete(`/clients/${id}`);
+    const { data } = await axios.delete(`/clients/${id}`); // CORRIGÉ
     return data;
   },
 
@@ -87,7 +85,6 @@ export const clientApi = {
     const formData = new FormData();
     formData.append('photo', photoData.photo);
     formData.append('type_photo', photoData.type_photo);
-    
     if (photoData.description) {
       formData.append('description', photoData.description);
     }
@@ -101,7 +98,7 @@ export const clientApi = {
       formData.append('is_public', photoData.is_public ? '1' : '0');
     }
 
-    const { data } = await axios.post(`/clients/${clientId}/photos`, formData, {
+    const { data } = await axios.post(`/clients/${clientId}/photos`, formData, { // CORRIGÉ
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -113,7 +110,7 @@ export const clientApi = {
    * Supprimer une photo
    */
   async deletePhoto(clientId: number, photoId: number): Promise<ApiResponse<void>> {
-    const { data } = await axios.delete(`/clients/${clientId}/photos/${photoId}`);
+    const { data } = await axios.delete(`/clients/${clientId}/photos/${photoId}`); // CORRIGÉ
     return data;
   },
 

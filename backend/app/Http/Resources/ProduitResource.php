@@ -40,6 +40,11 @@ class ProduitResource extends JsonResource
             'frais_cmb' => $this->frais_cmb ? (float) $this->frais_cmb : null,
             'frais_transit' => $this->frais_transit ? (float) $this->frais_transit : null,
             'moyen_paiement' => $this->moyen_paiement,
+            'cbm' => $this->cbm ? (float) $this->cbm : null,
+            'poids_kg' => $this->poids_kg ? (float) $this->poids_kg : null,
+            'frais_bancaires' => $this->frais_bancaires ? (float) $this->frais_bancaires : null,
+            'frais_courtier' => $this->frais_courtier ? (float) $this->frais_courtier : null,
+            'frais_transport_local' => $this->frais_transport_local ? (float) $this->frais_transport_local : null,
             'montant_total_achat' => $this->montant_total_achat ? (float) $this->montant_total_achat : null,
             
             // Prix
@@ -89,6 +94,7 @@ class ProduitResource extends JsonResource
             
             // Statut
             'is_active' => $this->is_active,
+            'visible_public' => $this->visible_public,
             'sync_status' => $this->sync_status,
             
             // Attributs dynamiques

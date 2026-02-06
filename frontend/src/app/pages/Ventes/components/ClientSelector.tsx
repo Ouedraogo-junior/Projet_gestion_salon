@@ -62,16 +62,17 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
   };
 
   const handleNouveauClientSubmit = () => {
-    if (!nouveauClient.nom || !nouveauClient.prenom || !nouveauClient.telephone) {
-      alert('Veuillez remplir tous les champs obligatoires');
+    // Seul le téléphone est obligatoire
+    if (!nouveauClient.telephone) {
+      alert('Le téléphone est requis');
       return;
     }
     onClientSelect({ nouveau_client: nouveauClient });
   };
 
   const handleClientAnonymeSubmit = () => {
-    if (!clientAnonyme.nom) {
-      alert('Le nom est requis');
+    if (!clientAnonyme.telephone) {
+      alert('Le téléphone est requis');
       return;
     }
     onClientSelect({ client_anonyme: clientAnonyme });
@@ -231,7 +232,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
             <div className="space-y-2">
               <input
                 type="text"
-                placeholder="Nom *"
+                placeholder="Nom (optionnel)"  
                 value={nouveauClient.nom}
                 onChange={(e) =>
                   setNouveauClient({ ...nouveauClient, nom: e.target.value })
@@ -240,7 +241,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
               />
               <input
                 type="text"
-                placeholder="Prénom *"
+                placeholder="Prénom (optionnel)"  
                 value={nouveauClient.prenom}
                 onChange={(e) =>
                   setNouveauClient({ ...nouveauClient, prenom: e.target.value })
@@ -280,7 +281,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
             <div className="space-y-2">
               <input
                 type="text"
-                placeholder="Nom *"
+                placeholder="Nom (optionnel)"  
                 value={clientAnonyme.nom}
                 onChange={(e) =>
                   setClientAnonyme({ ...clientAnonyme, nom: e.target.value })
@@ -289,7 +290,7 @@ export const ClientSelector: React.FC<ClientSelectorProps> = ({
               />
               <input
                 type="tel"
-                placeholder="Téléphone (optionnel)"
+                placeholder="Téléphone *"  
                 value={clientAnonyme.telephone}
                 onChange={(e) =>
                   setClientAnonyme({ ...clientAnonyme, telephone: e.target.value })

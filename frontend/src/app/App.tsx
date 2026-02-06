@@ -67,11 +67,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
         {/* Passer la fonction onMenuClick au Header */}
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        
-        {/* SUPPRIMER le bouton menu d'ici car il est déjà dans le Header */}
-        {/* <button onClick={() => setSidebarOpen(true)} ...>
-          <Menu size={24} />
-        </button> */}
 
         <main className="flex-1 overflow-y-auto">
           {children}

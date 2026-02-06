@@ -103,15 +103,60 @@ export const NouvelleVente: React.FC = () => {
     setClientData(data);
     
     if (data.client_id) {
+      // Client existant - récupérer depuis l'API
       try {
-        const response = await clientApi.getOne(data.client_id);
+        const response = await clientApi.getClient(data.client_id);
         if (response.success) {
-          setClientSelectionne(response.data);
+          setClientSelectionne(response.data.client);
         }
       } catch (error) {
         console.error('Erreur récupération client:', error);
         setClientSelectionne(null);
       }
+    } else if (data.nouveau_client) {
+      // Nouveau client - créer un objet temporaire pour l'affichage
+      const tempClient: Client = {
+        id: 0, // ID temporaire
+        nom: data.nouveau_client.nom || 'Client',
+        prenom: data.nouveau_client.prenom || 'Nouveau',
+        telephone: data.nouveau_client.telephone,
+        email: data.nouveau_client.email,
+        points_fidelite: 0,
+        date_naissance: undefined,
+        adresse: undefined,
+        ville: undefined,
+        quartier: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        nombre_visites: 0,
+        derniere_visite: undefined,
+        total_depense: 0,
+        moyenne_depense: 0,
+        statut: 'actif'
+      };
+      setClientSelectionne(tempClient);
+    } else if (data.client_anonyme) {
+      // Client anonyme - créer un objet temporaire pour l'affichage
+      const tempClient: Client = {
+        id: 0, // ID temporaire
+        nom: data.client_anonyme.nom || 'Anonyme',
+        prenom: 'Client',
+        telephone: data.client_anonyme.telephone || 'Non renseigné',
+        email: undefined,
+        points_fidelite: 0,
+        date_naissance: undefined,
+        adresse: undefined,
+        ville: undefined,
+        quartier: undefined,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        nombre_visites: 0,
+        derniere_visite: undefined,
+        total_depense: 0,
+        moyenne_depense: 0,
+        statut: 'actif'
+      };
+      setClientSelectionne(tempClient);
     } else {
       setClientSelectionne(null);
     }
@@ -358,6 +403,7 @@ export const NouvelleVente: React.FC = () => {
               montantHT={totaux.montantHT}
               montantReduction={totaux.totalReductionGlobale}
               montantTTC={totaux.montantTTC}
+              clientSelectionne={clientSelectionne}
             />
 
             {/* Paiement */}

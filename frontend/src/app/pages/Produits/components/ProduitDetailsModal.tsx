@@ -17,6 +17,7 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
   const [produit, setProduit] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     if (isOpen && produitId) {
@@ -37,6 +38,53 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
       setLoading(false);
     }
   };
+
+
+  const handleToggleActive = async () => {
+  if (!produit) return;
+  
+  if (!confirm(`${produit.is_active ? 'Désactiver' : 'Activer'} ce produit ?`)) {
+    return;
+  }
+
+  try {
+    setIsUpdating(true);
+    await produitsApi.produits.update(produit.id, {
+      is_active: !produit.is_active
+    });
+    
+    // Recharger les détails
+    await loadProduitDetails();
+  } catch (error: any) {
+    console.error('❌ Erreur:', error);
+    alert('❌ Erreur lors de la modification: ' + error.message);
+  } finally {
+    setIsUpdating(false);
+  }
+};
+
+const handleToggleVisibility = async () => {
+  if (!produit) return;
+  
+  if (!confirm(`Rendre ce produit ${produit.visible_public ? 'privé' : 'public'} ?`)) {
+    return;
+  }
+
+  try {
+    setIsUpdating(true);
+    await produitsApi.produits.update(produit.id, {
+      visible_public: !produit.visible_public
+    });
+    
+    // Recharger les détails
+    await loadProduitDetails();
+  } catch (error: any) {
+    console.error('❌ Erreur:', error);
+    alert('❌ Erreur lors de la modification: ' + error.message);
+  } finally {
+    setIsUpdating(false);
+  }
+};
 
     useEffect(() => {
     if (produit) {
@@ -300,56 +348,113 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
       )}
 
       {/* Détails des coûts du stock total */}
-      {(produit.prix_achat_stock_total || produit.frais_cmb || produit.frais_transit) && (
-        <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">Coût total du stock commandé</h4>
-          
-          <div className="space-y-2">
-            {produit.prix_achat_stock_total && (
-              <div className="flex justify-between items-center">
-                <span className="text-xs sm:text-sm text-gray-600">Prix d'achat stock total</span>
-                <span className="text-sm sm:text-base font-medium text-gray-900">
-                  {formatCurrency(produit.prix_achat_stock_total)}{' '}
-                  {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
-                </span>
-              </div>
-            )}
-            
-            {produit.frais_cmb && produit.frais_cmb > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-xs sm:text-sm text-gray-600">Frais CMB</span>
-                <span className="text-sm sm:text-base font-medium text-gray-900">
-                  +{formatCurrency(produit.frais_cmb)}{' '}
-                  {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
-                </span>
-              </div>
-            )}
-            
-            {produit.frais_transit && produit.frais_transit > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="text-xs sm:text-sm text-gray-600">Frais transit/douane</span>
-                <span className="text-sm sm:text-base font-medium text-gray-900">
-                  +{formatCurrency(produit.frais_transit)}{' '}
-                  {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
-                </span>
-              </div>
-            )}
-            
-            {produit.montant_total_achat && produit.montant_total_achat > 0 && (
-              <>
-                <div className="border-t border-blue-300 my-2"></div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm sm:text-base font-semibold text-gray-900">Coût total du stock</span>
-                  <span className="text-lg sm:text-xl font-bold text-blue-600">
-                    {formatCurrency(produit.montant_total_achat)}{' '}
-                    {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
+{(produit.prix_achat_stock_total || produit.frais_cmb || produit.frais_transit || 
+  produit.frais_bancaires || produit.frais_courtier || produit.frais_transport_local || 
+  produit.cbm || produit.poids_kg) && (
+  <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+    <h4 className="text-sm font-semibold text-gray-900 mb-3">Coût total du stock commandé</h4>
+    
+    {/* Informations physiques */}
+    {(produit.cbm || produit.poids_kg) && (
+      <div className="mb-4 pb-3 border-b border-blue-200">
+        <h5 className="text-xs font-medium text-gray-600 mb-2">Informations physiques</h5>
+        <div className="grid grid-cols-2 gap-3">
+          {produit.cbm && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs sm:text-sm text-gray-600">CBM (m³)</span>
+              <span className="text-sm sm:text-base font-medium text-gray-900">
+                {produit.cbm}
+              </span>
+            </div>
+          )}
+          {produit.poids_kg && (
+            <div className="flex justify-between items-center">
+              <span className="text-xs sm:text-sm text-gray-600">Poids (kg)</span>
+              <span className="text-sm sm:text-base font-medium text-gray-900">
+                {produit.poids_kg}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+    
+    <div className="space-y-2">
+      {produit.prix_achat_stock_total && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm text-gray-600">Prix d'achat stock total</span>
+          <span className="text-sm sm:text-base font-medium text-gray-900">
+            {formatCurrency(produit.prix_achat_stock_total)}{' '}
+            {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+          </span>
         </div>
       )}
+      
+      {produit.frais_cmb && produit.frais_cmb > 0 && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm text-gray-600">Frais CMB</span>
+          <span className="text-sm sm:text-base font-medium text-gray-900">
+            +{formatCurrency(produit.frais_cmb)}{' '}
+            {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+          </span>
+        </div>
+      )}
+      
+      {produit.frais_transit && produit.frais_transit > 0 && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm text-gray-600">Frais transit/douane</span>
+          <span className="text-sm sm:text-base font-medium text-gray-900">
+            +{formatCurrency(produit.frais_transit)}{' '}
+            {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+          </span>
+        </div>
+      )}
+
+      {produit.frais_bancaires && produit.frais_bancaires > 0 && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm text-gray-600">Frais bancaires</span>
+          <span className="text-sm sm:text-base font-medium text-gray-900">
+            +{formatCurrency(produit.frais_bancaires)}{' '}
+            {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+          </span>
+        </div>
+      )}
+
+      {produit.frais_courtier && produit.frais_courtier > 0 && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm text-gray-600">Frais courtier</span>
+          <span className="text-sm sm:text-base font-medium text-gray-900">
+            +{formatCurrency(produit.frais_courtier)}{' '}
+            {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+          </span>
+        </div>
+      )}
+
+      {produit.frais_transport_local && produit.frais_transport_local > 0 && (
+        <div className="flex justify-between items-center">
+          <span className="text-xs sm:text-sm text-gray-600">Frais transport local</span>
+          <span className="text-sm sm:text-base font-medium text-gray-900">
+            +{formatCurrency(produit.frais_transport_local)}{' '}
+            {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+          </span>
+        </div>
+      )}
+      
+      {produit.montant_total_achat && produit.montant_total_achat > 0 && (
+        <>
+          <div className="border-t border-blue-300 my-2"></div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm sm:text-base font-semibold text-gray-900">Coût total du stock</span>
+            <span className="text-lg sm:text-xl font-bold text-blue-600">
+              {formatCurrency(produit.montant_total_achat)}{' '}
+              {DEVISES.find(d => d.value === produit.devise_achat)?.symbole || 'FCFA'}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+)}
     </CardContent>
   </Card>
 )}
@@ -584,6 +689,86 @@ export function ProduitDetailsModal({ isOpen, onClose, produitId }: ProduitDetai
               </div>
             </CardContent>
           </Card>
+
+{/* Statut et visibilité */}
+<Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+      <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+      Statut et visibilité
+    </CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Statut du produit */}
+      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+        <label className="text-xs sm:text-sm font-medium text-gray-600 mb-2 block">
+          Statut du produit
+        </label>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Badge variant={produit.is_active ? 'success' : 'danger'} className="text-sm">
+              {produit.is_active ? 'Actif' : 'Inactif'}
+            </Badge>
+            <span className="text-xs text-gray-500">
+              {produit.is_active 
+                ? 'Disponible pour vente/utilisation' 
+                : 'Produit désactivé'}
+            </span>
+          </div>
+          <button
+            onClick={handleToggleActive}
+            disabled={isUpdating}
+            className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              produit.is_active
+                ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-300'
+                : 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-300'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {isUpdating ? 'Modification...' : produit.is_active ? 'Désactiver' : 'Activer'}
+          </button>
+        </div>
+      </div>
+
+      {/* Visibilité publique */}
+      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+        <label className="text-xs sm:text-sm font-medium text-gray-600 mb-2 block">
+          Visibilité publique
+        </label>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Badge variant={produit.visible_public ? 'success' : 'warning'} className="text-sm">
+              {produit.visible_public ? 'Public' : 'Privé'}
+            </Badge>
+            <span className="text-xs text-gray-500">
+              {produit.visible_public 
+                ? 'Visible sur le site web' 
+                : 'Masqué du public'}
+            </span>
+          </div>
+          <button
+            onClick={handleToggleVisibility}
+            disabled={isUpdating}
+            className={`w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              produit.visible_public
+                ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
+                : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            {isUpdating ? 'Modification...' : produit.visible_public ? 'Rendre privé' : 'Rendre public'}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+      <p className="text-xs text-amber-800">
+        <strong>ℹ️ Note :</strong> Un produit peut être actif mais privé (disponible en interne uniquement) 
+        ou public mais inactif (visible mais non disponible à la vente).
+      </p>
+    </div>
+  </CardContent>
+</Card>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
             <button
