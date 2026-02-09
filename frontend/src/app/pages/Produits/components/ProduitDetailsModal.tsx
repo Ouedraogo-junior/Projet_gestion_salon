@@ -135,7 +135,7 @@ const handleToggleVisibility = async () => {
           <p className="mt-2 text-gray-600">Chargement des détails...</p>
         </div>
       ) : produit ? (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-6">
           {/* En-tête avec photo - Responsive */}
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             <div className="flex-shrink-0 mx-auto sm:mx-0">
@@ -220,13 +220,13 @@ const handleToggleVisibility = async () => {
 
           {/* Informations générales */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Info className="w-4 h-4 sm:w-5 sm:h-5" />
-                Informations générales
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-l-4 border-blue-500">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Info className="w-5 h-5 text-blue-600" />
+                ℹ️ Informations générales
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs sm:text-sm font-medium text-gray-600">Catégorie</label>
@@ -260,13 +260,13 @@ const handleToggleVisibility = async () => {
 {/* Informations d'achat */}
 {(produit.date_commande || produit.frais_cmb || produit.frais_transit || produit.moyen_paiement || produit.date_reception || produit.prix_achat_devise_origine) && (
   <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-        <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-        Informations d'achat
+    <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500">
+      <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+        <Calendar className="w-5 h-5 text-amber-600" />
+        📦 Informations d'achat
       </CardTitle>
     </CardHeader>
-    <CardContent className="space-y-4">
+    <CardContent className="space-y-4 pt-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {produit.date_commande && (
           <div>
@@ -324,7 +324,10 @@ const handleToggleVisibility = async () => {
       {/* Prix unitaire dans les deux devises */}
       {produit.prix_achat_devise_origine && produit.devise_achat !== 'FCFA' && (
         <div className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-          <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire</h4>
+          <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <span className="text-lg">💵</span>
+            Prix unitaire
+          </h4>
           
           <div className="space-y-3">
             <div className="flex justify-between items-center">
@@ -352,7 +355,10 @@ const handleToggleVisibility = async () => {
   produit.frais_bancaires || produit.frais_courtier || produit.frais_transport_local || 
   produit.cbm || produit.poids_kg) && (
   <div className="p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-    <h4 className="text-sm font-semibold text-gray-900 mb-3">Coût total du stock commandé</h4>
+    <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+      <span className="text-lg">📊</span>
+      Coût total du stock commandé
+    </h4>
     
     {/* Informations physiques */}
     {(produit.cbm || produit.poids_kg) && (
@@ -469,13 +475,13 @@ const handleToggleVisibility = async () => {
 
             return (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                    <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
-                    Caractéristiques
+                <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 border-l-4 border-indigo-500">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                    <Tag className="w-5 h-5 text-indigo-600" />
+                    📋 Caractéristiques
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     {valeursAttributs.map((va: any) => {
                       const attribut = va.attribut || { 
@@ -552,13 +558,13 @@ const handleToggleVisibility = async () => {
 
           {/* Prix et marges */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
-                Prix et marges
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                💰 Prix et marges
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
+            <CardContent className="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4 pt-4">
               <div>
                 <label className="text-xs sm:text-sm font-medium text-gray-600">Prix d'achat</label>
                 <p className="text-lg sm:text-xl font-bold text-gray-900 mt-1">
@@ -600,15 +606,18 @@ const handleToggleVisibility = async () => {
 
           {/* Stocks */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Package className="w-4 h-4 sm:w-5 sm:h-5" />
-                Gestion des stocks
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-l-4 border-teal-500">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Package className="w-5 h-5 text-teal-600" />
+                📊 Gestion des stocks
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border-l-4 border-blue-500 pl-3 sm:pl-4">
-                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Stock Vente</h4>
+            <CardContent className="space-y-4 pt-4">
+              <div className="border-l-4 border-blue-500 pl-3 sm:pl-4 bg-blue-50 rounded-r-lg py-3">
+                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <span className="text-lg">🛒</span>
+                  Stock Vente
+                </h4>
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div>
                     <label className="text-xs text-gray-600">Actuelle</label>
@@ -625,8 +634,11 @@ const handleToggleVisibility = async () => {
                 </div>
               </div>
 
-              <div className="border-l-4 border-purple-500 pl-3 sm:pl-4">
-                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Stock Salon</h4>
+              <div className="border-l-4 border-purple-500 pl-3 sm:pl-4 bg-purple-50 rounded-r-lg py-3">
+                <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <span className="text-lg">💇‍♀️</span>
+                  Stock Salon
+                </h4>
                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                   <div>
                     <label className="text-xs text-gray-600">Actuelle</label>
@@ -645,8 +657,11 @@ const handleToggleVisibility = async () => {
 
               {/* Stock Réserve - SI EXISTE */}
               {produit.type_stock_principal === 'reserve' && (
-                <div className="border-l-4 border-amber-500 pl-3 sm:pl-4">
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2">Stock Réserve</h4>
+                <div className="border-l-4 border-amber-500 pl-3 sm:pl-4 bg-amber-50 rounded-r-lg py-3">
+                  <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    <span className="text-lg">🏪</span>
+                    Stock Réserve
+                  </h4>
                   <div className="grid grid-cols-3 gap-2 sm:gap-4">
                     <div>
                       <label className="text-xs text-gray-600">Actuelle</label>
@@ -672,13 +687,13 @@ const handleToggleVisibility = async () => {
 
           {/* Dates */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-                Informations temporelles
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-slate-50 border-l-4 border-gray-500">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <Calendar className="w-5 h-5 text-gray-600" />
+                🕐 Informations temporelles
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-4">
               <div>
                 <label className="text-xs sm:text-sm font-medium text-gray-600">Création</label>
                 <p className="text-xs sm:text-sm text-gray-900 mt-1">{formatDate(produit.created_at)}</p>
@@ -692,16 +707,16 @@ const handleToggleVisibility = async () => {
 
 {/* Statut et visibilité */}
 <Card>
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-      <Info className="w-4 h-4 sm:w-5 sm:h-5" />
-      Statut et visibilité
+  <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 border-l-4 border-violet-500">
+    <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+      <Info className="w-5 h-5 text-violet-600" />
+      🔒 Statut et visibilité
     </CardTitle>
   </CardHeader>
-  <CardContent className="space-y-4">
+  <CardContent className="space-y-4 pt-4">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {/* Statut du produit */}
-      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
         <label className="text-xs sm:text-sm font-medium text-gray-600 mb-2 block">
           Statut du produit
         </label>
@@ -731,7 +746,7 @@ const handleToggleVisibility = async () => {
       </div>
 
       {/* Visibilité publique */}
-      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+      <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200">
         <label className="text-xs sm:text-sm font-medium text-gray-600 mb-2 block">
           Visibilité publique
         </label>

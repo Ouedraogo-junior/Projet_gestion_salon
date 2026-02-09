@@ -355,7 +355,7 @@ export function ProduitFormModal({
       prix_achat_devise_origine: prixUnitaireDeviseOrigine || null,
       prix_achat_stock_total: stockTotal || null,
       quantite_stock_commande: quantite || null,
-      montant_total_achat: montantTotalAchat || null, // ✅ Utilise le champ existant
+      montant_total_achat: montantTotalAchat || null,
       frais_cmb: fraisCmb || null,
       frais_transit: fraisTransit || null,
       moyen_paiement: formData.moyen_paiement || null,
@@ -438,7 +438,7 @@ export function ProduitFormModal({
       title={produit ? 'Modifier le produit' : 'Nouveau produit'}
       size="large"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Message d'erreur */}
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
@@ -451,10 +451,12 @@ export function ProduitFormModal({
         )}
 
         {/* Section Photo */}
-        <div className="space-y-3 border-b pb-4">
-          <label className="text-sm font-medium text-gray-700">Photo du produit</label>
+        <div className="space-y-3 border-b pb-6">
+          <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-purple-50 to-blue-50 px-4 py-2 rounded-lg border-l-4 border-purple-500">
+            📸 Photo du produit
+          </h3>
           
-          <div className="flex gap-4">
+          <div className="flex gap-4 px-1">
             <div className="w-32 h-32 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex-shrink-0">
               {photoPreview ? (
                 <img src={photoPreview} alt="Aperçu" className="w-full h-full object-cover" />
@@ -506,83 +508,113 @@ export function ProduitFormModal({
         </div>
 
         {/* Informations de base */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nom <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={formData.nom}
-              onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-              required
-              placeholder="Nom du produit"
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-2 rounded-lg border-l-4 border-blue-500">
+            ℹ️ Informations de base
+          </h3>
+          
+          <div className="grid grid-cols-2 gap-4 px-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nom <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={formData.nom}
+                onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                required
+                placeholder="Nom du produit"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Référence
+              </label>
+              <Input
+                value={formData.reference}
+                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                placeholder="Référence unique"
+              />
+            </div>
+          </div>
+
+          <div className="px-1">
+            <Textarea
+              label="Description"
+              value={formData.description}
+              onChange={(val: string) => setFormData({ ...formData, description: val })}
+              placeholder="Description du produit..."
+              rows={2}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Référence
-            </label>
-            <Input
-              value={formData.reference}
-              onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-              placeholder="Référence unique"
-            />
-          </div>
-        </div>
+          <div className="grid grid-cols-2 gap-4 px-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Catégorie <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.categorie_id}
+                onChange={(e) => setFormData({ ...formData, categorie_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Sélectionnez...</option>
+                {categories.map((cat: any) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <Textarea
-          label="Description"
-          value={formData.description}
-          onChange={(val: string) => setFormData({ ...formData, description: val })}
-          placeholder="Description du produit..."
-          rows={2}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Catégorie <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.categorie_id}
-              onChange={(e) => setFormData({ ...formData, categorie_id: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Sélectionnez...</option>
-              {categories.map((cat: any) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.nom}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Type de stock <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={formData.type_stock_principal}
+                onChange={(e) => setFormData({ ...formData, type_stock_principal: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="vente">Vente uniquement</option>
+                <option value="utilisation">Utilisation salon uniquement</option>
+                <option value="mixte">Mixte (vente + salon)</option>
+                <option value="reserve">Réserve (stock non alloué)</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Type de stock <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={formData.type_stock_principal}
-              onChange={(e) => setFormData({ ...formData, type_stock_principal: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="vente">Vente uniquement</option>
-              <option value="utilisation">Utilisation salon uniquement</option>
-              <option value="mixte">Mixte (vente + salon)</option>
-              <option value="reserve">Réserve (stock non alloué)</option>
-            </select>
+          <div className="grid grid-cols-2 gap-4 px-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Marque</label>
+              <Input
+                value={formData.marque}
+                onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
+                placeholder="Marque du produit"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur</label>
+              <Input
+                value={formData.fournisseur}
+                onChange={(e) => setFormData({ ...formData, fournisseur: e.target.value })}
+                placeholder="Fournisseur"
+              />
+            </div>
           </div>
         </div>
 
         {/* Attributs dynamiques */}
         {attributsCategorie.length > 0 && (
-          <div className="border-t pt-4 space-y-3">
-            <h3 className="text-sm font-medium text-gray-900">Caractéristiques du produit</h3>
+          <div className="space-y-4">
+            <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-indigo-50 to-purple-50 px-4 py-2 rounded-lg border-l-4 border-indigo-500">
+              📋 Caractéristiques du produit
+            </h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 px-1">
               {attributsCategorie.map((attr) => (
                 <div key={attr.id}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -623,31 +655,13 @@ export function ProduitFormModal({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Marque</label>
-            <Input
-              value={formData.marque}
-              onChange={(e) => setFormData({ ...formData, marque: e.target.value })}
-              placeholder="Marque du produit"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur</label>
-            <Input
-              value={formData.fournisseur}
-              onChange={(e) => setFormData({ ...formData, fournisseur: e.target.value })}
-              placeholder="Fournisseur"
-            />
-          </div>
-        </div>
-
         {/* Informations de commande */}
-        <div className="border-t pt-4">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Informations de commande</h3>
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2 rounded-lg border-l-4 border-amber-500">
+            📦 Informations de commande
+          </h3>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 px-1">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Date de commande
@@ -671,7 +685,7 @@ export function ProduitFormModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-2 gap-4 px-1">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Moyen de paiement
@@ -709,7 +723,7 @@ export function ProduitFormModal({
             </div>
           </div>
 
-          {/* NOUVEAU : Champ pour modifier le taux de change */}
+          {/* Taux de change modifiable */}
           {formData.devise_achat !== 'FCFA' && (
             <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -744,299 +758,304 @@ export function ProduitFormModal({
               </p>
             </div>
           )}
-      </div>
+        </div>
 
         {/* Prix et coûts */}
-        <div className="border-t pt-4">
-          <h3 className="text-sm font-medium text-gray-900 mb-3">Prix et coûts d'achat</h3>
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-2 rounded-lg border-l-4 border-green-500">
+            💰 Prix et coûts d'achat
+          </h3>
           
-          {/* Prix d'achat du stock total */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-  <h4 className="text-sm font-semibold text-gray-900 mb-3">Stock commandé</h4>
-  
-  {/* Informations physiques */}
-  <div className="grid grid-cols-3 gap-4 mb-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Prix d'achat total du stock
-      </label>
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          value={formData.prix_achat_stock_total}
-          onChange={(e) => setFormData({ ...formData, prix_achat_stock_total: e.target.value })}
-          min="0"
-          step="0.01"
-          placeholder="0"
-          className="flex-1"
-        />
-        <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-          {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Quantité commandée
-      </label>
-      <Input
-        type="number"
-        value={formData.quantite_stock_commande}
-        onChange={(e) => setFormData({ ...formData, quantite_stock_commande: e.target.value })}
-        min="0"
-        step="1"
-        placeholder="0"
-      />
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        CBM <span className="text-gray-400">(m³)</span>
-      </label>
-      <Input
-        type="number"
-        value={formData.cbm}
-        onChange={(e) => setFormData({ ...formData, cbm: e.target.value })}
-        min="0"
-        step="0.0001"
-        placeholder="0.0000"
-      />
-      <p className="text-xs text-gray-500 mt-1">Volume informatif</p>
-    </div>
-  </div>
-
-  {/* Poids */}
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Poids total <span className="text-gray-400">(kg)</span>
-    </label>
-    <Input
-      type="number"
-      value={formData.poids_kg}
-      onChange={(e) => setFormData({ ...formData, poids_kg: e.target.value })}
-      min="0"
-      step="0.01"
-      placeholder="0"
-      className="w-48"
-    />
-    <p className="text-xs text-gray-500 mt-1">Poids informatif</p>
-  </div>
-
-  {/* Tous les frais */}
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Frais CMB
-      </label>
-      <Input
-        type="number"
-        value={formData.frais_cmb}
-        onChange={(e) => setFormData({ ...formData, frais_cmb: e.target.value })}
-        min="0"
-        step="0.01"
-        placeholder="0"
-      />
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Frais transit/douane
-      </label>
-      <Input
-        type="number"
-        value={formData.frais_transit}
-        onChange={(e) => setFormData({ ...formData, frais_transit: e.target.value })}
-        min="0"
-        step="0.01"
-        placeholder="0"
-      />
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Frais bancaires
-      </label>
-      <Input
-        type="number"
-        value={formData.frais_bancaires}
-        onChange={(e) => setFormData({ ...formData, frais_bancaires: e.target.value })}
-        min="0"
-        step="0.01"
-        placeholder="0"
-      />
-    </div>
-
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Frais courtier
-      </label>
-      <Input
-        type="number"
-        value={formData.frais_courtier}
-        onChange={(e) => setFormData({ ...formData, frais_courtier: e.target.value })}
-        min="0"
-        step="0.01"
-        placeholder="0"
-      />
-    </div>
-
-    <div className="col-span-2">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Frais transport local
-      </label>
-      <Input
-        type="number"
-        value={formData.frais_transport_local}
-        onChange={(e) => setFormData({ ...formData, frais_transport_local: e.target.value })}
-        min="0"
-        step="0.01"
-        placeholder="0"
-      />
-      <p className="text-xs text-gray-500 mt-1">Du port jusqu'au salon</p>
-    </div>
-  </div>
-
-  {/* Calcul coût total */}
-  {(formData.prix_achat_stock_total || formData.frais_cmb || formData.frais_transit || 
-    formData.frais_bancaires || formData.frais_courtier || formData.frais_transport_local) && (
-    <div className="mt-4 pt-3 border-t border-blue-300">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">Coût total du stock</span>
-        <span className="text-lg font-bold text-blue-600">
-          {(() => {
-            const total = 
-              (parseFloat(formData.prix_achat_stock_total) || 0) +
-              (parseFloat(formData.frais_cmb) || 0) +
-              (parseFloat(formData.frais_transit) || 0) +
-              (parseFloat(formData.frais_bancaires) || 0) +
-              (parseFloat(formData.frais_courtier) || 0) +
-              (parseFloat(formData.frais_transport_local) || 0);
-            return formatCurrency(total);
-          })()}{' '}
-          {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
-        </span>
-      </div>
-    </div>
-  )}
-</div>
-
-          {/* Prix unitaire calculé automatiquement */}
-<div className="bg-green-50 border border-green-200 rounded-lg p-4">
-  <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire</h4>
-  
-  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
-    <p className="text-sm text-amber-800">
-      ℹ️ Le prix d'achat unitaire sera calculé automatiquement par le système en fonction des frais saisis ci-dessus.
-    </p>
-  </div>
-
-  {/* Affichage du prix dans la devise d'origine */}
-  {formData.devise_achat !== 'FCFA' && formData.prix_achat_stock_total && formData.quantite_stock_commande && (
-    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">
-          Prix unitaire estimé en {DEVISES.find(d => d.value === formData.devise_achat)?.label}
-        </span>
-        <span className="text-lg font-bold text-blue-600">
-          {(() => {
-            const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
-            const quantite = parseFloat(formData.quantite_stock_commande) || 0;
-            const fraisCmb = parseFloat(formData.frais_cmb) || 0;
-            const fraisTransit = parseFloat(formData.frais_transit) || 0;
-            const fraisBancaires = parseFloat(formData.frais_bancaires) || 0;
-            const fraisCourtier = parseFloat(formData.frais_courtier) || 0;
-            const fraisLocal = parseFloat(formData.frais_transport_local) || 0;
+          {/* Stock commandé */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">Stock commandé</h4>
             
-            const total = stockTotal + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
-            const prixUnitaireDevise = quantite > 0 ? total / quantite : 0;
-            return formatCurrency(prixUnitaireDevise);
-          })()}{' '}
-          {DEVISES.find(d => d.value === formData.devise_achat)?.symbole}
-        </span>
-      </div>
-      <p className="text-xs text-gray-600">
-        Taux appliqué : 1 {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} = {tauxChange} FCFA
-      </p>
-    </div>
-  )}
-  
-  <div className="grid grid-cols-2 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Prix d'achat unitaire (FCFA) <span className="text-red-500">*</span>
-      </label>
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          value={formData.prix_achat}
-          onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
-          required
-          min="0"
-          step="0.01"
-          placeholder="Calculé automatiquement"
-          className="flex-1"
-        />
-        <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-          FCFA
-        </div>
-      </div>
-      <p className="text-xs text-gray-500 mt-1">
-        Calculé automatiquement ou saisir manuellement
-      </p>
-    </div>
+            {/* Informations physiques */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prix d'achat total du stock
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={formData.prix_achat_stock_total}
+                    onChange={(e) => setFormData({ ...formData, prix_achat_stock_total: e.target.value })}
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    className="flex-1"
+                  />
+                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
+                  </div>
+                </div>
+              </div>
 
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Prix de vente unitaire <span className="text-red-500">*</span>
-      </label>
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          value={formData.prix_vente}
-          onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
-          required
-          min="0"
-          step="0.01"
-          placeholder="0"
-          className="flex-1"
-        />
-        <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
-          FCFA
-        </div>
-      </div>
-    </div>
-  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantité commandée
+                </label>
+                <Input
+                  type="number"
+                  value={formData.quantite_stock_commande}
+                  onChange={(e) => setFormData({ ...formData, quantite_stock_commande: e.target.value })}
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                />
+              </div>
 
-  {/* Calcul de la marge */}
-  {formData.prix_achat && formData.prix_vente && (
-    <div className="mt-4 pt-3 border-t border-green-300">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700">Marge unitaire</span>
-        <span className="text-base font-bold text-green-600">
-          {(() => {
-            const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
-            const margePct = (marge / parseFloat(formData.prix_achat)) * 100;
-            return `${formatCurrency(marge)} FCFA (${margePct.toFixed(1)}%)`;
-          })()}
-        </span>
-      </div>
-    </div>
-  )}
-</div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  CBM <span className="text-gray-400">(m³)</span>
+                </label>
+                <Input
+                  type="number"
+                  value={formData.cbm}
+                  onChange={(e) => setFormData({ ...formData, cbm: e.target.value })}
+                  min="0"
+                  step="0.0001"
+                  placeholder="0.0000"
+                />
+                <p className="text-xs text-gray-500 mt-1">Volume informatif</p>
+              </div>
+            </div>
+
+            {/* Poids */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Poids total <span className="text-gray-400">(kg)</span>
+              </label>
+              <Input
+                type="number"
+                value={formData.poids_kg}
+                onChange={(e) => setFormData({ ...formData, poids_kg: e.target.value })}
+                min="0"
+                step="0.01"
+                placeholder="0"
+                className="w-48"
+              />
+              <p className="text-xs text-gray-500 mt-1">Poids informatif</p>
+            </div>
+
+            {/* Tous les frais */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Frais CMB
+                </label>
+                <Input
+                  type="number"
+                  value={formData.frais_cmb}
+                  onChange={(e) => setFormData({ ...formData, frais_cmb: e.target.value })}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Frais transit/douane
+                </label>
+                <Input
+                  type="number"
+                  value={formData.frais_transit}
+                  onChange={(e) => setFormData({ ...formData, frais_transit: e.target.value })}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Frais bancaires
+                </label>
+                <Input
+                  type="number"
+                  value={formData.frais_bancaires}
+                  onChange={(e) => setFormData({ ...formData, frais_bancaires: e.target.value })}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Frais courtier
+                </label>
+                <Input
+                  type="number"
+                  value={formData.frais_courtier}
+                  onChange={(e) => setFormData({ ...formData, frais_courtier: e.target.value })}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Frais transport local
+                </label>
+                <Input
+                  type="number"
+                  value={formData.frais_transport_local}
+                  onChange={(e) => setFormData({ ...formData, frais_transport_local: e.target.value })}
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                />
+                <p className="text-xs text-gray-500 mt-1">Du port jusqu'au salon</p>
+              </div>
+            </div>
+
+            {/* Calcul coût total */}
+            {(formData.prix_achat_stock_total || formData.frais_cmb || formData.frais_transit || 
+              formData.frais_bancaires || formData.frais_courtier || formData.frais_transport_local) && (
+              <div className="mt-4 pt-3 border-t border-blue-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Coût total du stock</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {(() => {
+                      const total = 
+                        (parseFloat(formData.prix_achat_stock_total) || 0) +
+                        (parseFloat(formData.frais_cmb) || 0) +
+                        (parseFloat(formData.frais_transit) || 0) +
+                        (parseFloat(formData.frais_bancaires) || 0) +
+                        (parseFloat(formData.frais_courtier) || 0) +
+                        (parseFloat(formData.frais_transport_local) || 0);
+                      return formatCurrency(total);
+                    })()}{' '}
+                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Prix unitaire calculé */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-3">Prix unitaire</h4>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-amber-800">
+                ℹ️ Le prix d'achat unitaire sera calculé automatiquement par le système en fonction des frais saisis ci-dessus.
+              </p>
+            </div>
+
+            {/* Affichage du prix dans la devise d'origine */}
+            {formData.devise_achat !== 'FCFA' && formData.prix_achat_stock_total && formData.quantite_stock_commande && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Prix unitaire estimé en {DEVISES.find(d => d.value === formData.devise_achat)?.label}
+                  </span>
+                  <span className="text-lg font-bold text-blue-600">
+                    {(() => {
+                      const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
+                      const quantite = parseFloat(formData.quantite_stock_commande) || 0;
+                      const fraisCmb = parseFloat(formData.frais_cmb) || 0;
+                      const fraisTransit = parseFloat(formData.frais_transit) || 0;
+                      const fraisBancaires = parseFloat(formData.frais_bancaires) || 0;
+                      const fraisCourtier = parseFloat(formData.frais_courtier) || 0;
+                      const fraisLocal = parseFloat(formData.frais_transport_local) || 0;
+                      
+                      const total = stockTotal + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
+                      const prixUnitaireDevise = quantite > 0 ? total / quantite : 0;
+                      return formatCurrency(prixUnitaireDevise);
+                    })()}{' '}
+                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Taux appliqué : 1 {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} = {tauxChange} FCFA
+                </p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prix d'achat unitaire (FCFA) <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={formData.prix_achat}
+                    onChange={(e) => setFormData({ ...formData, prix_achat: e.target.value })}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="Calculé automatiquement"
+                    className="flex-1"
+                  />
+                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+                    FCFA
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Calculé automatiquement ou saisir manuellement
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prix de vente unitaire <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={formData.prix_vente}
+                    onChange={(e) => setFormData({ ...formData, prix_vente: e.target.value })}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    className="flex-1"
+                  />
+                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-600 flex items-center">
+                    FCFA
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Calcul de la marge */}
+            {formData.prix_achat && formData.prix_vente && (
+              <div className="mt-4 pt-3 border-t border-green-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Marge unitaire</span>
+                  <span className="text-base font-bold text-green-600">
+                    {(() => {
+                      const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
+                      const margePct = (marge / parseFloat(formData.prix_achat)) * 100;
+                      return `${formatCurrency(marge)} FCFA (${margePct.toFixed(1)}%)`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Section Stock Réserve */}
         {isReserve && (
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Stock de réserve</h3>
+          <div className="space-y-4">
+            <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-2 rounded-lg border-l-4 border-orange-500">
+              🏪 Stock de réserve
+            </h3>
+            
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-amber-800 mb-2">
                 ℹ️ Ce produit sera stocké en réserve. Utilisez les transferts pour l'allouer au stock vente ou salon.
               </p>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-4 px-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Quantité en réserve
@@ -1081,16 +1100,20 @@ export function ProduitFormModal({
           </div>
         )}
 
-        {/* Section Stocks opérationnels - SEULEMENT si pas réserve */}
+        {/* Section Stocks opérationnels */}
         {!isReserve && (
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Stocks et seuils</h3>
+          <div className="space-y-4">
+            <h3 className="text-base font-semibold text-gray-900 bg-gradient-to-r from-teal-50 to-cyan-50 px-4 py-2 rounded-lg border-l-4 border-teal-500">
+              📊 Stocks et seuils
+            </h3>
             
-            <div className={`grid ${showStockVente && showStockUtilisation ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+            <div className={`grid ${showStockVente && showStockUtilisation ? 'grid-cols-2' : 'grid-cols-1'} gap-4 px-1`}>
               {/* Stock Vente */}
               {showStockVente && (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-medium text-gray-700">Stock Vente</h4>
+                  <h4 className="text-sm font-semibold text-gray-800 bg-blue-100 px-3 py-1.5 rounded">
+                    🛒 Stock Vente
+                  </h4>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">Quantité</label>
                     <Input
@@ -1131,7 +1154,9 @@ export function ProduitFormModal({
               {/* Stock Salon */}
               {showStockUtilisation && (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-medium text-gray-700">Stock Salon</h4>
+                  <h4 className="text-sm font-semibold text-gray-800 bg-purple-100 px-3 py-1.5 rounded">
+                    💇‍♀️ Stock Salon
+                  </h4>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">Quantité</label>
                     <Input
@@ -1172,7 +1197,8 @@ export function ProduitFormModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-4">
+        {/* Boutons d'action */}
+        <div className="flex justify-end gap-2 pt-4 border-t">
           <Button type="button" variant="outline" onClick={onClose}>
             Annuler
           </Button>
