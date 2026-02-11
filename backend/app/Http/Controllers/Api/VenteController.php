@@ -14,6 +14,7 @@ use App\Models\VentePaiement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\RendezVous;
 
 class VenteController extends Controller
 {
@@ -589,6 +590,263 @@ class VenteController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors du calcul des statistiques',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function finaliserRendezVous(Request $request, $rendezVousId)
+    {
+        $request->validate([
+            'articles' => 'required|array|min:1',
+            'articles.*.type' => 'required|in:prestation,produit',
+            'articles.*.id' => 'required|integer',
+            'articles.*.quantite' => 'required|integer|min:1',
+            'articles.*.prix_unitaire' => 'required|numeric|min:0',
+            'articles.*.reduction' => 'nullable|numeric|min:0',
+            'articles.*.source_stock' => 'nullable|in:vente,utilisation',
+            'articles.*.coiffeur_id' => 'nullable|exists:users,id',
+            'paiements' => 'required|array|min:1',
+            'paiements.*.mode' => 'required|in:especes,orange_money,moov_money,carte',
+            'paiements.*.montant' => 'required|numeric|min:0',
+            'paiements.*.reference' => 'nullable|string|max:100',
+            'reduction' => 'nullable|array',
+            'reduction.type' => 'required_with:reduction|in:fixe,pourcentage',
+            'reduction.valeur' => 'required_with:reduction|numeric|min:0',
+            'points_utilises' => 'nullable|integer|min:0',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Récupérer le rendez-vous
+            $rendezVous = RendezVous::with(['client', 'prestations', 'coiffeur'])
+                ->findOrFail($rendezVousId);
+
+            // Vérifications
+            if ($rendezVous->statut !== 'en_cours') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le rendez-vous doit être en cours pour être finalisé'
+                ], 400);
+            }
+
+            // CALCULER LES MONTANTS (même logique que VenteController)
+            $montantPrestations = 0;
+            $montantProduits = 0;
+            $montantTotalHT = 0;
+            $montantReductionArticles = 0;
+
+            foreach ($request->articles as $article) {
+                $sousTotal = $article['prix_unitaire'] * $article['quantite'];
+                $reductionArticle = $article['reduction'] ?? 0;
+                $sousTotalApresReduction = $sousTotal - $reductionArticle;
+
+                $montantTotalHT += $sousTotalApresReduction;
+                $montantReductionArticles += $reductionArticle;
+
+                if ($article['type'] === 'prestation') {
+                    $montantPrestations += $sousTotalApresReduction;
+                } else {
+                    $montantProduits += $sousTotalApresReduction;
+                }
+            }
+
+            // Réduction globale
+            $montantReductionGlobale = 0;
+            if ($request->reduction) {
+                if ($request->reduction['type'] === 'pourcentage') {
+                    $montantReductionGlobale = ($montantTotalHT * $request->reduction['valeur']) / 100;
+                } else {
+                    $montantReductionGlobale = $request->reduction['valeur'];
+                }
+            }
+
+            // Réduction points fidélité
+            $montantReductionPoints = 0;
+            if ($request->points_utilises > 0) {
+                $montantReductionPoints = ($request->points_utilises / 100) * 1000;
+            }
+
+            // Déduire l'acompte du total
+            $acompteVerse = $rendezVous->acompte_paye ? $rendezVous->acompte_montant : 0;
+
+            $montantReductionTotal = $montantReductionArticles + $montantReductionGlobale + $montantReductionPoints + $acompteVerse;
+            $montantTotalTTC = max(0, $montantTotalHT - $montantReductionGlobale - $montantReductionPoints - $acompteVerse);
+
+            // Paiements
+            $montantPaye = array_sum(array_column($request->paiements, 'montant'));
+            $montantRendu = max(0, $montantPaye - $montantTotalTTC);
+            $soldeRestant = max(0, $montantTotalTTC - $montantPaye);
+
+            // Statut paiement
+            if ($soldeRestant == 0) {
+                $statutPaiement = 'paye';
+            } elseif ($montantPaye > 0) {
+                $statutPaiement = 'partiel';
+            } else {
+                $statutPaiement = 'impaye';
+            }
+
+            // Points gagnés (calculés sur le montant total AVANT déduction acompte)
+            $pointsGagnes = floor(($montantTotalHT - $montantReductionGlobale - $montantReductionPoints) / 1000);
+
+            // Type de vente
+            $typeVente = 'mixte';
+            if ($montantPrestations > 0 && $montantProduits == 0) {
+                $typeVente = 'prestations';
+            } elseif ($montantProduits > 0 && $montantPrestations == 0) {
+                $typeVente = 'produits';
+            }
+
+            // Mode paiement
+            $modePaiement = 'mixte';
+            if (count($request->paiements) == 1) {
+                $modePaiement = $request->paiements[0]['mode'];
+            }
+
+            // GÉNÉRER NUMÉRO FACTURE
+            $numeroFacture = 'VT-' . date('Ymd') . '-' . str_pad(
+                Vente::whereDate('created_at', today())->count() + 1,
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            // CRÉER LA VENTE
+            $vente = Vente::create([
+                'numero_facture' => $numeroFacture,
+                'client_id' => $rendezVous->client_id,
+                'client_nom' => $rendezVous->client->prenom . ' ' . $rendezVous->client->nom,
+                'client_telephone' => $rendezVous->client->telephone,
+                'coiffeur_id' => $rendezVous->coiffeur_id,
+                'vendeur_id' => auth()->id(),
+                'rendez_vous_id' => $rendezVous->id,
+                'type_vente' => $typeVente,
+                'date_vente' => now(),
+                'montant_prestations' => $montantPrestations,
+                'montant_produits' => $montantProduits,
+                'montant_total_ht' => $montantTotalHT,
+                'montant_reduction' => $montantReductionTotal,
+                'type_reduction' => $request->reduction ? 'manuelle' : ($request->points_utilises > 0 ? 'fidelite' : 'aucune'),
+                'montant_total_ttc' => $montantTotalTTC,
+                'mode_paiement' => $modePaiement,
+                'montant_paye' => $montantPaye,
+                'montant_rendu' => $montantRendu,
+                'statut_paiement' => $statutPaiement,
+                'solde_restant' => $soldeRestant,
+                'recu_imprime' => false,
+                'points_gagnes' => $pointsGagnes,
+                'points_utilises' => $request->points_utilises ?? 0,
+                'notes' => $request->notes,
+                'sync_status' => 'synced',
+            ]);
+
+            // CRÉER LES DÉTAILS
+            foreach ($request->articles as $article) {
+                $articleNom = '';
+                $prestationId = null;
+                $produitId = null;
+                $produitReference = null;
+
+                if ($article['type'] === 'prestation') {
+                        $prestation = TypePrestation::find($article['id']); // ← NOUVELLE VERSION
+                        if ($prestation) {
+                            $articleNom = $prestation->nom;
+                            $prestationId = $prestation->id;
+                        }
+                    } else {
+                    $produit = Produit::find($article['id']);
+                    if ($produit) {
+                        $articleNom = $produit->nom;
+                        $produitId = $produit->id;
+                        $produitReference = $produit->reference;
+
+                        // Vérifier et décompter stock
+                        $sourceStock = $article['source_stock'] ?? 'utilisation';
+                        $stockDisponible = $sourceStock === 'vente' ? $produit->stock_vente : $produit->stock_utilisation;
+
+                        if ($stockDisponible < $article['quantite']) {
+                            throw new \Exception("Stock insuffisant pour {$produit->nom}");
+                        }
+
+                        if ($sourceStock === 'vente') {
+                            $produit->decrement('stock_vente', $article['quantite']);
+                        } else {
+                            $produit->decrement('stock_utilisation', $article['quantite']);
+                        }
+
+                        // Mouvement de stock
+                        MouvementStock::create([
+                            'produit_id' => $produit->id,
+                            'type_stock' => $sourceStock,
+                            'type_mouvement' => 'sortie',
+                            'quantite' => $article['quantite'],
+                            'stock_avant' => $stockDisponible,
+                            'stock_apres' => $stockDisponible - $article['quantite'],
+                            'motif' => "Vente RDV #{$rendezVous->id} - {$numeroFacture}",
+                            'vente_id' => $vente->id,
+                            'user_id' => auth()->id(),
+                        ]);
+                    }
+                }
+
+                VenteDetail::create([
+                    'vente_id' => $vente->id,
+                    'type_article' => $article['type'],
+                    'article_nom' => $articleNom,
+                    'prestation_id' => $prestationId,
+                    'produit_id' => $produitId,
+                    'produit_reference' => $produitReference,
+                    'quantite' => $article['quantite'],
+                    'prix_unitaire' => $article['prix_unitaire'],
+                    'prix_total' => $article['prix_unitaire'] * $article['quantite'],
+                    'reduction' => $article['reduction'] ?? 0,
+                    'articles.*.coiffeur_id' => 'nullable|exists:users,id',
+                ]);
+            }
+
+            // CRÉER LES PAIEMENTS
+            foreach ($request->paiements as $paiement) {
+                VentePaiement::create([
+                    'vente_id' => $vente->id,
+                    'mode_paiement' => $paiement['mode'],
+                    'montant' => $paiement['montant'],
+                    'reference_transaction' => $paiement['reference'] ?? null,
+                ]);
+            }
+
+            // METTRE À JOUR POINTS FIDÉLITÉ
+            $client = Client::find($rendezVous->client_id);
+            if ($client) {
+                if ($request->points_utilises > 0) {
+                    $client->decrement('points_fidelite', $request->points_utilises);
+                }
+                if ($pointsGagnes > 0) {
+                    $client->increment('points_fidelite', $pointsGagnes);
+                }
+            }
+
+            // MARQUER LE RENDEZ-VOUS COMME TERMINÉ
+            $rendezVous->update(['statut' => 'termine']);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rendez-vous finalisé avec succès',
+                'data' => [
+                    'vente' => $vente->load(['details', 'paiements']),
+                    'rendez_vous' => $rendezVous->fresh(['paiements'])
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la finalisation',
                 'error' => $e->getMessage()
             ], 500);
         }

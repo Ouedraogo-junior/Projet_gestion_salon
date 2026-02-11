@@ -380,6 +380,7 @@ export function ProduitFormModal({
       attributs: valeursAttributs
     };
 
+    //console.log('📦 PAYLOAD ENVOYÉ:', JSON.stringify(payload, null, 2));
     let produitId: number;
 
     if (produit) {
@@ -387,6 +388,7 @@ export function ProduitFormModal({
       produitId = produit.id;
     } else {
       const response = await produitsApi.produits.create(payload);
+      //console.log('✅ Produit créé:', response.data);
       produitId = response.data.id;
     }
 
@@ -1037,10 +1039,51 @@ export function ProduitFormModal({
                     })()}
                   </span>
                 </div>
+
+                {formData.quantite_stock_commande && (
+      <div className="flex items-center justify-between pt-2 border-t border-green-200">
+        <span className="text-sm font-medium text-gray-700">
+          Gain total sur stock commandé ({formData.quantite_stock_commande} unités)
+        </span>
+        <span className="text-base font-bold text-emerald-600">
+          {(() => {
+            const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
+            const gainTotal = marge * parseFloat(formData.quantite_stock_commande);
+            return `${formatCurrency(gainTotal)} FCFA`;
+          })()}
+        </span>
+      </div>
+    )}
+
+    {/* Gain sur stock actuel (pour édition uniquement) */}
+    {produit && (
+      <div className="flex items-center justify-between pt-2 border-t border-green-200">
+        <span className="text-sm font-medium text-gray-700">
+          Gain total sur stock actuel ({(() => {
+            const stockActuel = (parseInt(formData.stock_vente) || 0) + 
+                                (parseInt(formData.stock_utilisation) || 0) + 
+                                (parseInt(formData.stock_reserve) || 0);
+            return stockActuel;
+          })()} unités)
+        </span>
+        <span className="text-base font-bold text-teal-600">
+          {(() => {
+            const marge = parseFloat(formData.prix_vente) - parseFloat(formData.prix_achat);
+            const stockActuel = (parseInt(formData.stock_vente) || 0) + 
+                                (parseInt(formData.stock_utilisation) || 0) + 
+                                (parseInt(formData.stock_reserve) || 0);
+            const gainTotal = marge * stockActuel;
+            return `${formatCurrency(gainTotal)} FCFA`;
+          })()}
+        </span>
+      </div>
+    )}
               </div>
             )}
           </div>
         </div>
+
+        
 
         {/* Section Stock Réserve */}
         {isReserve && (

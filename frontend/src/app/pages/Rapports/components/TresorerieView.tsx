@@ -142,7 +142,7 @@ export function TresorerieView({ data }: TresorerieViewProps) {
       </div>
 
       {/* Créances */}
-      {data.creances.nb_factures > 0 && (
+      {/* {data.creances.nb_factures > 0 && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Créances à recouvrer</AlertTitle>
@@ -164,7 +164,7 @@ export function TresorerieView({ data }: TresorerieViewProps) {
             </p>
           </AlertDescription>
         </Alert>
-      )}
+      )} */}
 
       {/* Résumé visuel */}
       <Card>

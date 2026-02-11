@@ -9,6 +9,7 @@ import type {
   ComparaisonPeriodes,
   ApiResponse,
 } from '../types/rapport.types';
+import { clientApi } from './clientApi';
 
 /**
  * Service API pour les rapports comptables
@@ -182,6 +183,13 @@ export const rapportApi = {
       date_fin,
     };
   },
+
+  // Arrêté de compte : Envoi d'une notification au gestionnaire
+  async envoyerCompteArrete(date: string): Promise<void> {
+    const response = await axios.post('/rapports/compte-arrete', { date });
+    return response.data;
+  },
+
 };
 
 export default rapportApi;

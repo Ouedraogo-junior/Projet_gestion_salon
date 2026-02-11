@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\CompteArreteMail;
 
 // Models
 use App\Models\Vente;
@@ -15,6 +18,7 @@ use App\Models\RendezVous;
 use App\Models\Confection;
 use App\Models\VenteDetail;
 use App\Models\TypePrestation;
+use App\Models\Produit;
 
 class RapportController extends Controller
 {
@@ -282,54 +286,144 @@ class RapportController extends Controller
             });
 
         // Top prestations
-        $topPrestations = VenteDetail::join('ventes', 'ventes_details.vente_id', '=', 'ventes.id')
-            ->join('types_prestations', 'ventes_details.prestation_id', '=', 'types_prestations.id')
-            ->whereBetween('ventes.date_vente', [$dateDebut, $dateFin])
-            ->whereIn('ventes.statut_paiement', ['paye', 'partiel'])
-            ->where('ventes_details.type_article', 'prestation')
-            ->selectRaw('
-                types_prestations.id,
-                types_prestations.nom,
-                COUNT(*) as nb_ventes,
-                SUM(ventes_details.prix_total) as montant_total
-            ')
-            ->groupBy('types_prestations.id', 'types_prestations.nom')
-            ->orderByDesc('nb_ventes')
-            ->limit(10)
+        $topPrestations = collect(DB::select("
+            SELECT 
+                tp.id,
+                tp.nom,
+                COUNT(vd.id)::integer as nb_ventes,
+                SUM(vd.prix_total)::numeric as montant_total
+            FROM ventes_details vd
+            INNER JOIN ventes v ON vd.vente_id = v.id
+            INNER JOIN types_prestations tp ON vd.prestation_id = tp.id
+            WHERE v.date_vente BETWEEN ? AND ?
+            AND v.statut_paiement IN ('paye', 'partiel')
+            AND vd.type_article = 'prestation'
+            AND vd.prestation_id IS NOT NULL
+            GROUP BY tp.id, tp.nom
+            ORDER BY montant_total DESC
+            LIMIT 10
+        ", [$dateDebut, $dateFin]))
+        ->map(function ($item) {
+            return [
+                'id' => (int) $item->id,
+                'nom' => $item->nom,
+                'nb_ventes' => (int) $item->nb_ventes,
+                'montant_total' => (float) $item->montant_total,
+            ];
+        });
+
+
+        // Top produits
+        $topProduits = collect(DB::select("
+            SELECT 
+                p.id,
+                p.nom,
+                SUM(vd.quantite)::integer as quantite_vendue,
+                SUM(vd.prix_total)::numeric as montant_total
+            FROM ventes_details vd
+            INNER JOIN ventes v ON vd.vente_id = v.id
+            INNER JOIN produits p ON vd.produit_id = p.id
+            WHERE v.date_vente BETWEEN ? AND ?
+            AND v.statut_paiement IN ('paye', 'partiel')
+            AND vd.type_article = 'produit'
+            AND vd.produit_id IS NOT NULL
+            GROUP BY p.id, p.nom
+            ORDER BY montant_total DESC
+            LIMIT 10
+        ", [$dateDebut, $dateFin]))
+        ->map(function ($item) {
+            return [
+                'id' => (int) $item->id,
+                'nom' => $item->nom,
+                'quantite_vendue' => (int) $item->quantite_vendue,
+                'montant_total' => (float) $item->montant_total,
+            ];
+        });
+
+
+        // Liste détaillée de toutes les transactions
+        $transactions = Vente::with(['client', 'vendeur', 'details.prestation', 'details.produit'])
+            ->whereBetween('date_vente', [$dateDebut, $dateFin])
+            ->whereIn('statut_paiement', ['paye', 'partiel'])
+            ->orderBy('date_vente', 'desc')
             ->get()
-            ->map(function ($item) {
+            ->map(function ($vente) {
                 return [
-                    'id' => $item->id,
-                    'nom' => $item->nom,
-                    'nb_ventes' => (int) $item->nb_ventes,
-                    'montant_total' => (float) $item->montant_total,
+                    'id' => 'vente-' . $vente->id,  // ← CHANGEMENT ICI
+                    'type' => $vente->type_vente,
+                    'montant' => (float) $vente->montant_paye,
+                    'mode_paiement' => $vente->mode_paiement,
+                    'date' => $vente->date_vente,
+                    'vendeur' => $vente->vendeur ? [
+                        'id' => $vente->vendeur->id,
+                        'prenom' => $vente->vendeur->prenom,
+                        'nom' => $vente->vendeur->nom,
+                    ] : null,
+                    'client' => $vente->client ? [
+                        'id' => $vente->client->id,
+                        'prenom' => $vente->client->prenom,
+                        'nom' => $vente->client->nom,
+                        'telephone' => $vente->client->telephone,
+                    ] : null,
+                    'prestations' => $vente->details
+                        ->where('type_article', 'prestation')
+                        ->map(function ($detail) {
+                            return [
+                                'nom' => $detail->prestation?->nom ?? 'N/A',
+                                'quantite' => (int) $detail->quantite,
+                                'prix_total' => (float) $detail->prix_total,
+                            ];
+                        })
+                        ->values(),
+                    'produits' => $vente->details
+                        ->where('type_article', 'produit')
+                        ->map(function ($detail) {
+                            return [
+                                'nom' => $detail->produit?->nom ?? 'N/A',
+                                'quantite' => (int) $detail->quantite,
+                                'prix_total' => (float) $detail->prix_total,
+                            ];
+                        })
+                        ->values(),
                 ];
             });
 
-        // Top produits
-        $topProduits = VenteDetail::join('ventes', 'ventes_details.vente_id', '=', 'ventes.id')
-            ->join('produits', 'ventes_details.produit_id', '=', 'produits.id')
-            ->whereBetween('ventes.date_vente', [$dateDebut, $dateFin])
-            ->whereIn('ventes.statut_paiement', ['paye', 'partiel'])
-            ->where('ventes_details.type_article', 'produit')
-            ->selectRaw('
-                produits.id,
-                produits.nom,
-                SUM(ventes_details.quantite) as quantite_vendue,
-                SUM(ventes_details.prix_total) as montant_total
-            ')
-            ->groupBy('produits.id', 'produits.nom')
-            ->orderByDesc('quantite_vendue')
-            ->limit(10)
+        // Acomptes de rendez-vous
+        $acomptesRdv = RendezVous::with(['client', 'prestations'])
+            ->whereBetween('date_heure', [$dateDebut, $dateFin])
+            ->where('acompte_paye', true)
+            ->orderBy('date_heure', 'desc')
             ->get()
-            ->map(function ($item) {
+            ->map(function ($rdv) {
                 return [
-                    'id' => $item->id,
-                    'nom' => $item->nom,
-                    'quantite_vendue' => (int) $item->quantite_vendue,
-                    'montant_total' => (float) $item->montant_total,
+                    'id' => 'rdv-' . $rdv->id,  // ← CHANGEMENT ICI
+                    'type' => 'acompte',
+                    'montant' => (float) $rdv->acompte_montant,
+                    'mode_paiement' => $rdv->mode_paiement ?? 'N/A',
+                    'date' => $rdv->date_heure,
+                    'vendeur' => null,
+                    'client' => $rdv->client ? [
+                        'id' => $rdv->client->id,
+                        'prenom' => $rdv->client->prenom,
+                        'nom' => $rdv->client->nom,
+                        'telephone' => $rdv->client->telephone,
+                    ] : null,
+                    'prestations' => $rdv->prestations->map(function ($prestation) {
+                        return [
+                            'nom' => $prestation->nom,
+                            'quantite' => 1,
+                            'prix_total' => (float) $prestation->prix_base,
+                        ];
+                    })->values(),
+                    'produits' => [],
                 ];
             });
+
+        // Fusionner toutes les transactions
+        $toutesTransactions = $transactions->concat($acomptesRdv)->sortByDesc('date')->values();    
+
+        // Log::info('🔍 TOP PRODUITS FINAL ENVOYÉ AU FRONTEND:', ['data' => $topProduits]);
+        // Log::info('🔍 TOP PRESTATIONS FINAL ENVOYÉ AU FRONTEND:', ['data' => $topPrestations]);
 
         return response()->json([
             'success' => true,
@@ -339,6 +433,7 @@ class RapportController extends Controller
                 'par_type' => $parType,
                 'top_prestations' => $topPrestations,
                 'top_produits' => $topProduits,
+                'transactions' => $toutesTransactions,
             ],
             'message' => 'Détail des ventes généré avec succès',
         ]);
@@ -410,8 +505,17 @@ class RapportController extends Controller
             ->where('statut', 'terminee')
             ->sum('cout_total');
 
-        $totalDecaissements = $depensesOperationnelles + $achatsStock + $coutsConfections;
+        $employes = User::where('is_active', true)
+            ->whereNotNull('salaire_mensuel')                                       
+            ->get();
 
+        $totalSalairesMensuel = $employes->sum('salaire_mensuel');
+        $joursPeriode = $dateFin->diffInDays($dateDebut) + 1;
+        $joursMois = $dateDebut->daysInMonth;
+        $salairesProportionnels = ($totalSalairesMensuel / $joursMois) * $joursPeriode;    
+
+
+        $totalDecaissements = $depensesOperationnelles + $achatsStock + $coutsConfections + $salairesProportionnels;
         // ========================================
         // SOLDE & CRÉANCES
         // ========================================
@@ -442,6 +546,7 @@ class RapportController extends Controller
                     'depenses_operationnelles' => (float) $depensesOperationnelles,
                     'achats_stock' => (float) $achatsStock,
                     'confections' => (float) $coutsConfections,
+                    'salaires' => (float) $salairesProportionnels,
                     'total' => (float) $totalDecaissements,
                 ],
                 'solde_net' => (float) $soldeNet,
@@ -529,6 +634,60 @@ class RapportController extends Controller
             ],
             'message' => 'Comparaison de périodes générée avec succès',
         ]);
+    }
+
+
+    public function compteArrete(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+        ]);
+
+        $date = Carbon::parse($validated['date'])->format('d/m/Y');
+        $user = $request->user();
+        
+        // Récupérer l'email du gestionnaire
+        $gestionnaire = User::where('role', 'gestionnaire')
+            ->where('is_active', true)
+            ->first();
+        
+        if (!$gestionnaire || !$gestionnaire->email) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Aucun gestionnaire avec email trouvé',
+            ], 404);
+        }
+
+        try {
+            // Envoyer l'email
+            Mail::to($gestionnaire->email)->send(new CompteArreteMail([
+                'date' => $date,
+                'emetteur' => $user->nom . ' ' . $user->prenom,
+                'role' => $user->role,
+            ]));
+
+            // Log pour debug
+            \Log::info('Compte arrêté envoyé', [
+                'destinataire' => $gestionnaire->email,
+                'emetteur' => $user->nom_complet,
+                'date' => $date,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compte arrêté envoyé avec succès',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur envoi email compte arrêté', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'envoi de l\'email',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

@@ -9,11 +9,23 @@ interface Props {
   rendezVous: RendezVous[];
   isLoading: boolean;
   onRefresh: () => void;
+  selectedRdvFromSearch?: RendezVous | null; 
+  onClearSelection?: () => void; 
 }
 
-export const CalendrierRendezVous: React.FC<Props> = ({ rendezVous, isLoading, onRefresh }) => {
+export const CalendrierRendezVous: React.FC<Props> = ({ rendezVous, isLoading, onRefresh, selectedRdvFromSearch, onClearSelection }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedRdv, setSelectedRdv] = useState<RendezVous | null>(null);
+
+  // Ouvrir automatiquement et naviguer vers le mois du RDV
+  React.useEffect(() => {
+    if (selectedRdvFromSearch) {
+      const rdvDate = new Date(selectedRdvFromSearch.date_heure);
+      setCurrentDate(rdvDate);
+      setSelectedRdv(selectedRdvFromSearch);
+      onClearSelection?.();
+    }
+  }, [selectedRdvFromSearch, onClearSelection]);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();

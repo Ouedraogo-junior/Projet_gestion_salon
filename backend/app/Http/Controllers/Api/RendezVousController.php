@@ -19,29 +19,24 @@ class RendezVousController extends Controller
      */
     public function index(Request $request)
     {
-        $query = RendezVous::with(['client', 'coiffeur', 'typePrestation', 'coiffeurs']);
+        $query = RendezVous::with(['client', 'coiffeur', 'prestations', 'coiffeurs', 'paiements']);
 
-        // Filtre par statut
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
         }
 
-        // Filtre par coiffeur
         if ($request->has('coiffeur_id')) {
             $query->where('coiffeur_id', $request->coiffeur_id);
         }
 
-        // Filtre par client
         if ($request->has('client_id')) {
             $query->where('client_id', $request->client_id);
         }
 
-        // Filtre par date
         if ($request->has('date')) {
             $query->whereDate('date_heure', $request->date);
         }
 
-        // Filtre par période
         if ($request->has('date_debut') && $request->has('date_fin')) {
             $query->whereBetween('date_heure', [
                 $request->date_debut,
@@ -49,12 +44,10 @@ class RendezVousController extends Controller
             ]);
         }
 
-        // Rendez-vous à venir uniquement
         if ($request->has('a_venir') && $request->boolean('a_venir')) {
             $query->where('date_heure', '>=', now());
         }
 
-        // Ordre par date
         $query->orderBy('date_heure', $request->get('order', 'asc'));
 
         $rendezVous = $query->paginate($request->get('per_page', 20));
@@ -66,7 +59,7 @@ class RendezVousController extends Controller
     }
 
     /**
-     * Créer un rendez-vous (PUBLIC - sans auth pour les clients)
+     * Créer un rendez-vous (PUBLIC - sans auth)
      */
     public function storePublic(Request $request)
     {
@@ -75,7 +68,8 @@ class RendezVousController extends Controller
             'prenom' => 'nullable|string|max:100',
             'telephone' => 'required|string|max:20',
             'email' => 'nullable|email|max:255',
-            'type_prestation_id' => 'required|exists:types_prestations,id',
+            'type_prestation_ids' => 'required|array|min:1',
+            'type_prestation_ids.*' => 'exists:types_prestations,id',
             'date_heure' => 'required|date|after:now',
             'notes' => 'nullable|string',
         ]);
@@ -94,7 +88,6 @@ class RendezVousController extends Controller
             $client = Client::where('telephone', $request->telephone)->first();
 
             if (!$client) {
-                // Créer un nouveau client
                 $client = Client::create([
                     'nom' => $request->nom ?? 'Client',
                     'prenom' => $request->prenom ?? '',
@@ -106,30 +99,35 @@ class RendezVousController extends Controller
                 ]);
             }
 
-            // 2. Récupérer les infos de la prestation
-            $prestation = TypePrestation::findOrFail($request->type_prestation_id);
+            // 2. Récupérer les prestations
+            $prestations = TypePrestation::whereIn('id', $request->type_prestation_ids)->get();
 
-            // 3. Calculer l'acompte automatiquement depuis la prestation
-            $acompteDemande = $prestation->acompte_requis;
+            // 3. Calculer totaux
+            $prixTotal = $prestations->sum('prix_base');
+            $dureeTotal = $prestations->sum('duree_estimee_minutes');
+
+            // 4. Calculer acompte (si au moins 1 prestation le demande)
+            $acompteDemande = $prestations->where('acompte_requis', true)->isNotEmpty();
             $acompteMontant = null;
 
             if ($acompteDemande) {
-                if ($prestation->acompte_montant) {
-                    // Montant fixe défini
-                    $acompteMontant = $prestation->acompte_montant;
-                } elseif ($prestation->acompte_pourcentage) {
-                    // Pourcentage du prix
-                    $acompteMontant = $prestation->prix_base * ($prestation->acompte_pourcentage / 100);
-                }
+                // Calculer la somme des acomptes
+                $acompteMontant = $prestations->sum(function ($p) {
+                    if (!$p->acompte_requis) return 0;
+                    if ($p->acompte_montant) return $p->acompte_montant;
+                    if ($p->acompte_pourcentage) {
+                        return round($p->prix_base * ($p->acompte_pourcentage / 100));
+                    }
+                    return 0;
+                });
             }
 
-            // 4. Créer le rendez-vous
+            // 5. Créer le rendez-vous
             $rendezVous = RendezVous::create([
                 'client_id' => $client->id,
-                'type_prestation_id' => $request->type_prestation_id,
                 'date_heure' => $request->date_heure,
-                'duree_minutes' => $prestation->duree_estimee_minutes,
-                'prix_estime' => $prestation->prix_base,
+                'duree_minutes' => $dureeTotal,
+                'prix_estime' => $prixTotal,
                 'statut' => 'en_attente',
                 'notes' => $request->notes,
                 'acompte_demande' => $acompteDemande,
@@ -137,15 +135,19 @@ class RendezVousController extends Controller
                 'acompte_paye' => false,
             ]);
 
-            DB::commit();
+            // 6. Attacher les prestations
+            $rendezVous->prestations()->attach(
+                collect($request->type_prestation_ids)->mapWithKeys(function ($id, $index) {
+                    return [$id => ['ordre' => $index + 1]];
+                })
+            );
 
-            // TODO: Envoyer SMS de confirmation
-            // $this->envoyerSMSConfirmation($rendezVous);
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Rendez-vous enregistré avec succès. Vous recevrez une confirmation par SMS.',
-                'data' => $rendezVous->load(['client', 'typePrestation'])
+                'data' => $rendezVous->load(['client', 'prestations'])
             ], 201);
 
         } catch (\Exception $e) {
@@ -161,7 +163,6 @@ class RendezVousController extends Controller
     /**
      * Créer un rendez-vous (GÉRANT - avec auth)
      */
-    
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -169,15 +170,18 @@ class RendezVousController extends Controller
             'coiffeur_id' => 'nullable|exists:users,id',
             'coiffeur_ids' => 'nullable|array',
             'coiffeur_ids.*' => 'exists:users,id',
-            'type_prestation_id' => 'required|exists:types_prestations,id',
+            'type_prestation_ids' => 'required|array|min:1',
+            'type_prestation_ids.*' => 'exists:types_prestations,id',
             'date_heure' => 'required|date',
-            'duree_minutes' => 'required|integer|min:15',
+            'duree_minutes' => 'nullable|integer|min:15',
             'prix_estime' => 'nullable|numeric|min:0',
             'statut' => 'nullable|in:en_attente,confirme,en_cours,termine,annule',
             'notes' => 'nullable|string',
             'acompte_demande' => 'nullable|boolean',
             'acompte_montant' => 'nullable|numeric|min:0',
             'acompte_paye' => 'nullable|boolean',
+            'mode_paiement' => 'required_if:acompte_paye,true|nullable|in:especes,orange_money,moov_money,carte',
+            'reference_transaction' => 'nullable|string|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -190,12 +194,13 @@ class RendezVousController extends Controller
 
         DB::beginTransaction();
         try {
-            // Vérifier les conflits pour coiffeur unique
+            // Vérifier conflits coiffeur unique
             if ($request->coiffeur_id) {
+                $duree = $request->duree_minutes ?? 60;
                 $conflit = $this->verifierConflit(
                     $request->coiffeur_id,
                     $request->date_heure,
-                    $request->duree_minutes
+                    $duree
                 );
 
                 if ($conflit) {
@@ -206,13 +211,14 @@ class RendezVousController extends Controller
                 }
             }
 
-            // Vérifier les conflits pour coiffeurs multiples
+            // Vérifier conflits coiffeurs multiples
             if ($request->has('coiffeur_ids') && is_array($request->coiffeur_ids)) {
+                $duree = $request->duree_minutes ?? 60;
                 foreach ($request->coiffeur_ids as $coiffeurId) {
                     $conflit = $this->verifierConflit(
                         $coiffeurId,
                         $request->date_heure,
-                        $request->duree_minutes
+                        $duree
                     );
 
                     if ($conflit) {
@@ -225,38 +231,41 @@ class RendezVousController extends Controller
                 }
             }
 
-            // Récupérer la prestation
-            $prestation = TypePrestation::findOrFail($request->type_prestation_id);
+            // Récupérer les prestations
+            $prestations = TypePrestation::whereIn('id', $request->type_prestation_ids)->get();
 
-            // PRIORITÉ À LA VALEUR FOURNIE PAR LE FRONTEND
-            $acompteDemande = $request->has('acompte_demande') 
-                ? $request->boolean('acompte_demande') 
-                : $prestation->acompte_requis;
-                
+            // Calculer totaux si non fournis
+            $prixEstime = $request->prix_estime ?? $prestations->sum('prix_base');
+            $dureeMinutes = $request->duree_minutes ?? $prestations->sum('duree_estimee_minutes');
+
+            // Gérer acompte
+            $acompteDemande = $request->has('acompte_demande')
+                ? $request->boolean('acompte_demande')
+                : $prestations->where('acompte_requis', true)->isNotEmpty();
+
             $acompteMontant = null;
 
-            // Si le frontend envoie explicitement un montant, l'utiliser
             if ($request->has('acompte_montant')) {
                 $acompteMontant = $request->acompte_montant;
-            } 
-            // Sinon, calculer automatiquement depuis la prestation
-            elseif ($acompteDemande) {
-                if ($prestation->acompte_montant) {
-                    $acompteMontant = $prestation->acompte_montant;
-                } elseif ($prestation->acompte_pourcentage) {
-                    $prixBase = $request->prix_estime ?? $prestation->prix_base;
-                    $acompteMontant = round($prixBase * ($prestation->acompte_pourcentage / 100));
-                }
+            } elseif ($acompteDemande) {
+                // Calculer la somme des acomptes
+                $acompteMontant = $prestations->sum(function ($p) use ($prixEstime, $prestations) {
+                    if (!$p->acompte_requis) return 0;
+                    if ($p->acompte_montant) return $p->acompte_montant;
+                    if ($p->acompte_pourcentage) {
+                        return round($p->prix_base * ($p->acompte_pourcentage / 100));
+                    }
+                    return 0;
+                });
             }
 
             // Créer le rendez-vous
             $rendezVous = RendezVous::create([
                 'client_id' => $request->client_id,
                 'coiffeur_id' => $request->coiffeur_id,
-                'type_prestation_id' => $request->type_prestation_id,
                 'date_heure' => $request->date_heure,
-                'duree_minutes' => $request->duree_minutes,
-                'prix_estime' => $request->prix_estime ?? $prestation->prix_base,
+                'duree_minutes' => $dureeMinutes,
+                'prix_estime' => $prixEstime,
                 'statut' => $request->statut ?? 'en_attente',
                 'notes' => $request->notes,
                 'acompte_demande' => $acompteDemande,
@@ -264,9 +273,30 @@ class RendezVousController extends Controller
                 'acompte_paye' => $request->boolean('acompte_paye', false),
             ]);
 
+            // Attacher les prestations avec ordre
+            $rendezVous->prestations()->attach(
+                collect($request->type_prestation_ids)->mapWithKeys(function ($id, $index) {
+                    return [$id => ['ordre' => $index + 1]];
+                })
+            );
+
             // Attacher les coiffeurs multiples
             if ($request->has('coiffeur_ids') && is_array($request->coiffeur_ids) && count($request->coiffeur_ids) > 0) {
                 $rendezVous->coiffeurs()->attach($request->coiffeur_ids);
+            }
+
+            // Créer le paiement si acompte payé
+            if ($rendezVous->acompte_paye && $rendezVous->acompte_montant) {
+                \App\Models\RendezVousPaiement::create([
+                    'rendez_vous_id' => $rendezVous->id,
+                    'type_paiement' => 'acompte',
+                    'montant' => $rendezVous->acompte_montant,
+                    'mode_paiement' => $request->mode_paiement,
+                    'reference_transaction' => $request->reference_transaction,
+                    'date_paiement' => now(),
+                    'user_id' => auth()->id(),
+                    'notes' => 'Acompte payé lors de la création du rendez-vous',
+                ]);
             }
 
             DB::commit();
@@ -274,12 +304,11 @@ class RendezVousController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Rendez-vous créé avec succès',
-                'data' => $rendezVous->load(['client', 'coiffeur', 'coiffeurs', 'typePrestation'])
+                'data' => $rendezVous->load(['client', 'coiffeur', 'coiffeurs', 'prestations'])
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            //\Log::error('Erreur création RDV', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la création',
@@ -293,8 +322,14 @@ class RendezVousController extends Controller
      */
     public function show($id)
     {
-        $rendezVous = RendezVous::with(['client', 'coiffeur', 'typePrestation', 'coiffeurs'])
-            ->findOrFail($id);
+        $rendezVous = RendezVous::with([
+            'client', 
+            'coiffeur', 
+            'prestations', 
+            'coiffeurs', 
+            'paiements',
+            'vente.details' // ← Ajoute la relation vente
+        ])->findOrFail($id);
 
         return response()->json([
             'success' => true,
@@ -318,6 +353,8 @@ class RendezVousController extends Controller
 
         $validator = Validator::make($request->all(), [
             'coiffeur_id' => 'nullable|exists:users,id',
+            'type_prestation_ids' => 'nullable|array|min:1',
+            'type_prestation_ids.*' => 'exists:types_prestations,id',
             'date_heure' => 'nullable|date',
             'duree_minutes' => 'nullable|integer|min:15',
             'prix_estime' => 'nullable|numeric|min:0',
@@ -336,10 +373,10 @@ class RendezVousController extends Controller
 
         DB::beginTransaction();
         try {
-            // Vérifier les conflits si changement de coiffeur ou date
-            if (($request->has('coiffeur_id') || $request->has('date_heure')) 
+            // Vérifier conflits si changement de coiffeur ou date
+            if (($request->has('coiffeur_id') || $request->has('date_heure'))
                 && $request->coiffeur_id) {
-                
+
                 $conflit = $this->verifierConflit(
                     $request->coiffeur_id ?? $rendezVous->coiffeur_id,
                     $request->date_heure ?? $rendezVous->date_heure,
@@ -355,13 +392,33 @@ class RendezVousController extends Controller
                 }
             }
 
-            $rendezVous->update($request->all());
+            // Mettre à jour les champs basiques
+            $rendezVous->update($request->only([
+                'coiffeur_id',
+                'date_heure',
+                'duree_minutes',
+                'prix_estime',
+                'notes',
+                'acompte_demande',
+                'acompte_montant',
+                'acompte_paye'
+            ]));
+
+            // Mettre à jour les prestations si fournies
+            if ($request->has('type_prestation_ids')) {
+                $rendezVous->prestations()->sync(
+                    collect($request->type_prestation_ids)->mapWithKeys(function ($id, $index) {
+                        return [$id => ['ordre' => $index + 1]];
+                    })
+                );
+            }
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Rendez-vous modifié avec succès',
-                'data' => $rendezVous->fresh(['client', 'coiffeur', 'typePrestation'])
+                'data' => $rendezVous->fresh(['client', 'coiffeur', 'prestations'])
             ]);
 
         } catch (\Exception $e) {
@@ -417,7 +474,6 @@ class RendezVousController extends Controller
 
         DB::beginTransaction();
         try {
-            // Vérifier conflit si coiffeur assigné
             if ($request->coiffeur_id) {
                 $conflit = $this->verifierConflit(
                     $request->coiffeur_id,
@@ -442,13 +498,10 @@ class RendezVousController extends Controller
 
             DB::commit();
 
-            // TODO: Envoyer SMS de confirmation
-            // $this->envoyerSMSConfirmation($rendezVous);
-
             return response()->json([
                 'success' => true,
                 'message' => 'Rendez-vous confirmé avec succès',
-                'data' => $rendezVous->fresh(['client', 'coiffeur', 'typePrestation'])
+                'data' => $rendezVous->fresh(['client', 'coiffeur', 'prestations'])
             ]);
 
         } catch (\Exception $e) {
@@ -488,9 +541,6 @@ class RendezVousController extends Controller
 
         $rendezVous->annuler($request->motif_annulation);
 
-        // TODO: Envoyer SMS d'annulation
-        // $this->envoyerSMSAnnulation($rendezVous);
-
         return response()->json([
             'success' => true,
             'message' => 'Rendez-vous annulé avec succès',
@@ -528,7 +578,8 @@ class RendezVousController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'date' => 'required|date|after_or_equal:today',
-            'type_prestation_id' => 'required|exists:types_prestations,id',
+            'type_prestation_ids' => 'required|array|min:1',
+            'type_prestation_ids.*' => 'exists:types_prestations,id',
             'coiffeur_id' => 'nullable|exists:users,id',
         ]);
 
@@ -539,40 +590,38 @@ class RendezVousController extends Controller
             ], 422);
         }
 
-        $prestation = TypePrestation::findOrFail($request->type_prestation_id);
+        $prestations = TypePrestation::whereIn('id', $request->type_prestation_ids)->get();
+        $dureeTotal = $prestations->sum('duree_estimee_minutes');
+
         $date = Carbon::parse($request->date);
-        
-        // Horaires du salon (à adapter selon vos besoins)
+
         $heureOuverture = $date->copy()->setTime(8, 0);
         $heureFermeture = $date->copy()->setTime(18, 0);
         $pauseDebut = $date->copy()->setTime(12, 30);
         $pauseFin = $date->copy()->setTime(14, 0);
-        
+
         $creneaux = [];
-        $intervalle = 30; // minutes entre chaque créneau
+        $intervalle = 30;
         $current = $heureOuverture->copy();
 
         while ($current->lt($heureFermeture)) {
-            // Vérifier si c'est pendant la pause
             if ($current->gte($pauseDebut) && $current->lt($pauseFin)) {
                 $current->addMinutes($intervalle);
                 continue;
             }
 
-            // Vérifier si le créneau est dans le passé
             if ($current->lt(now())) {
                 $current->addMinutes($intervalle);
                 continue;
             }
 
-            // Vérifier disponibilité
             $disponible = true;
-            
+
             if ($request->coiffeur_id) {
                 $disponible = !$this->verifierConflit(
                     $request->coiffeur_id,
                     $current,
-                    $prestation->duree_estimee_minutes
+                    $dureeTotal
                 );
             }
 
@@ -620,9 +669,8 @@ class RendezVousController extends Controller
         return $query->exists();
     }
 
-
     /**
-     * Récupérer les rendez-vous d'un client par son téléphone (PUBLIC)
+     * Récupérer les rendez-vous d'un client (PUBLIC)
      */
     public function mesRendezVous(Request $request)
     {
@@ -638,10 +686,8 @@ class RendezVousController extends Controller
             ], 422);
         }
 
-        // Nettoyer le numéro de téléphone (enlever espaces, tirets, etc.)
         $telephone = preg_replace('/[^0-9+]/', '', $request->telephone);
 
-        // Trouver le client par téléphone
         $client = Client::where('telephone', $telephone)->first();
 
         if (!$client) {
@@ -655,23 +701,22 @@ class RendezVousController extends Controller
             ]);
         }
 
-        // Récupérer tous les rendez-vous du client
-        $rendezVous = RendezVous::with(['typePrestation', 'coiffeur', 'coiffeurs'])
+        $rendezVous = RendezVous::with(['prestations', 'coiffeur', 'coiffeurs'])
             ->where('client_id', $client->id)
             ->orderBy('date_heure', 'desc')
             ->get()
             ->map(function ($rdv) {
                 $deuxHeuresAvant = Carbon::parse($rdv->date_heure)->subHours(2);
                 $peutAnnuler = $rdv->peutEtreAnnule() && now()->lte($deuxHeuresAvant);
-                
+
                 return [
                     'id' => $rdv->id,
-                    'type_prestation' => $rdv->typePrestation,
+                    'prestations' => $rdv->prestations,
                     'coiffeur' => $rdv->coiffeur ? [
                         'nom' => $rdv->coiffeur->nom,
                         'prenom' => $rdv->coiffeur->prenom,
                     ] : null,
-                    'coiffeurs' => $rdv->coiffeurs->map(fn($c) => [ // AJOUTER CETTE LIGNE
+                    'coiffeurs' => $rdv->coiffeurs->map(fn($c) => [
                         'id' => $c->id,
                         'nom' => $c->nom,
                         'prenom' => $c->prenom,
@@ -691,11 +736,10 @@ class RendezVousController extends Controller
                     'peut_annuler' => $peutAnnuler,
                     'heures_avant_rdv' => now()->diffInHours($rdv->date_heure, false),
                     'est_passe' => $rdv->date_heure->isPast(),
-                    'token_annulation' => $rdv->token_annulation, // Pour l'annulation
+                    'token_annulation' => $rdv->token_annulation,
                 ];
             });
 
-        // Séparer les RDV à venir et passés
         $aVenir = $rendezVous->filter(fn($rdv) => !$rdv['est_passe'])->values();
         $passes = $rendezVous->filter(fn($rdv) => $rdv['est_passe'])->values();
 
@@ -717,9 +761,8 @@ class RendezVousController extends Controller
         ]);
     }
 
-
     /**
-     * Annuler un rendez-vous (PUBLIC - avec téléphone + vérification)
+     * Annuler un rendez-vous (PUBLIC)
      */
     public function cancelPublic(Request $request, $id)
     {
@@ -736,10 +779,8 @@ class RendezVousController extends Controller
             ], 422);
         }
 
-        // Nettoyer le téléphone
         $telephone = preg_replace('/[^0-9+]/', '', $request->telephone);
 
-        // Trouver le rendez-vous avec vérification du client
         $rendezVous = RendezVous::with('client')
             ->where('id', $id)
             ->whereHas('client', function($query) use ($telephone) {
@@ -761,7 +802,6 @@ class RendezVousController extends Controller
             ], 403);
         }
 
-        // Vérifier le délai de 2h
         $deuxHeuresAvant = Carbon::parse($rendezVous->date_heure)->subHours(2);
         if (now()->gt($deuxHeuresAvant)) {
             return response()->json([
@@ -773,19 +813,16 @@ class RendezVousController extends Controller
         $motif = $request->motif_annulation ?? 'Annulation client via interface publique';
         $rendezVous->annuler($motif);
 
-        // TODO: Envoyer SMS de confirmation d'annulation
-        // $this->envoyerSMSAnnulation($rendezVous);
-
         return response()->json([
             'success' => true,
             'message' => 'Votre rendez-vous a été annulé avec succès. Vous recevrez une confirmation par SMS.'
         ]);
     }
 
-   /**
+    /**
      * Marquer l'acompte comme payé
      */
-    public function marquerAcomptePaye($id)
+    public function marquerAcomptePaye(Request $request, $id)
     {
         $rendezVous = RendezVous::findOrFail($id);
 
@@ -803,24 +840,48 @@ class RendezVousController extends Controller
             ], 400);
         }
 
-        $rendezVous->update(['acompte_paye' => true]);
+        DB::beginTransaction();
+        try {
+            \App\Models\RendezVousPaiement::create([
+                'rendez_vous_id' => $rendezVous->id,
+                'type_paiement' => 'acompte',
+                'montant' => $rendezVous->acompte_montant,
+                'mode_paiement' => $request->mode_paiement ?? 'especes',
+                'reference_transaction' => $request->reference_transaction ?? null,
+                'date_paiement' => now(),
+                'user_id' => auth()->id(),
+                'notes' => $request->notes ?? 'Acompte marqué comme payé',
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Acompte marqué comme payé',
-            'data' => $rendezVous->fresh(['client', 'coiffeur', 'typePrestation'])
-        ]);
+            $rendezVous->update(['acompte_paye' => true]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Acompte marqué comme payé',
+                'data' => $rendezVous->fresh(['client', 'coiffeur', 'prestations', 'paiements'])
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-        public function updateAcompte(Request $request, $id) {
+    public function updateAcompte(Request $request, $id)
+    {
         $request->validate([
             'acompte_montant' => 'required|numeric|min:0'
         ]);
-        
+
         $rdv = RendezVous::findOrFail($id);
         $rdv->acompte_montant = $request->acompte_montant;
         $rdv->save();
-        
+
         return response()->json([
             'success' => true,
             'data' => $rdv

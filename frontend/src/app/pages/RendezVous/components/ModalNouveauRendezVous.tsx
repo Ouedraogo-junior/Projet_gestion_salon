@@ -8,6 +8,7 @@ import { clientApi } from '../../../../services/clientApi';
 import { userApi } from '../../../../services/userApi';
 import { prestationApi } from '../../../../services/prestationApi';
 import { ModalConfirmationAcompte } from './ModalConfirmationAcompte';
+import { PrestationMultiSelectRDV } from './PrestationMultiSelectRDV';
 import type { CreateRendezVousGerantDTO } from '../../../../types/rendezVous.types';
 import type { CreateClientDTO, Client } from '../../../../types/client.types';
 import type { TypePrestation } from '../../../../types/prestation.types';
@@ -25,19 +26,21 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateClient, setShowCreateClient] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [selectedPrestation, setSelectedPrestation] = useState<TypePrestation | null>(null);
+  const [selectedPrestations, setSelectedPrestations] = useState<TypePrestation[]>([]);
   const [showConfirmationAcompte, setShowConfirmationAcompte] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<CreateRendezVousGerantDTO | null>(null);
   
   const [formData, setFormData] = useState<CreateRendezVousGerantDTO>({
     client_id: 0,
-    type_prestation_id: 0,
+    type_prestation_ids: [],
     date_heure: '',
     duree_minutes: 60,
     statut: 'en_attente',
     acompte_demande: false,
     acompte_montant: undefined,
     acompte_paye: false,
+    mode_paiement: undefined,
+    reference_transaction: undefined,
     coiffeur_ids: [],
   });
 
@@ -104,47 +107,56 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
     },
   });
 
-  // Calculer l'acompte requis pour une prestation
-  const calculerAcompteRequis = (prestation: TypePrestation): number | null => {
-    if (!prestation.acompte_requis) return null;
-    
-    if (prestation.acompte_montant) {
-      return prestation.acompte_montant;
-    }
-    
-    if (prestation.acompte_pourcentage) {
-      return Math.round((prestation.prix_base * prestation.acompte_pourcentage) / 100);
-    }
-    
-    return null;
+  // Calculer le prix total
+  const prixTotal = selectedPrestations.reduce((sum, p) => sum + (Number(p.prix_base) || 0), 0);
+
+  // Calculer la durée totale
+  const dureeTotal = selectedPrestations.reduce((sum, p) => sum + (Number(p.duree_estimee_minutes) || 0), 0);
+
+  // Calculer l'acompte total requis
+  const calculerAcompteTotal = (): number => {
+    return selectedPrestations.reduce((sum, prestation) => {
+      if (!prestation.acompte_requis) return sum;
+      
+      if (prestation.acompte_montant) {
+        return sum + Number(prestation.acompte_montant);
+      }
+      
+      if (prestation.acompte_pourcentage) {
+        return sum + Math.round((Number(prestation.prix_base) * Number(prestation.acompte_pourcentage)) / 100);
+      }
+      
+      return sum;
+    }, 0);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.client_id || !formData.type_prestation_id || !formData.date_heure) {
+    if (!formData.client_id || formData.type_prestation_ids.length === 0 || !formData.date_heure) {
       return;
     }
 
     const dataToSend: CreateRendezVousGerantDTO = {
       ...formData,
-      duree_minutes: formData.duree_minutes || 60,
+      duree_minutes: formData.duree_minutes || dureeTotal,
+      prix_estime: formData.prix_estime || prixTotal,
     };
 
     // Vérifier si l'acompte a été modifié
-    if (selectedPrestation?.acompte_requis) {
-      const acompteRequis = calculerAcompteRequis(selectedPrestation);
+    const acompteRequis = calculerAcompteTotal();
+    const aDemandeAcompte = selectedPrestations.some(p => p.acompte_requis);
+    
+    if (aDemandeAcompte && acompteRequis > 0) {
       const acompteModifie = formData.acompte_montant || 0;
 
-      // Si l'acompte modifié est différent de l'acompte requis, demander confirmation
-      if (acompteRequis && acompteModifie !== acompteRequis) {
+      if (acompteModifie !== acompteRequis) {
         setPendingSubmitData(dataToSend);
         setShowConfirmationAcompte(true);
         return;
       }
     }
 
-    // Créer directement si pas de modification d'acompte
     proceedWithCreation(dataToSend);
   };
 
@@ -184,7 +196,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
   const resetForm = () => {
     setFormData({
       client_id: 0,
-      type_prestation_id: 0,
+      type_prestation_ids: [],
       date_heure: '',
       duree_minutes: 60,
       statut: 'en_attente',
@@ -195,7 +207,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
     });
     setSearchTerm('');
     setSelectedClient(null);
-    setSelectedPrestation(null);
+    setSelectedPrestations([]);
     setShowCreateClient(false);
     setErrorMessage('');
     setNewClientData({
@@ -207,24 +219,45 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
     });
   };
 
-  const handlePrestationChange = (prestationId: number) => {
-    const prestation = prestations?.find((p) => p.id === prestationId);
+  const handlePrestationsChange = (prestations: TypePrestation[]) => {
+    setSelectedPrestations(prestations);
     
-    if (prestation) {
-      setSelectedPrestation(prestation);
+    const ids = prestations.map(p => p.id);
+    
+    // ✅ Convertir prix_base en nombre
+    const prixTotal = prestations.reduce((sum, p) => {
+      return sum + (Number(p.prix_base) || 0);
+    }, 0);
+    
+    const dureeTotal = prestations.reduce((sum, p) => {
+      return sum + (Number(p.duree_estimee_minutes) || 0);
+    }, 0);
+    
+    const aDemandeAcompte = prestations.some(p => p.acompte_requis);
+    
+    const acompteTotal = prestations.reduce((sum, prestation) => {
+      if (!prestation.acompte_requis) return sum;
       
-      const acompteRequis = calculerAcompteRequis(prestation);
+      if (prestation.acompte_montant) {
+        return sum + Number(prestation.acompte_montant);
+      }
       
-      setFormData({
-        ...formData,
-        type_prestation_id: prestationId,
-        duree_minutes: prestation.duree_estimee_minutes || 60,
-        prix_estime: prestation.prix_base || undefined,
-        acompte_demande: prestation.acompte_requis,
-        acompte_montant: acompteRequis || undefined,
-        acompte_paye: false,
-      });
-    }
+      if (prestation.acompte_pourcentage) {
+        return sum + Math.round((Number(prestation.prix_base) * Number(prestation.acompte_pourcentage)) / 100);
+      }
+      
+      return sum;
+    }, 0);
+    
+    setFormData({
+      ...formData,
+      type_prestation_ids: ids,
+      duree_minutes: dureeTotal || 60,
+      prix_estime: prixTotal || undefined,
+      acompte_demande: aDemandeAcompte,
+      acompte_montant: acompteTotal > 0 ? acompteTotal : undefined,
+      acompte_paye: false,
+    });
   };
 
   const handleClientSelect = (client: Client) => {
@@ -241,6 +274,18 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
     }
   };
 
+  const handleToggleAllCoiffeurs = (checked: boolean) => {
+    if (checked) {
+      const allIds = coiffeurs?.map(c => c.id) || [];
+      setFormData({ ...formData, coiffeur_ids: allIds });
+    } else {
+      setFormData({ ...formData, coiffeur_ids: [] });
+    }
+  };
+
+  const allCoiffeursSelected = coiffeurs && coiffeurs.length > 0 && 
+    formData.coiffeur_ids?.length === coiffeurs.length;
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR').format(value);
   };
@@ -251,9 +296,26 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
     }
   }, [isOpen]);
 
+  // Recalculer totaux quand les prestations changent
+  useEffect(() => {
+    if (selectedPrestations.length > 0) {
+      const acompteTotal = calculerAcompteTotal();
+      const aDemandeAcompte = selectedPrestations.some(p => p.acompte_requis);
+      
+      setFormData(prev => ({
+        ...prev,
+        duree_minutes: dureeTotal || 60,
+        prix_estime: prixTotal || undefined,
+        acompte_demande: aDemandeAcompte,
+        acompte_montant: acompteTotal > 0 ? acompteTotal : undefined,
+      }));
+    }
+  }, [selectedPrestations]);
+
   if (!isOpen) return null;
 
-  const acompteRequis = selectedPrestation ? calculerAcompteRequis(selectedPrestation) : null;
+  const acompteRequis = calculerAcompteTotal();
+  const aDemandeAcompte = selectedPrestations.some(p => p.acompte_requis);
 
   return (
     <>
@@ -491,29 +553,35 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
               )}
             </div>
 
-            {/* Prestation */}
+            {/* Prestations (MULTI-SÉLECTION) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Scissors className="w-4 h-4 inline mr-1" />
-                Prestation *
+                Prestations * <span className="text-xs text-gray-500">(Sélection multiple)</span>
               </label>
-              <select
-                value={formData.type_prestation_id}
-                onChange={(e) => handlePrestationChange(Number(e.target.value))}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">Sélectionner une prestation</option>
-                {prestations?.map((prestation) => (
-                  <option key={prestation.id} value={prestation.id}>
-                    {prestation.nom} - {prestation.prix_base} FCFA ({prestation.duree_estimee_minutes} min)
-                  </option>
-                ))}
-              </select>
+              <PrestationMultiSelectRDV
+                selectedPrestations={selectedPrestations}
+                onChange={handlePrestationsChange}
+              />
+              
+              {/* Résumé des prestations */}
+              {selectedPrestations.length > 0 && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-gray-700">
+                      {selectedPrestations.length} prestation(s) sélectionnée(s)
+                    </span>
+                    <div className="text-right">
+                      <div className="font-bold text-blue-600">{formatCurrency(prixTotal)} FCFA</div>
+                      <div className="text-xs text-gray-600">{dureeTotal} minutes</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Section Acompte */}
-            {selectedPrestation?.acompte_requis && acompteRequis && (
+            {aDemandeAcompte && acompteRequis > 0 && (
               <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-orange-600" />
@@ -524,16 +592,14 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                   {/* Acompte requis (lecture seule) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Acompte défini
+                      Acompte défini (total)
                     </label>
                     <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 font-medium">
                       {formatCurrency(acompteRequis)} FCFA
                     </div>
-                    {selectedPrestation.acompte_pourcentage && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        ({selectedPrestation.acompte_pourcentage}% du prix de base)
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Somme des acomptes de {selectedPrestations.filter(p => p.acompte_requis).length} prestation(s)
+                    </p>
                   </div>
 
                   {/* Acompte modifiable */}
@@ -550,7 +616,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                         setFormData({ ...formData, acompte_montant: value });
                       }}
                       min="0"
-                      max={formData.prix_estime || undefined}
+                      max={formData.prix_estime || prixTotal}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     />
@@ -573,13 +639,55 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                     type="checkbox"
                     id="acompte_paye"
                     checked={formData.acompte_paye || false}
-                    onChange={(e) => setFormData({ ...formData, acompte_paye: e.target.checked })}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      acompte_paye: e.target.checked,
+                      mode_paiement: e.target.checked ? formData.mode_paiement : undefined,
+                      reference_transaction: e.target.checked ? formData.reference_transaction : undefined,
+                    })}
                     className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                   />
                   <label htmlFor="acompte_paye" className="text-sm font-medium text-gray-700">
                     Acompte déjà payé
                   </label>
                 </div>
+
+                {/* Champs de paiement si acompte payé */}
+                {formData.acompte_paye && (
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mode de paiement *
+                      </label>
+                      <select
+                        value={formData.mode_paiement || ''}
+                        onChange={(e) => setFormData({ ...formData, mode_paiement: e.target.value as any })}
+                        required
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      >
+                        <option value="">Sélectionner...</option>
+                        <option value="especes">Espèces</option>
+                        <option value="orange_money">Orange Money</option>
+                        <option value="carte_bancaire">Carte bancaire</option>
+                        <option value="moov_money">Moov Money</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Référence transaction
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.reference_transaction || ''}
+                        onChange={(e) => setFormData({ ...formData, reference_transaction: e.target.value })}
+                        placeholder="Optionnel"
+                        maxLength={100}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -626,34 +734,50 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Coiffeurs (optionnel)
               </label>
-              <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                {coiffeurs?.map((coiffeur) => (
-                  <label
-                    key={coiffeur.id}
-                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                  >
+              <div className="space-y-2 border border-gray-300 rounded-lg p-3">
+                {coiffeurs && coiffeurs.length > 0 && (
+                  <label className="flex items-center gap-3 p-2 bg-gray-50 rounded border-b border-gray-200 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={formData.coiffeur_ids?.includes(coiffeur.id) || false}
-                      onChange={(e) => {
-                        const ids = formData.coiffeur_ids || [];
-                        setFormData({
-                          ...formData,
-                          coiffeur_ids: e.target.checked
-                            ? [...ids, coiffeur.id]
-                            : ids.filter(id => id !== coiffeur.id)
-                        });
-                      }}
+                      checked={allCoiffeursSelected}
+                      onChange={(e) => handleToggleAllCoiffeurs(e.target.checked)}
                       className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                     />
-                    <span className="text-sm text-gray-900">
-                      {coiffeur.prenom} {coiffeur.nom}
-                      {coiffeur.specialite && (
-                        <span className="text-gray-500 text-xs ml-2">({coiffeur.specialite})</span>
-                      )}
+                    <span className="text-sm font-medium text-gray-900">
+                      Tout sélectionner
                     </span>
                   </label>
-                ))}
+                )}
+
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {coiffeurs?.map((coiffeur) => (
+                    <label
+                      key={coiffeur.id}
+                      className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.coiffeur_ids?.includes(coiffeur.id) || false}
+                        onChange={(e) => {
+                          const ids = formData.coiffeur_ids || [];
+                          setFormData({
+                            ...formData,
+                            coiffeur_ids: e.target.checked
+                              ? [...ids, coiffeur.id]
+                              : ids.filter(id => id !== coiffeur.id)
+                          });
+                        }}
+                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <span className="text-sm text-gray-900">
+                        {coiffeur.prenom} {coiffeur.nom}
+                        {coiffeur.specialite && (
+                          <span className="text-gray-500 text-xs ml-2">({coiffeur.specialite})</span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
               {formData.coiffeur_ids && formData.coiffeur_ids.length > 0 && (
                 <p className="text-sm text-gray-500 mt-2">
@@ -670,9 +794,9 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                 </label>
                 <input
                   type="number"
-                  value={formData.duree_minutes || ''}
+                  value={formData.duree_minutes || dureeTotal || ''}
                   onChange={(e) => {
-                    const value = e.target.value ? Number(e.target.value) : 60;
+                    const value = e.target.value ? Number(e.target.value) : dureeTotal;
                     setFormData({ ...formData, duree_minutes: value });
                   }}
                   min="15"
@@ -680,6 +804,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                   required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
+                <p className="text-xs text-gray-500 mt-1">Durée calculée: {dureeTotal} min</p>
               </div>
 
               <div>
@@ -689,11 +814,12 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                 </label>
                 <input
                   type="number"
-                  value={formData.prix_estime || ''}
+                  value={formData.prix_estime || prixTotal || ''}
                   onChange={(e) => setFormData({ ...formData, prix_estime: e.target.value ? Number(e.target.value) : undefined })}
                   min="0"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
+                <p className="text-xs text-gray-500 mt-1">Prix calculé: {formatCurrency(prixTotal)} FCFA</p>
               </div>
             </div>
 
@@ -740,11 +866,12 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                 disabled={
                   isCreating || 
                   !formData.client_id || 
-                  !formData.type_prestation_id || 
+                  formData.type_prestation_ids.length === 0 ||
                   !formData.date_heure ||
                   !formData.duree_minutes ||
                   formData.duree_minutes < 15 ||
-                  (selectedPrestation?.acompte_requis && !formData.acompte_montant)
+                  (aDemandeAcompte && !formData.acompte_montant) ||
+                  (formData.acompte_paye && !formData.mode_paiement)
                 }
                 className="px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -756,7 +883,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
       </div>
 
       {/* Modal de confirmation d'acompte */}
-      {selectedPrestation && acompteRequis && (
+      {aDemandeAcompte && acompteRequis > 0 && (
         <ModalConfirmationAcompte
           isOpen={showConfirmationAcompte}
           onClose={() => {
@@ -766,7 +893,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
           onConfirm={handleConfirmAcompte}
           acompteRequis={acompteRequis}
           acompteModifie={formData.acompte_montant || 0}
-          nomPrestation={selectedPrestation.nom}
+          nomPrestation={`${selectedPrestations.length} prestation(s)`}
         />
       )}
     </>

@@ -60,6 +60,13 @@ export function ProduitsTab() {
     return true;
   });
 
+  //   console.log('📊 Stats:', {
+  //   activeTab,
+  //   totalProduits: produits.length,
+  //   filteredProduits: filteredProduits.length,
+  //   produitsTypes: produits.map(p => ({ id: p.id, nom: p.nom, type: p.type_stock_principal }))
+  // });
+
   // Colonnes conditionnelles
   const shouldShowStockVente = activeTab === 'tous' || activeTab === 'vente';
   const shouldShowStockSalon = activeTab === 'tous' || activeTab === 'utilisation';
@@ -100,10 +107,14 @@ export function ProduitsTab() {
     setShowFormModal(true);
   };
 
-  const handleFormSuccess = () => {
-    reload();
+  const handleFormSuccess = async () => {
     setShowFormModal(false);
     setEditingProduit(null);
+    
+    // Attendre un peu que le backend termine
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    await reload(); // ← Maintenant c'est async
   };
 
   const handleFormClose = () => {

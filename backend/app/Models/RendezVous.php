@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RendezVous extends Model
 {
@@ -77,6 +79,21 @@ class RendezVous extends Model
     public function typePrestation()
     {
         return $this->belongsTo(TypePrestation::class, 'type_prestation_id');
+    }
+
+     public function paiements(): HasMany
+    {
+        return $this->hasMany(RendezVousPaiement::class, 'rendez_vous_id');
+    }
+
+    public function vente(): HasMany
+    {
+        return $this->hasMany(Vente::class, 'rendez_vous_id');
+    }
+
+    public function prestations()
+    {
+        return $this->belongsToMany(TypePrestation::class, 'rendez_vous_prestations')->withPivot('ordre')->orderBy('ordre');
     }
 
     /**
@@ -181,6 +198,19 @@ class RendezVous extends Model
             'no_show' => 'secondary',
             default => 'secondary',
         };
+    }
+
+    public function getMontantPayeAttribute(): float
+    {
+        return $this->paiements()->sum('montant');
+    }
+
+    public function getSoldeRestantAttribute(): float
+    {
+        if (!$this->prix_estime) {
+            return 0;
+        }
+        return max(0, $this->prix_estime - $this->getMontantPayeAttribute());
     }
 
     /**

@@ -604,6 +604,116 @@ const handleToggleVisibility = async () => {
             </CardContent>
           </Card>
 
+
+           {/* Gains totaux */}
+          <Card>
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 border-l-4 border-emerald-500">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg font-semibold">
+                <DollarSign className="w-5 h-5 text-emerald-600" />
+                💎 Gains totaux
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {/* Gain sur stock commandé */}
+              {produit.gain_total_commande !== undefined && produit.quantite_stock_commande && (
+                <div className="p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600">
+                        Gain sur stock commandé
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {produit.quantite_stock_commande} unités × {formatCurrency(produit.marge_montant || 0)} FCFA
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl sm:text-2xl font-bold text-purple-600">
+                        {formatCurrency(produit.gain_total_commande)} FCFA
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-purple-200">
+                    <p className="text-xs text-purple-700">
+                      💡 Gain potentiel si tout le stock commandé est vendu
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Gain sur stock actuel */}
+              {produit.gain_total_stock_actuel !== undefined && produit.stock_total && (
+                <div className="p-3 sm:p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg border border-emerald-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <label className="text-xs sm:text-sm font-medium text-gray-600">
+                        Gain sur stock actuel
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {produit.stock_total} unités × {formatCurrency(produit.marge_montant || 0)} FCFA
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl sm:text-2xl font-bold text-emerald-600">
+                        {formatCurrency(produit.gain_total_stock_actuel)} FCFA
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Détail par type de stock */}
+                  <div className="mt-3 pt-3 border-t border-emerald-200 space-y-2">
+                    {produit.stock_vente > 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-600">
+                          🛒 Stock vente ({produit.stock_vente} unités)
+                        </span>
+                        <span className="font-semibold text-blue-600">
+                          {formatCurrency((produit.marge_montant || 0) * produit.stock_vente)} FCFA
+                        </span>
+                      </div>
+                    )}
+                    {produit.stock_utilisation > 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-600">
+                          💇‍♀️ Stock salon ({produit.stock_utilisation} unités)
+                        </span>
+                        <span className="font-semibold text-purple-600">
+                          {formatCurrency((produit.marge_montant || 0) * produit.stock_utilisation)} FCFA
+                        </span>
+                      </div>
+                    )}
+                    {produit.stock_reserve > 0 && (
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-600">
+                          🏪 Stock réserve ({produit.stock_reserve} unités)
+                        </span>
+                        <span className="font-semibold text-amber-600">
+                          {formatCurrency((produit.marge_montant || 0) * produit.stock_reserve)} FCFA
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-2 pt-2 border-t border-emerald-300">
+                    <p className="text-xs text-emerald-700">
+                      💰 Gain réel si tout le stock actuel est vendu maintenant
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Message si pas de stock */}
+              {(!produit.stock_total || produit.stock_total === 0) && 
+               (!produit.quantite_stock_commande || produit.quantite_stock_commande === 0) && (
+                <div className="p-4 bg-gray-50 rounded-lg text-center">
+                  <p className="text-sm text-gray-500">
+                    📦 Aucun stock disponible pour calculer les gains
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>   
+
+
           {/* Stocks */}
           <Card>
             <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-l-4 border-teal-500">

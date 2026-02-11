@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { rendezVousApi } from '../services/rendezVousApi';
 import { toast } from 'sonner';
 import type { RendezVousFilters, CreateRendezVousGerantDTO } from '../types/rendezVous.types';
+import type { PayerAcompteDTO, FinaliserRendezVousDTO } from '../types/rendezVousPaiement.types';
 
 export const useRendezVous = (filters?: RendezVousFilters) => {
   const queryClient = useQueryClient();
@@ -98,7 +99,7 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     },
   });
 
-  // Marquer acompte payé
+  // Marquer acompte payé (ancienne méthode, à garder pour compatibilité)
   const marquerAcomptePayeMutation = useMutation({
     mutationFn: (id: number) => rendezVousApi.marquerAcomptePaye(id),
     onSuccess: () => {
@@ -107,6 +108,45 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Erreur');
+    },
+  });
+
+  // Payer acompte (nouvelle méthode avec enregistrement du paiement)
+  const payerAcompteMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: PayerAcompteDTO }) =>
+      rendezVousApi.payerAcompte(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rendez-vous'] });
+      toast.success('Acompte enregistré avec succès');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Erreur lors du paiement de l'acompte");
+    },
+  });
+
+  // Marquer en cours (client arrivé)
+  const marquerEnCoursMutation = useMutation({
+    mutationFn: (id: number) => rendezVousApi.marquerEnCours(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rendez-vous'] });
+      toast.success('Rendez-vous marqué comme en cours');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erreur');
+    },
+  });
+
+  // Finaliser rendez-vous (créer vente + payer solde)
+  const finaliserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: FinaliserRendezVousDTO }) =>
+      rendezVousApi.finaliserRendezVous(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rendez-vous'] });
+      queryClient.invalidateQueries({ queryKey: ['ventes'] });
+      toast.success('Rendez-vous finalisé avec succès');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erreur lors de la finalisation');
     },
   });
 
@@ -125,5 +165,11 @@ export const useRendezVous = (filters?: RendezVousFilters) => {
     isUpdating: updateMutation.isPending,
     marquerAcomptePaye: marquerAcomptePayeMutation.mutate,
     updateAcompte,
+    // Nouvelles méthodes pour la gestion des paiements
+    payerAcompte: payerAcompteMutation.mutate,
+    marquerEnCours: marquerEnCoursMutation.mutate,
+    finaliser: finaliserMutation.mutate,
+    isPayingAcompte: payerAcompteMutation.isPending,
+    isFinalizing: finaliserMutation.isPending,
   };
 };

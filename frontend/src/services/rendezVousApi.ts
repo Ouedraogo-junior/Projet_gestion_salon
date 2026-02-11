@@ -11,6 +11,7 @@ import type {
   CreneauDisponible,
   RendezVousFilters,
 } from '../types/rendezVous.types';
+import type { PayerAcompteDTO, FinaliserRendezVousDTO } from '../types/rendezVousPaiement.types';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -189,22 +190,81 @@ export const rendezVousApi = {
   /**
    * Mettre à jour l'acompte d'un rendez-vous
    */
-
   async updateAcompte(id: number, acompte_montant: number): Promise<ApiResponse<RendezVous>> {
-  const response = await apiAuth.patch(`/rendez-vous/${id}/acompte`, {
-    acompte_montant,
-  });
-  return response.data;
-},
+    const response = await apiAuth.patch(`/rendez-vous/${id}/acompte`, {
+      acompte_montant,
+    });
+    return response.data;
+  },
 
   /**
    * Marquer l'acompte comme payé
    */
-
-  marquerAcomptePaye: async (id: number) => {
+  async marquerAcomptePaye(id: number): Promise<ApiResponse<RendezVous>> {
     const response = await apiAuth.post(`/rendez-vous/${id}/marquer-acompte-paye`);
     return response.data;
   },
 
+  // ============ GESTION PAIEMENTS ============
 
+  /**
+   * Payer l'acompte d'un rendez-vous
+   */
+  async payerAcompte(id: number, data: PayerAcompteDTO): Promise<ApiResponse<any>> {
+    const response = await apiAuth.post(`/rendez-vous/${id}/payer-acompte`, data);
+    return response.data;
+  },
+
+  /**
+   * Marquer le rendez-vous comme en cours (client arrivé)
+   */
+  async marquerEnCours(id: number): Promise<ApiResponse<any>> {
+    const response = await apiAuth.patch(`/rendez-vous/${id}/marquer-en-cours`);
+    return response.data;
+  },
+
+  /**
+   * Finaliser le rendez-vous (créer vente + payer solde)
+   */
+  async finaliserRendezVous(id: number, data: FinaliserRendezVousDTO): Promise<ApiResponse<any>> {
+    const response = await apiAuth.post(`/rendez-vous/${id}/finaliser`, data);
+    return response.data;
+  },
+
+  /**
+   * Récupérer l'historique des paiements
+   */
+  async getHistoriquePaiements(id: number): Promise<any> {
+    const response = await apiAuth.get(`/rendez-vous/${id}/historique-paiements`);
+    return response.data;
+  },
+
+  /**
+   * Liste des rendez-vous avec paiements (NOUVELLE MÉTHODE)
+   */
+  async getListeAvecPaiements(params?: { 
+    search?: string; 
+    date_debut?: string; 
+    date_fin?: string;
+    page?: number;
+  }): Promise<any> {
+    const response = await apiAuth.get('/rendez-vous/liste-avec-paiements', { params });
+    return response.data;
+  },
+
+  /**
+   * Générer le reçu d'acompte (PDF)
+   */
+  getRecuAcompteUrl(id: number): string {
+    const token = tokenStorage.getToken();
+    return `${API_URL}/rendez-vous/${id}/recu-acompte?token=${token}`;
+  },
+
+  /**
+   * Générer le reçu final (PDF)
+   */
+  getRecuFinalUrl(id: number): string {
+    const token = tokenStorage.getToken();
+    return `${API_URL}/rendez-vous/${id}/recu-final?token=${token}`;
+  },
 };

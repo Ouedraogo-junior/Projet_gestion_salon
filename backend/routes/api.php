@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\TransfertStockController;
 use App\Http\Controllers\Api\TypePrestationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PublicController;
+use App\Http\Controllers\Api\RendezVousPaiementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -72,6 +73,10 @@ Route::post('/rendez-vous/{id}/cancel-public', [RendezVousController::class, 'ca
 Route::get('/types-prestations/public', [TypePrestationController::class, 'indexPublic']);
 Route::get('/salon/public', [SalonController::class, 'show']);
 Route::get('/ventes/{id}/receipt', [VenteController::class, 'generateReceipt']);
+
+// Génération des reçus pour paiements de rendez-vous
+Route::get('/rendez-vous/{id}/recu-acompte', [RendezVousPaiementController::class, 'genererRecuAcompte']);
+Route::get('/rendez-vous/{id}/recu-final', [RendezVousPaiementController::class, 'genererRecuFinal']);
 
 // ============================================================
 // ROUTES PROTÉGÉES
@@ -170,10 +175,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/transferts/{transfert}', [TransfertStockController::class, 'destroy']);
 
         // Rapports - Accès complet
-        Route::get('/rapports/global', [RapportController::class, 'global']);
-        Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
-        Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
-        Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
+        // Route::get('/rapports/global', [RapportController::class, 'global']);
+        // Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
+        // Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
+        // Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
         
     });
 
@@ -270,6 +275,31 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/photo', [UserController::class, 'uploadPhoto']);
             Route::delete('/photo', [UserController::class, 'deletePhoto']);
         });
+
+        // Rendez-vous Paiements
+         // Paiement d'acompte
+        Route::post('/rendez-vous/{id}/payer-acompte', [RendezVousPaiementController::class, 'payerAcompte']);
+        
+        // Marquer comme en cours (client arrivé)
+        Route::patch('/rendez-vous/{id}/marquer-en-cours', [RendezVousPaiementController::class, 'marquerEnCours']);
+        
+        // Finaliser le rendez-vous (créer vente + payer solde)
+        Route::post('/rendez-vous/{id}/finaliser', [VenteController::class, 'finaliserRendezVous']);
+        
+        // Paiement du solde (après création de la vente) - OBSOLÈTE, utiliser /finaliser
+        Route::post('/rendez-vous/{id}/payer-solde', [RendezVousPaiementController::class, 'payerSolde']);
+        
+        // Historique des paiements
+        Route::get('/rendez-vous/{id}/historique-paiements', [RendezVousPaiementController::class, 'historiquePaiements']);
+
+        // Liste des rendez-vous avec détails des paiements (pour dashboard)
+        Route::get('/rendez-vous/liste-avec-paiements', [RendezVousController::class, 'listeAvecPaiements']);
+        
+        // Rapports - Accès pour tous (filtrage côté frontend selon le rôle)
+        Route::get('/rapports/global', [RapportController::class, 'global']);
+        Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
+        Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
+        Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
     });
 
     // ========================================
@@ -310,6 +340,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/notifications/read/all', [NotificationController::class, 'deleteRead']); // AVANT /{id}
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+    // Arrete de compte
+    Route::post('/rapports/compte-arrete', [RapportController::class, 'compteArrete']);
 });
 
 // ============================================================

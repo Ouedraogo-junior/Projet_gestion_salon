@@ -93,6 +93,14 @@ class Produit extends Model
         'frais_transport_local' => 'decimal:2',
     ];
 
+        protected $appends = [
+        'marge_unitaire',
+        'marge_pourcentage',
+        'gain_total_commande',
+        'gain_total_stock_actuel',
+        'stock_total'
+    ];
+
     // Relation avec la catégorie
     public function categorie()
     {
@@ -229,5 +237,37 @@ class Produit extends Model
     {
         return $this->seuil_critique_reserve !== null 
             && $this->stock_reserve <= $this->seuil_critique_reserve;
+    }
+
+    /**
+     * Accesseurs pour les calculs de marge et gains
+     */
+    public function getMargeUnitaireAttribute(): float
+    {
+        return round(($this->prix_vente ?? 0) - ($this->prix_achat ?? 0), 2);
+    }
+
+    public function getMargePourcentageAttribute(): float
+    {
+        if (!$this->prix_achat || $this->prix_achat == 0) {
+            return 0;
+        }
+        return round(($this->marge_unitaire / $this->prix_achat) * 100, 2);
+    }
+
+    public function getGainTotalCommandeAttribute(): float
+    {
+        return round($this->marge_unitaire * ($this->quantite_stock_commande ?? 0), 2);
+    }
+
+    public function getGainTotalStockActuelAttribute(): float
+    {
+        $stockTotal = ($this->stock_vente ?? 0) + ($this->stock_utilisation ?? 0) + ($this->stock_reserve ?? 0);
+        return round($this->marge_unitaire * $stockTotal, 2);
+    }
+
+    public function getStockTotalAttribute(): int
+    {
+        return ($this->stock_vente ?? 0) + ($this->stock_utilisation ?? 0) + ($this->stock_reserve ?? 0);
     }
 }

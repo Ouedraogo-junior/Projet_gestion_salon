@@ -9,11 +9,21 @@ interface Props {
   rendezVous: RendezVous[];
   isLoading: boolean;
   onRefresh: () => void;
+  selectedRdvFromSearch?: RendezVous | null; 
+  onClearSelection?: () => void; 
 }
 
-export const ListeRendezVous: React.FC<Props> = ({ rendezVous, isLoading, onRefresh }) => {
+export const ListeRendezVous: React.FC<Props> = ({ rendezVous, isLoading, onRefresh, selectedRdvFromSearch, onClearSelection }) => {
   const [selectedRdv, setSelectedRdv] = useState<RendezVous | null>(null);
   const [menuOpen, setMenuOpen] = useState<number | null>(null);
+
+  // Ouvrir automatiquement le RDV de la recherche
+  React.useEffect(() => {
+    if (selectedRdvFromSearch) {
+      setSelectedRdv(selectedRdvFromSearch);
+      onClearSelection?.();
+    }
+  }, [selectedRdvFromSearch, onClearSelection]);
 
   const getStatutBadge = (statut: string) => {
     const configs = {
