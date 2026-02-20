@@ -210,7 +210,15 @@
             <div class="info-block-title">Rendez-vous</div>
             <p><strong>N°:</strong> RDV-{{ str_pad($rendezVous->id, 6, '0', STR_PAD_LEFT) }}</p>
             <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($rendezVous->date_heure)->format('d/m/Y à H:i') }}</p>
-            <p><strong>Prestation:</strong> {{ $rendezVous->typePrestation->nom }}</p>
+            <p><strong>Prestation(s):</strong> 
+                @if($rendezVous->prestations && $rendezVous->prestations->count() > 0)
+                    {{ $rendezVous->prestations->pluck('nom')->join(', ') }}
+                @elseif($rendezVous->typePrestation)
+                    {{ $rendezVous->typePrestation->nom }}
+                @else
+                    N/A
+                @endif
+            </p>
             <p><strong>Durée:</strong> {{ $rendezVous->duree_minutes }} min</p>
             @if($rendezVous->coiffeur)
                 <p><strong>Coiffeur:</strong> {{ $rendezVous->coiffeur->prenom }} {{ $rendezVous->coiffeur->nom }}</p>
@@ -250,7 +258,9 @@
             <div class="info-box-content">
                 @if($rendezVous->prix_estime)
                     <p><strong>Prix estimé prestation:</strong> {{ number_format($rendezVous->prix_estime, 0, ',', ' ') }} FCFA</p>
-                @else
+                @elseif($rendezVous->prestations && $rendezVous->prestations->count() > 0)
+                    <p><strong>Prix de base:</strong> {{ number_format($rendezVous->prestations->sum('prix_base'), 0, ',', ' ') }} FCFA</p>
+                @elseif($rendezVous->typePrestation)
                     <p><strong>Prix de base:</strong> {{ number_format($rendezVous->typePrestation->prix_base, 0, ',', ' ') }} FCFA</p>
                 @endif
                 <p><strong>Acompte versé:</strong> {{ number_format($paiementAcompte->montant, 0, ',', ' ') }} FCFA</p>

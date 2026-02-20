@@ -137,8 +137,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/attributs/{attribut}/valeurs', [AttributController::class, 'supprimerValeurPossible']);
         
         // Produits - CRUD complet
-        Route::post('/produits', [ProduitController::class, 'store']);
-        Route::put('/produits/{produit}', [ProduitController::class, 'update']);
         Route::delete('/produits/{produit}', [ProduitController::class, 'destroy']);
         Route::post('/produits/{produit}/toggle-active', [ProduitController::class, 'toggleActive']);
         Route::post('/produits/{id}/photo', [ProduitController::class, 'uploadPhoto']);
@@ -180,6 +178,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
         // Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
         
+        Route::get('/produits/en-attente', [ProduitController::class, 'enAttente']);           // AVANT /{produit}
+        Route::patch('/produits/{produit}/valider', [ProduitController::class, 'valider']);
+        Route::patch('/produits/{produit}/rejeter', [ProduitController::class, 'rejeter']);
+        Route::patch('/produits/{produit}/modifier-valider', [ProduitController::class, 'modifierEtValider']);
     });
 
     // ========================================
@@ -202,6 +204,10 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Pointages - Stats
         Route::get('/pointages/stats', [PointageController::class, 'stats']);
+
+        // Produits - Validation
+        Route::post('/produits', [ProduitController::class, 'store']);
+        Route::put('/produits/{produit}', [ProduitController::class, 'update']);
     });
 
     // ========================================

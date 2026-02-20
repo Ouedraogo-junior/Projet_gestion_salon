@@ -85,6 +85,24 @@ export const RendezVousPage: React.FC = () => {
 
   return (
     <div className="h-full bg-gray-50">
+      <style>
+        {`
+          @keyframes pulse-dot {
+            0%, 100% { 
+              opacity: 1;
+              transform: scale(1);
+            }
+            50% { 
+              opacity: 0.3;
+              transform: scale(1.2);
+            }
+          }
+          .animate-pulse-dot {
+            animation: pulse-dot 1s ease-in-out infinite;
+          }
+        `}
+      </style>
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -204,7 +222,18 @@ export const RendezVousPage: React.FC = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+            {/* Stat "Aujourd'hui" avec point rouge clignotant conditionnel */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 relative">
+              {/* Point rouge clignotant - affiché uniquement s'il y a des RDV aujourd'hui */}
+              {stats.aujourd_hui > 0 && (
+                <div className="absolute -top-1 -right-1 flex items-center justify-center">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600 animate-pulse-dot"></span>
+                  </span>
+                </div>
+              )}
+              
               <p className="text-sm text-blue-700 font-medium">Aujourd'hui</p>
               <p className="text-2xl sm:text-3xl font-bold text-blue-900 mt-1">{stats.aujourd_hui}</p>
             </div>

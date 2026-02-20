@@ -97,13 +97,13 @@ export const rendezVousApi = {
    */
   async getCreneauxDisponibles(
     date: string,
-    typePrestationId: number,
+    typePrestationIds: number[], // ← Array maintenant
     coiffeurId?: number
   ): Promise<ApiResponse<{ date: string; creneaux: CreneauDisponible[] }>> {
     const response = await apiPublic.get('/rendez-vous/available-slots', {
       params: {
         date,
-        type_prestation_id: typePrestationId,
+        'type_prestation_ids[]': typePrestationIds, // ← Notation array pour query params
         coiffeur_id: coiffeurId,
       },
     });

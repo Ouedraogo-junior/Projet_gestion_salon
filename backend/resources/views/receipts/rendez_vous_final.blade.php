@@ -385,7 +385,9 @@
             <div class="info-box-title">Modes de paiement</div>
             <div class="info-box-content">
                 @php
-                    $acomptePaiement = $rendezVous->paiements->where('type_paiement', 'acompte')->first();
+                    $acomptePaiement = $rendezVous->paiements && $rendezVous->paiements->count() > 0 
+                        ? $rendezVous->paiements->where('type_paiement', 'acompte')->first() 
+                        : null;
                 @endphp
                 @if($rendezVous->acompte_paye && $rendezVous->acompte_montant && $acomptePaiement)
                     <div style="margin: 1px 0;">

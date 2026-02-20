@@ -126,6 +126,18 @@ class ProduitResource extends JsonResource
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
             'deleted_at' => $this->deleted_at?->format('Y-m-d H:i:s'),
+
+            'statut_validation' => $this->statut_validation,
+            'motif_rejet'       => $this->motif_rejet,
+            'valide_le'         => $this->valide_le?->format('d/m/Y H:i'),
+            'validateur'        => $this->whenLoaded('validateur', fn() => [
+                'id'   => $this->validateur->id,
+                'name' => $this->validateur->name,
+            ]),
+            'createur'          => $this->whenLoaded('createur', fn() => [
+                'id'   => $this->createur->id,
+                'name' => $this->createur->name,
+            ]),
         ];
     }
     

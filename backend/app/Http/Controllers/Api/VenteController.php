@@ -270,6 +270,9 @@ class VenteController extends Controller
                 } else {
                     $produit = Produit::find($article['id']);
                     if ($produit) {
+                        if ($produit->statut_validation !== 'valide') {
+                            throw new \Exception("Le produit \"{$produit->nom}\" n'est pas validé et ne peut pas être vendu.");
+                        }
                         $articleNom = $produit->nom;
                         $produitId = $produit->id;
                         $produitReference = $produit->reference;
@@ -759,10 +762,13 @@ class VenteController extends Controller
                     } else {
                     $produit = Produit::find($article['id']);
                     if ($produit) {
+
                         $articleNom = $produit->nom;
                         $produitId = $produit->id;
                         $produitReference = $produit->reference;
-
+                        if ($produit->statut_validation !== 'valide') {
+                            throw new \Exception("Le produit \"{$produit->nom}\" n'est pas validé et ne peut pas être vendu.");
+                        }
                         // Vérifier et décompter stock
                         $sourceStock = $article['source_stock'] ?? 'utilisation';
                         $stockDisponible = $sourceStock === 'vente' ? $produit->stock_vente : $produit->stock_utilisation;

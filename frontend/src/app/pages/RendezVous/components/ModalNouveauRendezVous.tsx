@@ -724,6 +724,7 @@ export const ModalNouveauRendezVous: React.FC<Props> = ({ isOpen, onClose, onSuc
                     setFormData({ ...formData, date_heure: `${date}T${e.target.value}` });
                   }}
                   required
+                  step="60"  
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>

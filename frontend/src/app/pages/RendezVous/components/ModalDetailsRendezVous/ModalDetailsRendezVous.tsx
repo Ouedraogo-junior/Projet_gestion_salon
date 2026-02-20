@@ -32,9 +32,9 @@ export const ModalDetailsRendezVous: React.FC<Props> = ({ rdv, isOpen, onClose, 
     updateAcompte,
     marquerEnCours,
   } = useRendezVous();
-  console.log('RDV complet:', rdv);
-  console.log('Paiements:', rdv.paiements);
-  console.log('Acompte payé?', rdv.acompte_paye);
+  // console.log('RDV complet:', rdv);
+  // console.log('Paiements:', rdv.paiements);
+  // console.log('Acompte payé?', rdv.acompte_paye);
 
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showAnnuler, setShowAnnuler] = useState(false);

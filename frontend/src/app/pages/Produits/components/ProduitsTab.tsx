@@ -1,7 +1,7 @@
 // src/app/pages/Produits/components/ProduitsTab.tsx
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { useProduits, useCategories } from '@/hooks/useProduitsModule';
@@ -12,6 +12,8 @@ import { ProductsGrid } from './ProductsGrid';
 import { ProduitFormModal } from './ProduitFormModal';
 import { ProduitDetailsModal } from './ProduitDetailsModal';
 import type { Produit } from '@/types/produit.types';
+import { ProduitFilters } from './ProduitFilters';
+import type { ProduitFilters as ProduitFiltersType } from '@/types/produit.types';
 
 type ProductSubTab = 'tous' | 'vente' | 'utilisation' | 'reserve';
 
@@ -26,6 +28,11 @@ export function ProduitsTab() {
   const [selectedProduit, setSelectedProduit] = useState<Produit | null>(null);
   const [editingProduit, setEditingProduit] = useState<Produit | null>(null);
   const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<ProduitFiltersType>({
+    sort_by: 'nom',
+    sort_order: 'asc',
+  });
 
   // 🔔 Gérer l'ouverture automatique depuis une notification
   useEffect(() => {
@@ -44,6 +51,18 @@ export function ProduitsTab() {
       }
     }
   }, [searchParams, produits, loading, setSearchParams]);
+
+  // 🔍 Recharger les produits à chaque changement de recherche
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (search !== '') {
+        reload({ search, per_page: 500 });
+      } else {
+        reload({ per_page: 500 });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Filtrage selon l'onglet actif
   const filteredProduits = produits.filter((prod: Produit) => {
@@ -127,6 +146,23 @@ export function ProduitsTab() {
     setSelectedProduit(null);
   };
 
+  // Gérer le changement de filtres
+  const handleFiltersChange = (newFilters: ProduitFiltersType) => {
+    setFilters(newFilters);
+    const params: any = { per_page: 500 };
+    if (newFilters.search)               params.search = newFilters.search;
+    if (newFilters.categorie_id)         params.categorie_id = newFilters.categorie_id;
+    if (newFilters.type_stock_principal) params.type_stock_principal = newFilters.type_stock_principal;
+    if (newFilters.actifs_only)          params.actifs_only = 'true';
+    if (newFilters.alerte_stock_vente)   params.alerte_stock_vente = 'true';
+    if (newFilters.alerte_stock_utilisation) params.alerte_stock_utilisation = 'true';
+    if (newFilters.critique_stock_vente) params.critique_stock_vente = 'true';
+    if (newFilters.en_promotion)         params.en_promotion = 'true';
+    if (newFilters.sort_by)              params.sort_by = newFilters.sort_by;
+    if (newFilters.sort_order)           params.sort_order = newFilters.sort_order;
+    reload(params);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -138,17 +174,50 @@ export function ProduitsTab() {
       {/* Barre de recherche */}
       <Card>
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-            <Input
-              type="text"
-              placeholder="Rechercher un produit..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyUp={(e) => e.key === 'Enter' && reload(search)}
-              className="pl-10"
-            />
+          <div className="flex gap-3">
+            {/* Barre de recherche */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+              <Input
+                type="text"
+                placeholder="Rechercher un produit..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  handleFiltersChange({ ...filters, search: e.target.value });
+                }}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Bouton filtre */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition ${
+                showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'
+              }`}
+            >
+              <Filter size={16} />
+              Filtres
+              {Object.values(filters).filter(Boolean).length > 2 && (
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">
+                  {Object.values(filters).filter(v => v && v !== 'nom' && v !== 'asc').length}
+                </span>
+              )}
+            </button>
           </div>
+
+          {/* Panneau filtres */}
+          {showFilters && (
+            <div className="mt-4 border-t pt-4">
+              <ProduitFilters
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                categories={categories}
+                onClose={() => setShowFilters(false)}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -112,16 +112,16 @@ export function ProduitFilters({
           <div className="space-y-2">
             <Label htmlFor="categorie">Catégorie</Label>
             <Select
-              value={localFilters.categorie_id?.toString() || ''}
+              value={localFilters.categorie_id?.toString() || 'all'}
               onValueChange={(value) => 
-                handleFilterChange('categorie_id', value ? parseInt(value) : undefined)
+                handleFilterChange('categorie_id', value === 'all' ? undefined : parseInt(value))
               }
             >
               <SelectTrigger id="categorie">
                 <SelectValue placeholder="Toutes les catégories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes les catégories</SelectItem>
+                <SelectItem value="all">Toutes les catégories</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id.toString()}>
                     {cat.nom} ({cat.nombre_produits || 0})
@@ -137,16 +137,16 @@ export function ProduitFilters({
           <div className="space-y-2">
             <Label htmlFor="type-stock">Type de stock</Label>
             <Select
-              value={localFilters.type_stock_principal || ''}
+              value={localFilters.type_stock_principal || 'all'}
               onValueChange={(value) => 
-                handleFilterChange('type_stock_principal', value || undefined)
+                handleFilterChange('type_stock_principal', value === 'all' ? undefined : value)
               }
             >
               <SelectTrigger id="type-stock">
                 <SelectValue placeholder="Tous les types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tous les types</SelectItem>
+                <SelectItem value="all">Tous les types</SelectItem>
                 <SelectItem value="vente">Vente uniquement</SelectItem>
                 <SelectItem value="utilisation">Utilisation uniquement</SelectItem>
                 <SelectItem value="mixte">Mixte (vente + utilisation)</SelectItem>

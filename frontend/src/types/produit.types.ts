@@ -116,6 +116,15 @@ export interface Produit {
   frais_bancaires?: number;
   frais_courtier?: number;
   frais_transport_local?: number;
+
+  // Validation
+  statut_validation: 'en_attente' | 'valide' | 'rejete';
+  motif_rejet: string | null;
+  valide_le: string | null;
+  cree_par: number | null;
+  valide_par: number | null;
+  createur?: { id: number; name: string };
+  validateur?: { id: number; name: string };
 }
 
 export interface MouvementStock {
@@ -191,17 +200,18 @@ export interface AttributFilters {
 export interface ProduitFilters {
   search?: string;
   categorie_id?: number;
-  type_stock_principal?: 'vente' | 'utilisation' | 'mixte' | 'reserve'; // ✅ AJOUT 'reserve'
+  type_stock_principal?: 'vente' | 'utilisation' | 'mixte' | 'reserve'; 
   actifs_only?: boolean;
   alerte_stock_vente?: boolean;
   alerte_stock_utilisation?: boolean;
-  alerte_stock_reserve?: boolean; // ✅ AJOUT
+  alerte_stock_reserve?: boolean; 
   critique_stock_vente?: boolean;
   en_promotion?: boolean;
   sort_by?: 'nom' | 'reference' | 'prix_vente' | 'prix_achat' | 'stock_vente' | 'stock_utilisation' | 'stock_reserve' | 'created_at'; // ✅ AJOUT 'stock_reserve'
   sort_order?: 'asc' | 'desc';
   per_page?: number;
   page?: number;
+  statut_validation?: 'en_attente' | 'valide' | 'rejete';
 }
 
 export interface TransfertFilters {
@@ -209,10 +219,10 @@ export interface TransfertFilters {
   type_transfert?: 
     | 'vente_vers_utilisation' 
     | 'utilisation_vers_vente'
-    | 'reserve_vers_vente' // ✅ AJOUT
-    | 'reserve_vers_utilisation' // ✅ AJOUT
-    | 'vente_vers_reserve' // ✅ AJOUT
-    | 'utilisation_vers_reserve'; // ✅ AJOUT
+    | 'reserve_vers_vente' 
+    | 'reserve_vers_utilisation'
+    | 'vente_vers_reserve' 
+    | 'utilisation_vers_reserve'; 
   en_attente?: boolean;
   valides?: boolean;
   user_id?: number;
@@ -224,7 +234,7 @@ export interface TransfertFilters {
 }
 
 export interface MouvementFilters {
-  type_stock?: 'vente' | 'utilisation' | 'reserve'; // ✅ AJOUT 'reserve'
+  type_stock?: 'vente' | 'utilisation' | 'reserve';
   type_mouvement?: 'entree' | 'sortie' | 'ajustement' | 'inventaire';
   date_debut?: string;
   date_fin?: string;
@@ -265,14 +275,14 @@ export interface ProduitFormData {
   date_fin_promo?: string;
   stock_vente?: number;
   stock_utilisation?: number;
-  stock_reserve?: number; // ✅ AJOUT
+  stock_reserve?: number; 
   seuil_alerte?: number;
   seuil_critique?: number;
   seuil_alerte_utilisation?: number;
   seuil_critique_utilisation?: number;
-  seuil_alerte_reserve?: number; // ✅ AJOUT
-  seuil_critique_reserve?: number; // ✅ AJOUT
-  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve'; // ✅ AJOUT 'reserve'
+  seuil_alerte_reserve?: number; 
+  seuil_critique_reserve?: number; 
+  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve';
   photo_url?: string;
   quantite_min_commande?: number;
   delai_livraison_jours?: number;
@@ -285,15 +295,15 @@ export interface TransfertFormData {
   type_transfert: 
     | 'vente_vers_utilisation' 
     | 'utilisation_vers_vente'
-    | 'reserve_vers_vente' // ✅ AJOUT
-    | 'reserve_vers_utilisation' // ✅ AJOUT
-    | 'vente_vers_reserve' // ✅ AJOUT
-    | 'utilisation_vers_reserve'; // ✅ AJOUT
+    | 'reserve_vers_vente' 
+    | 'reserve_vers_utilisation'
+    | 'vente_vers_reserve' 
+    | 'utilisation_vers_reserve';
   quantite: number;
   motif?: string;
   auto_valider?: boolean;
-  seuil_alerte?: number; // ✅ AJOUT (pour transferts depuis réserve)
-  seuil_critique?: number; // ✅ AJOUT (pour transferts depuis réserve)
+  seuil_alerte?: number; // AJOUT (pour transferts depuis réserve)
+  seuil_critique?: number; // AJOUT (pour transferts depuis réserve)
 }
 
 // Types pour les réponses API
@@ -321,10 +331,10 @@ export interface AlertesStats {
   total_alertes: number;
   alertes_vente: number;
   alertes_utilisation: number;
-  alertes_reserve: number; // ✅ AJOUT
+  alertes_reserve: number;
   critiques_vente: number;
   critiques_utilisation: number;
-  critiques_reserve: number; // ✅ AJOUT
+  critiques_reserve: number; 
 }
 
 export interface TransfertStats {
@@ -333,10 +343,10 @@ export interface TransfertStats {
   valides: number;
   vente_vers_utilisation: number;
   utilisation_vers_vente: number;
-  reserve_vers_vente: number; // ✅ AJOUT
-  reserve_vers_utilisation: number; // ✅ AJOUT
-  vente_vers_reserve: number; // ✅ AJOUT
-  utilisation_vers_reserve: number; // ✅ AJOUT
+  reserve_vers_vente: number; 
+  reserve_vers_utilisation: number; 
+  vente_vers_reserve: number; 
+  utilisation_vers_reserve: number;
   montant_total: number;
   quantite_totale: number;
 }

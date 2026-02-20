@@ -62,16 +62,14 @@ export const SelectionProduitModal: React.FC<SelectionProduitModalProps> = ({
     try {
       const filters: any = {
         actifs_only: true,
-        per_page: 50,
+        statut_validation: 'valide', 
+        per_page: 500,               
       };
 
-      if (searchTerm) {
-        filters.search = searchTerm;
-      }
+      if (searchTerm) filters.search = searchTerm;
+      if (selectedCategorie) filters.categorie_id = selectedCategorie;
 
-      if (selectedCategorie) {
-        filters.categorie_id = selectedCategorie;
-      }
+       console.log('🔍 Filtres envoyés:', filters); // ← ajouter
 
       const response = await produitsApi.produits.getAll(filters);
       if (response.success) {

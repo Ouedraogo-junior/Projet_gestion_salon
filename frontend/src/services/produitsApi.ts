@@ -141,9 +141,17 @@ class ProduitsApiService {
   // ========================================
   produits = {
     // Liste avec filtres
-    getAll: (params: any = {}) => 
-      this.request(`/produits?${new URLSearchParams(params)}`),
-    
+    getAll: (params: any = {}) => {
+      // URLSearchParams ignore les valeurs undefined/null
+      // S'assurer que tous les params sont des strings
+      const stringParams: Record<string, string> = {};
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          stringParams[key] = String(value);
+        }
+      });
+      return this.request(`/produits?${new URLSearchParams(stringParams)}`);
+    },
     // Méthode index (alias de getAll pour compatibilité)
     index: (params: any = {}) => this.produits.getAll(params),
     
@@ -220,6 +228,25 @@ class ProduitsApiService {
     // Supprimer photo produit
     deletePhoto: (id: number) =>
       this.request(`/produits/${id}/photo`, { method: 'DELETE' }),
+
+    // Obtenir les produits en attente de validation
+    enAttente: (params: any = {}) =>
+    this.request(`/produits/en-attente?${new URLSearchParams(params)}`),
+
+    valider: (id: number) =>
+      this.request(`/produits/${id}/valider`, { method: 'PATCH' }),
+
+    rejeter: (id: number, motif: string) =>
+      this.request(`/produits/${id}/rejeter`, {
+        method: 'PATCH',
+        body: JSON.stringify({ motif }),
+      }),
+
+    modifierEtValider: (id: number, data: any) =>
+      this.request(`/produits/${id}/modifier-valider`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
   };
 
   // ========================================

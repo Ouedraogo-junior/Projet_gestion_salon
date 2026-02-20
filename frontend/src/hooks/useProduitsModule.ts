@@ -90,7 +90,16 @@ export function useProduits() {
     setLoading(true);
     setError(null);
     try {
-      const response = await produitsApi.produits.getAll(params);
+      const response = await produitsApi.produits.getAll({ per_page: 500, ...params });
+
+      // console.log('📦 Réponse complète:', response);
+      // console.log('📄 Meta pagination:', response.data?.meta);
+      // console.log('🔍 Statuts:', (response.data?.data ?? []).map((p: any) => ({
+      //   id: p.id,
+      //   nom: p.nom,
+      //   statut: p.statut_validation
+      // })));
+
       setData(response.data?.data || []);
       setMeta(response.data?.meta || null);
     } catch (err: any) {
@@ -100,7 +109,6 @@ export function useProduits() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     load();
   }, []);

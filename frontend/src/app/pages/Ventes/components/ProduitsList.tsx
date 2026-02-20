@@ -41,26 +41,27 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
   };
 
   const chargerProduits = async () => {
-    setLoading(true);
-    try {
-      const filters: any = {
-        actifs_only: true,
-        per_page: 20,
-      };
+  setLoading(true);
+  try {
+    const filters: any = {
+      actifs_only: 'true',
+      statut_validation: 'valide', // ← ajouter
+      per_page: '500',             // ← augmenter
+    };
 
-      if (searchTerm) filters.search = searchTerm;
-      if (selectedCategorie) filters.categorie_id = selectedCategorie;
+    if (searchTerm) filters.search = searchTerm;
+    if (selectedCategorie) filters.categorie_id = String(selectedCategorie);
 
-      const response = await produitsApi.produits.getAll(filters);
-      if (response.success) {
-        setProduits(response.data.data || response.data);
-      }
-    } catch (error) {
-      console.error('Erreur chargement produits:', error);
-    } finally {
-      setLoading(false);
+    const response = await produitsApi.produits.getAll(filters);
+    if (response.success) {
+      setProduits(response.data.data || response.data);
     }
-  };
+  } catch (error) {
+    console.error('Erreur chargement produits:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getPrixAffichage = (produit: Produit) => {
     if (produit.prix_promo && produit.date_debut_promo && produit.date_fin_promo) {

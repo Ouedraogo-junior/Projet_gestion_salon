@@ -17,6 +17,7 @@ interface ProduitFormModalProps {
   onSuccess: () => void;
   produit?: Produit | null;
   categories: Categorie[];
+  modeValidation?: boolean;
 }
 
 export function ProduitFormModal({
@@ -24,7 +25,8 @@ export function ProduitFormModal({
   onClose,
   onSuccess,
   produit,
-  categories
+  categories,
+  modeValidation = false
 }: ProduitFormModalProps) {
   const [formData, setFormData] = useState({
     nom: '',
@@ -85,9 +87,10 @@ export function ProduitFormModal({
     const fraisLocal = parseFloat(formData.frais_transport_local) || 0;
 
     if (quantite > 0) {
-      const totalFrais = stockTotal + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
-      const prixUnitaireDevise = totalFrais / quantite;
-      const prixUnitaireFCFA = prixUnitaireDevise * tauxChange;
+      // Le prix d'achat stock est converti en FCFA, les frais sont déjà en FCFA
+      const stockTotalEnFCFA = stockTotal * tauxChange;
+      const totalEnFCFA = stockTotalEnFCFA + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
+      const prixUnitaireFCFA = totalEnFCFA / quantite;
       
       setFormData(prev => ({
         ...prev,
@@ -335,11 +338,17 @@ export function ProduitFormModal({
     const fraisCmb = parseFloat(formData.frais_cmb) || 0;
     const fraisTransit = parseFloat(formData.frais_transit) || 0;
     
+    // Prix unitaire dans la devise d'origine (sans frais, ceux-ci étant en FCFA)
     const prixUnitaireDeviseOrigine = (stockTotal > 0 && quantite > 0) 
-      ? (stockTotal + fraisCmb + fraisTransit) / quantite 
+      ? stockTotal / quantite 
       : 0;
     
-    const montantTotalAchat = stockTotal + fraisCmb + fraisTransit;
+    // Montant total : stock converti en FCFA + frais en FCFA
+    const stockTotalEnFCFA = stockTotal * tauxChange;
+    const montantTotalAchat = stockTotalEnFCFA + fraisCmb + fraisTransit +
+      (parseFloat(formData.frais_bancaires) || 0) +
+      (parseFloat(formData.frais_courtier) || 0) +
+      (parseFloat(formData.frais_transport_local) || 0);
     
     const payload: any = {
       nom: formData.nom,
@@ -380,15 +389,17 @@ export function ProduitFormModal({
       attributs: valeursAttributs
     };
 
-    //console.log('📦 PAYLOAD ENVOYÉ:', JSON.stringify(payload, null, 2));
     let produitId: number;
 
     if (produit) {
-      await produitsApi.produits.update(produit.id, payload);
+      if (modeValidation) {
+        await produitsApi.produits.modifierEtValider(produit.id, payload);
+      } else {
+        await produitsApi.produits.update(produit.id, payload);
+      }
       produitId = produit.id;
-    } else {
+    }else {
       const response = await produitsApi.produits.create(payload);
-      //console.log('✅ Produit créé:', response.data);
       produitId = response.data.id;
     }
 
@@ -437,7 +448,7 @@ export function ProduitFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={produit ? 'Modifier le produit' : 'Nouveau produit'}
+      title={modeValidation ? 'Modifier et valider' : produit ? 'Modifier le produit' : 'Nouveau produit'}
       size="large"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -845,7 +856,7 @@ export function ProduitFormModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais CMB
+                  Frais CMB <span className="text-gray-400">(FCFA)</span>
                 </label>
                 <Input
                   type="number"
@@ -859,7 +870,7 @@ export function ProduitFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais transit/douane
+                  Frais transit/douane <span className="text-gray-400">(FCFA)</span>
                 </label>
                 <Input
                   type="number"
@@ -873,7 +884,7 @@ export function ProduitFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais bancaires
+                  Frais bancaires <span className="text-gray-400">(FCFA)</span>
                 </label>
                 <Input
                   type="number"
@@ -887,7 +898,7 @@ export function ProduitFormModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais courtier
+                  Frais courtier <span className="text-gray-400">(FCFA)</span>
                 </label>
                 <Input
                   type="number"
@@ -901,7 +912,7 @@ export function ProduitFormModal({
 
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Frais transport local
+                  Frais transport local <span className="text-gray-400">(FCFA)</span>
                 </label>
                 <Input
                   type="number"
@@ -915,16 +926,28 @@ export function ProduitFormModal({
               </div>
             </div>
 
-            {/* Calcul coût total */}
+            {/* Calcul coût total en FCFA */}
             {(formData.prix_achat_stock_total || formData.frais_cmb || formData.frais_transit || 
               formData.frais_bancaires || formData.frais_courtier || formData.frais_transport_local) && (
               <div className="mt-4 pt-3 border-t border-blue-300">
+                {/* Ligne de conversion si devise étrangère */}
+                {formData.devise_achat !== 'FCFA' && formData.prix_achat_stock_total && (
+                  <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+                    <span>
+                      Prix stock converti ({formatCurrency(parseFloat(formData.prix_achat_stock_total) || 0)}{' '}
+                      {DEVISES.find(d => d.value === formData.devise_achat)?.symbole} × {tauxChange})
+                    </span>
+                    <span className="font-medium">
+                      {formatCurrency((parseFloat(formData.prix_achat_stock_total) || 0) * tauxChange)} FCFA
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Coût total du stock</span>
+                  <span className="text-sm font-medium text-gray-700">Coût total du stock (FCFA)</span>
                   <span className="text-lg font-bold text-blue-600">
                     {(() => {
-                      const total = 
-                        (parseFloat(formData.prix_achat_stock_total) || 0) +
+                      const stockFCFA = (parseFloat(formData.prix_achat_stock_total) || 0) * tauxChange;
+                      const total = stockFCFA +
                         (parseFloat(formData.frais_cmb) || 0) +
                         (parseFloat(formData.frais_transit) || 0) +
                         (parseFloat(formData.frais_bancaires) || 0) +
@@ -932,7 +955,7 @@ export function ProduitFormModal({
                         (parseFloat(formData.frais_transport_local) || 0);
                       return formatCurrency(total);
                     })()}{' '}
-                    {DEVISES.find(d => d.value === formData.devise_achat)?.symbole || 'FCFA'}
+                    FCFA
                   </span>
                 </div>
               </div>
@@ -945,7 +968,7 @@ export function ProduitFormModal({
             
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-amber-800">
-                ℹ️ Le prix d'achat unitaire sera calculé automatiquement par le système en fonction des frais saisis ci-dessus.
+                ℹ️ Le prix d'achat unitaire est calculé automatiquement : (prix stock × taux de change + frais en FCFA) ÷ quantité.
               </p>
             </div>
 
@@ -954,20 +977,13 @@ export function ProduitFormModal({
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">
-                    Prix unitaire estimé en {DEVISES.find(d => d.value === formData.devise_achat)?.label}
+                    Prix unitaire en {DEVISES.find(d => d.value === formData.devise_achat)?.label} (hors frais)
                   </span>
                   <span className="text-lg font-bold text-blue-600">
                     {(() => {
                       const stockTotal = parseFloat(formData.prix_achat_stock_total) || 0;
                       const quantite = parseFloat(formData.quantite_stock_commande) || 0;
-                      const fraisCmb = parseFloat(formData.frais_cmb) || 0;
-                      const fraisTransit = parseFloat(formData.frais_transit) || 0;
-                      const fraisBancaires = parseFloat(formData.frais_bancaires) || 0;
-                      const fraisCourtier = parseFloat(formData.frais_courtier) || 0;
-                      const fraisLocal = parseFloat(formData.frais_transport_local) || 0;
-                      
-                      const total = stockTotal + fraisCmb + fraisTransit + fraisBancaires + fraisCourtier + fraisLocal;
-                      const prixUnitaireDevise = quantite > 0 ? total / quantite : 0;
+                      const prixUnitaireDevise = quantite > 0 ? stockTotal / quantite : 0;
                       return formatCurrency(prixUnitaireDevise);
                     })()}{' '}
                     {DEVISES.find(d => d.value === formData.devise_achat)?.symbole}
@@ -1246,9 +1262,9 @@ export function ProduitFormModal({
             Annuler
           </Button>
           <Button type="submit" disabled={isSubmitting || isUploadingPhoto}>
-            {isSubmitting || isUploadingPhoto 
-              ? 'Enregistrement...' 
-              : produit ? 'Modifier' : 'Créer'}
+            {isSubmitting || isUploadingPhoto
+              ? 'Enregistrement...'
+              : modeValidation ? 'Modifier & Valider' : produit ? 'Modifier' : 'Créer'}
           </Button>
         </div>
       </form>

@@ -183,6 +183,57 @@ class NotificationService
     }
 
     /**
+     * Notifier produit soumis pour validation
+     */
+    public function notifierProduitSoumis(Produit $produit): void
+    {
+        $gestionnaires = User::where('role', 'gestionnaire')->get();
+
+        foreach ($gestionnaires as $gestionnaire) {
+            $this->creer(
+                userId: $gestionnaire->id,
+                type: 'produit_a_valider',
+                titre: '🛍️ Nouveau produit à valider',
+                message: "Le produit \"{$produit->nom}\" a été soumis par {$produit->createur?->name} et attend votre validation.",
+                data: [
+                    'produit_id'  => $produit->id,
+                    'produit_nom' => $produit->nom,
+                    'cree_par_id' => $produit->cree_par,
+                    'cree_par'    => $produit->createur?->name,
+                ],
+                priorite: 'haute',
+                lien: "/produits?statut_validation=en_attente&id={$produit->id}"
+            );
+        }
+    }
+
+    /**
+     * Notifier le créateur du résultat de la validation
+     */
+    public function notifierResultatValidation(Produit $produit): void
+    {
+        if (!$produit->cree_par) return;
+
+        $estValide = $produit->statut_validation === 'valide';
+
+        $this->creer(
+            userId: $produit->cree_par,
+            type: $estValide ? 'produit_valide' : 'produit_rejete',
+            titre: $estValide ? '✅ Produit validé' : '❌ Produit rejeté',
+            message: $estValide
+                ? "Votre produit \"{$produit->nom}\" a été validé et est maintenant disponible dans le système."
+                : "Votre produit \"{$produit->nom}\" a été rejeté. Motif : {$produit->motif_rejet}",
+            data: [
+                'produit_id'  => $produit->id,
+                'produit_nom' => $produit->nom,
+                'motif_rejet' => $produit->motif_rejet,
+            ],
+            priorite: $estValide ? 'normale' : 'haute',
+            lien: "/produits?id={$produit->id}"
+        );
+    }
+
+    /**
      * Compter les notifications non lues
      */
     public function compterNonLues(?int $userId): int

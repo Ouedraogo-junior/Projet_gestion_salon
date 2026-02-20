@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { Edit, Trash2, Eye, ImageOff, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from './ui/Badge';
 import type { Produit } from '@/types/produit.types';
+import { Clock, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ProduitCardProps {
   produit: Produit;
@@ -27,6 +29,8 @@ export function ProduitCard({
   showStockReserve = false
 }: ProduitCardProps) {
   const [imageError, setImageError] = useState(false);
+  const { user } = useAuth();
+  const isGestionnaire = user?.role === 'gestionnaire';
 
   const getImageUrl = (photoUrl?: string) => {
     if (!photoUrl) return null;
@@ -124,6 +128,29 @@ export function ProduitCard({
           )}
         </div>
 
+        {/* Badge statut validation */}
+        {produit.statut_validation && produit.statut_validation !== 'valide' && (
+          <div>
+            {produit.statut_validation === 'en_attente' && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 w-full justify-center">
+                <Clock size={12} /> En attente de validation
+              </span>
+            )}
+            {produit.statut_validation === 'rejete' && (
+              <div className="space-y-1">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 w-full justify-center">
+                  <AlertCircle size={12} /> Rejeté
+                </span>
+                {produit.motif_rejet && (
+                  <p className="text-xs text-red-500 italic text-center truncate" title={produit.motif_rejet}>
+                    {produit.motif_rejet}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Prix */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
@@ -211,37 +238,47 @@ export function ProduitCard({
             <Eye size={16} />
             Détails
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(produit);
-            }}
-            className="flex-1 px-3 py-1.5 text-orange-600 hover:bg-orange-50 rounded text-sm flex items-center justify-center gap-2"
-            title="Modifier"
-          >
-            <Edit size={16} />
-            Modifier
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleActive(produit.id);
-            }}
-            className="p-1.5 text-gray-600 hover:bg-gray-50 rounded"
-            title={produit.is_active ? 'Désactiver' : 'Activer'}
-          >
-            {produit.is_active ? <XCircle size={16} /> : <CheckCircle size={16} />}
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(produit.id);
-            }}
-            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-            title="Supprimer"
-          >
-            <Trash2 size={16} />
-          </button>
+          {/* Modifier — visible si gestionnaire, ou si créateur ET produit non validé */}
+          {(isGestionnaire || produit.statut_validation !== 'valide') && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(produit);
+              }}
+              className="flex-1 px-3 py-1.5 text-orange-600 hover:bg-orange-50 rounded text-sm flex items-center justify-center gap-2"
+              title="Modifier"
+            >
+              <Edit size={16} />
+              Modifier
+            </button>
+          )}
+          {/* Toggle actif — gestionnaire uniquement */}
+          {isGestionnaire && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleActive(produit.id);
+              }}
+              className="p-1.5 text-gray-600 hover:bg-gray-50 rounded"
+              title={produit.is_active ? 'Désactiver' : 'Activer'}
+            >
+              {produit.is_active ? <XCircle size={16} /> : <CheckCircle size={16} />}
+            </button>
+          )}
+
+          {/* Supprimer — gestionnaire uniquement */}
+          {isGestionnaire && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(produit.id);
+              }}
+              className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+              title="Supprimer"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
   );

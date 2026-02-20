@@ -188,6 +188,7 @@ public function genererRecuAcompte($rendezVousId)
         $rendezVous = RendezVous::with([
             'client',
             'typePrestation',
+            'prestations',
             'coiffeur',
             'paiements' => function($query) {
                 $query->where('type_paiement', 'acompte')
@@ -236,6 +237,7 @@ public function genererRecuAcompte($rendezVousId)
             $rendezVous = RendezVous::with([
                 'client',
                 'typePrestation',
+                'prestations',
                 'coiffeur',
                 'paiements',
                 'vente' => function($query) {

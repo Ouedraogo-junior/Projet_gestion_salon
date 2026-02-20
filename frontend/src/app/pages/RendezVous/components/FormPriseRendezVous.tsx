@@ -19,7 +19,7 @@ export const FormPriseRendezVous: React.FC = () => {
     prenom: '',
     telephone: '',
     email: '',
-    type_prestation_id: 0,
+    type_prestation_ids: [] as number[],
     date: '',
     heure: '',
     notes: '',
@@ -32,7 +32,7 @@ export const FormPriseRendezVous: React.FC = () => {
   
 
   // Prestation sélectionnée (pour affichage)
-  const prestationSelectionnee = prestations.find(p => p.id === formData.type_prestation_id);
+  const prestationsSelectionnees = prestations.filter(p => formData.type_prestation_ids.includes(p.id));
 
   // Charger les prestations au montage
   useEffect(() => {
@@ -41,10 +41,10 @@ export const FormPriseRendezVous: React.FC = () => {
 
   // Charger les créneaux quand date et prestation sont sélectionnées
   useEffect(() => {
-    if (formData.date && formData.type_prestation_id) {
+    if (formData.date && formData.type_prestation_ids.length > 0) {
       loadCreneaux();
     }
-  }, [formData.date, formData.type_prestation_id]);
+  }, [formData.date, formData.type_prestation_ids]);
 
   const loadPrestations = async () => {
     try {
@@ -60,12 +60,12 @@ export const FormPriseRendezVous: React.FC = () => {
     };
 
   const loadCreneaux = async () => {
-    setIsLoadingCreneaux(true);
-    try {
-      const response = await rendezVousApi.getCreneauxDisponibles(
-        formData.date,
-        formData.type_prestation_id
-      );
+  setIsLoadingCreneaux(true);
+  try {
+    const response = await rendezVousApi.getCreneauxDisponibles(
+      formData.date,
+      formData.type_prestation_ids // ← Array
+    );
 
       if (response.success) {
         setCreneaux(response.data.creneaux);
@@ -88,8 +88,8 @@ export const FormPriseRendezVous: React.FC = () => {
       return;
     }
 
-    if (!formData.type_prestation_id) {
-      toast.error('Veuillez sélectionner une prestation');
+    if (formData.type_prestation_ids.length === 0) {
+      toast.error('Veuillez sélectionner au moins une prestation');
       return;
     }
 
@@ -109,7 +109,7 @@ export const FormPriseRendezVous: React.FC = () => {
         prenom: formData.prenom || undefined,
         telephone: formData.telephone,
         email: formData.email || undefined,
-        type_prestation_id: formData.type_prestation_id,
+        type_prestation_ids: formData.type_prestation_ids, // ← Array
         date_heure: dateHeure,
         notes: formData.notes || undefined,
       });
@@ -132,7 +132,7 @@ export const FormPriseRendezVous: React.FC = () => {
       prenom: '',
       telephone: '',
       email: '',
-      type_prestation_id: 0,
+      type_prestation_ids: [],
       date: '',
       heure: '',
       notes: '',
@@ -144,6 +144,13 @@ export const FormPriseRendezVous: React.FC = () => {
 
   // Affichage succès
   if (isSuccess) {
+
+    // console.log('Prestations sélectionnées:', prestationsSelectionnees);
+    // console.log('Prix individuels:', prestationsSelectionnees.map(p => p.prix_base));
+
+    // Ligne 151
+  const prixTotal = prestationsSelectionnees.reduce((sum, p) => {return sum + parseFloat(String(p.prix_base));}, 0);
+     //console.log('Prix total:', prixTotal);
     return (
       <div className="bg-white rounded-xl shadow-lg p-8 text-center">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -154,7 +161,7 @@ export const FormPriseRendezVous: React.FC = () => {
         </h3>
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
           <p className="text-gray-700 mb-2">
-            <strong>Prestation:</strong> {prestationSelectionnee?.nom}
+            <strong>Prestations:</strong> {prestationsSelectionnees.map(p => p.nom).join(', ')}
           </p>
           <p className="text-gray-700 mb-2">
             <strong>Date:</strong> {new Date(formData.date).toLocaleDateString('fr-FR', { 
@@ -168,12 +175,11 @@ export const FormPriseRendezVous: React.FC = () => {
             <strong>Heure:</strong> {formData.heure}
           </p>
           <p className="text-gray-700">
-            <strong>Prix estimé:</strong> {prestationSelectionnee?.prix_base.toLocaleString()} FCFA
-          </p>
+            <strong>Prix estimé:</strong> {Math.round(prixTotal).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} FCFA
+        </p>
         </div>
         <p className="text-gray-600 mb-6">
-          Vous recevrez une confirmation par SMS au <strong>{formData.telephone}</strong>.
-          Le salon vous contactera pour confirmer définitivement votre rendez-vous.
+          Le salon vous contactera au <strong>{formData.telephone}</strong> pour confirmer définitivement votre rendez-vous.
         </p>
         <button
           onClick={resetForm}
@@ -319,9 +325,14 @@ export const FormPriseRendezVous: React.FC = () => {
                 {prestations.map((prestation) => (
                   <div
                     key={prestation.id}
-                    onClick={() => setFormData({ ...formData, type_prestation_id: prestation.id })}
+                    onClick={() => {
+                      const newIds = formData.type_prestation_ids.includes(prestation.id)
+                        ? formData.type_prestation_ids.filter(id => id !== prestation.id)
+                        : [...formData.type_prestation_ids, prestation.id];
+                      setFormData({ ...formData, type_prestation_ids: newIds });
+                    }}
                     className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                      formData.type_prestation_id === prestation.id
+                      formData.type_prestation_ids.includes(prestation.id)
                         ? 'border-orange-600 bg-orange-50'
                         : 'border-gray-200 hover:border-orange-300'
                     }`}
@@ -342,14 +353,14 @@ export const FormPriseRendezVous: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <div
+                       <div
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          formData.type_prestation_id === prestation.id
+                          formData.type_prestation_ids.includes(prestation.id)
                             ? 'border-orange-600 bg-orange-600'
                             : 'border-gray-300'
                         }`}
                       >
-                        {formData.type_prestation_id === prestation.id && (
+                        {formData.type_prestation_ids.includes(prestation.id) && (
                           <CheckCircle className="w-4 h-4 text-white" />
                         )}
                       </div>
@@ -370,7 +381,7 @@ export const FormPriseRendezVous: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEtape(3)}
-                disabled={!formData.type_prestation_id}
+                disabled={formData.type_prestation_ids.length === 0}
                 className="flex-1 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Continuer
