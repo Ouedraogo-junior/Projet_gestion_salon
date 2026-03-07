@@ -20,8 +20,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select';
 import { useConfection, useConfectionActions } from '@/hooks/useConfections';
-import { useCategories, useProduits, useAttributs } from '@/hooks/useProduitsModule';
-import { tokenStorage } from '@/utils/tokenStorage';
+import { useCategories, useVariantes, useAttributs } from '@/hooks/useProduitsModule';import { tokenStorage } from '@/utils/tokenStorage';
 import { CreateConfectionData, CreateConfectionDetailData, CreateConfectionAttributData } from '@/types/confection';
 import { Separator } from '@/app/components/ui/separator';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
@@ -38,7 +37,7 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
   const { create, update } = useConfectionActions();
   
   const { data: categories } = useCategories();
-  const { data: produits, reload: reloadProduits } = useProduits();
+  const { data: produits, reload: reloadProduits } = useVariantes();
   const { data: attributs } = useAttributs();
 
   const [selectedCategorie, setSelectedCategorie] = useState<number | null>(null);
@@ -72,9 +71,9 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
       // Charger les détails et attributs
       if (confection.details) {
         setDetails(confection.details.map(d => ({
-          produit_id: d.produit_id,
+          variante_id: d.variante_id,
           quantite_utilisee: d.quantite_utilisee,
-          prix_unitaire: d.prix_unitaire
+          prix_unitaire: d.prix_unitaire,
         })));
       }
       
@@ -88,11 +87,11 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
   }, [confection, isEdit, setValue]);
 
   // Filtrer les produits par catégorie
-  useEffect(() => {
-    if (selectedCategorie) {
-      reloadProduits({ categorie_id: selectedCategorie, type: 'matiere_premiere' });
-    }
-  }, [selectedCategorie]);
+//  useEffect(() => {
+//   if (selectedCategorie) {
+//     reloadProduits({ categorie_id: selectedCategorie, type: 'matiere_premiere' });
+//   }
+// }, [selectedCategorie]);
 
   // Réinitialiser lors de la fermeture
   const handleClose = () => {
@@ -105,7 +104,7 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
 
   // Ajouter un produit
   const handleAddDetail = () => {
-    setDetails([...details, { produit_id: 0, quantite_utilisee: 1, prix_unitaire: 0 }]);
+    setDetails([...details, { variante_id: 0, quantite_utilisee: 1, prix_unitaire: 0 }]);
   };
 
   // Supprimer un produit
@@ -117,15 +116,15 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
   const handleUpdateDetail = (index: number, field: keyof CreateConfectionDetailData, value: any) => {
     const newDetails = [...details];
     newDetails[index] = { ...newDetails[index], [field]: value };
-    
-    // Auto-remplir le prix si un produit est sélectionné
-    if (field === 'produit_id') {
-      const produit = produits.find((p: any) => p.id === Number(value));
-      if (produit) {
-        newDetails[index].prix_unitaire = produit.prix_achat || 0;
+
+    // ✅ Auto-remplir le prix depuis la variante aplatie
+    if (field === 'variante_id') {
+      const variante = produits.find((p: any) => p.variante_id === Number(value));
+      if (variante) {
+        newDetails[index].prix_unitaire = variante.prix_achat ?? 0;
       }
     }
-    
+
     setDetails(newDetails);
   };
 
@@ -165,7 +164,7 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
       return;
     }
 
-    const invalidDetails = details.filter(d => !d.produit_id || d.quantite_utilisee <= 0);
+    const invalidDetails = details.filter(d => !d.variante_id || d.quantite_utilisee <= 0);
     if (invalidDetails.length > 0) {
       alert('Veuillez remplir correctement tous les produits');
       return;
@@ -376,19 +375,27 @@ export default function ConfectionDialog({ open, onClose, confectionId }: Confec
                     {/* Sélection du produit - Toujours en pleine largeur */}
                     <div className="space-y-1.5">
                       <Label className="text-xs sm:text-sm font-medium">Produit</Label>
-                      <Select
-                        value={detail.produit_id.toString()}
-                        onValueChange={(value) => handleUpdateDetail(index, 'produit_id', Number(value))}
+                     <Select
+                        value={detail.variante_id ? detail.variante_id.toString() : ''}
+                        onValueChange={(value) => handleUpdateDetail(index, 'variante_id', Number(value))}
                       >
                         <SelectTrigger className="text-xs sm:text-sm h-9 w-full">
                           <SelectValue placeholder="Sélectionner un produit" />
                         </SelectTrigger>
                         <SelectContent>
-                          {produits.map((prod: any) => (
-                            <SelectItem key={prod.id} value={prod.id.toString()} className="text-xs sm:text-sm">
-                              {prod.nom} ({prod.quantite_stock} en stock)
-                            </SelectItem>
-                          ))}
+                          {produits
+                            // ✅ Filtrer par catégorie si sélectionnée
+                            .filter((p: any) => !selectedCategorie || p.categorie_id === selectedCategorie)
+                            .map((p: any) => (
+                              <SelectItem
+                                key={p.variante_id}
+                                value={p.variante_id.toString()}
+                                disabled={p.stock_utilisation <= 0 && p.stock_vente <= 0}
+                              >
+                                {p.nom} — stock: {p.stock_utilisation} util / {p.stock_vente} vente
+                              </SelectItem>
+                            ))
+                          }
                         </SelectContent>
                       </Select>
                     </div>

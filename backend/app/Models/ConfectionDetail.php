@@ -14,7 +14,7 @@ class ConfectionDetail extends Model
 
     protected $fillable = [
         'confection_id',
-        'produit_id',
+        'variante_id',
         'quantite_utilisee',
         'prix_unitaire',
         'prix_total',
@@ -22,16 +22,17 @@ class ConfectionDetail extends Model
 
     protected $casts = [
         'quantite_utilisee' => 'integer',
-        'prix_unitaire' => 'decimal:2',
-        'prix_total' => 'decimal:2',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'prix_unitaire'     => 'decimal:2',
+        'prix_total'        => 'decimal:2',
+        'created_at'        => 'datetime',
+        'updated_at'        => 'datetime',
     ];
 
-    /**
-     * Calcule automatiquement le prix total
-     */
-    protected static function booted()
+    // ========================================
+    // BOOT
+    // ========================================
+
+    protected static function booted(): void
     {
         static::creating(function ($detail) {
             if (!$detail->prix_total) {
@@ -46,25 +47,24 @@ class ConfectionDetail extends Model
         });
     }
 
-    /**
-     * Relation avec la confection
-     */
+    // ========================================
+    // RELATIONS
+    // ========================================
+
     public function confection(): BelongsTo
     {
         return $this->belongsTo(Confection::class);
     }
 
-    /**
-     * Relation avec le produit (matière première)
-     */
-    public function produit(): BelongsTo
+    public function variante(): BelongsTo
     {
-        return $this->belongsTo(Produit::class);
+        return $this->belongsTo(ProduitVariante::class, 'variante_id');
     }
 
-    /**
-     * Scope pour une confection spécifique
-     */
+    // ========================================
+    // SCOPES
+    // ========================================
+
     public function scopePourConfection($query, int $confectionId)
     {
         return $query->where('confection_id', $confectionId);

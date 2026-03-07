@@ -1,5 +1,13 @@
 // src/services/publicApi.ts
+
 import axios from 'axios';
+import type {
+  SalonPublicInfo,
+  PrestationPublique,
+  ProduitPublic,
+  ProduitPublicDetail,
+  PhotoPublique,
+} from '@/types/public.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -7,48 +15,29 @@ const publicApi = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    Accept: 'application/json',
   },
 });
 
+type ApiResponse<T> = { success: boolean; data: T };
+
 export const publicApiService = {
-  // Obtenir le salon par défaut
-  getSalonDefaut: async () => {
-    const response = await publicApi.get('/public/salon-defaut');
-    return response.data;
-  },
+  getSalonDefaut: (): Promise<ApiResponse<SalonPublicInfo>> =>
+    publicApi.get('/public/salon-defaut').then((r) => r.data),
 
-  // Info salon (avec ou sans slug)
-  getSalonInfo: async (slug?: string) => {
-    const url = slug ? `/public/${slug}/info` : '/public/info';
-    const response = await publicApi.get(url);
-    return response.data;
-  },
+  getSalonInfo: (slug?: string): Promise<ApiResponse<SalonPublicInfo>> =>
+    publicApi.get(slug ? `/public/${slug}/info` : '/public/info').then((r) => r.data),
 
-  // Prestations (avec ou sans slug)
-  getPrestations: async (slug?: string) => {
-    const url = slug ? `/public/${slug}/prestations` : '/public/prestations';
-    const response = await publicApi.get(url);
-    return response.data;
-  },
+  getPrestations: (slug?: string): Promise<ApiResponse<PrestationPublique[]>> =>
+    publicApi.get(slug ? `/public/${slug}/prestations` : '/public/prestations').then((r) => r.data),
 
-  // Produits (avec ou sans slug)
-  getProduits: async (slug?: string) => {
-    const url = slug ? `/public/${slug}/produits` : '/public/produits';
-    const response = await publicApi.get(url);
-    return response.data;
-  },
+  getProduits: (slug?: string): Promise<ApiResponse<ProduitPublic[]>> =>
+    publicApi.get(slug ? `/public/${slug}/produits` : '/public/produits').then((r) => r.data),
 
-  // Détails d'un produit avec attributs
-  getProduitDetails: async (id: number) => {
-    const response = await publicApi.get(`/public/produits/${id}`);
-    return response.data;
-  },
+  getProduitDetails: (id: number): Promise<ApiResponse<ProduitPublicDetail>> =>
+    publicApi.get(`/public/produits/${id}`).then((r) => r.data),
 
-  // Photos publiques
-  getPhotosPubliques: async (slug?: string) => {
-    const url = slug ? `/public/${slug}/photos` : '/public/photos';
-    const response = await publicApi.get(url);
-    return response.data;
-  },
+  getPhotosPubliques: (slug?: string): Promise<ApiResponse<PhotoPublique[]>> =>
+    publicApi.get(slug ? `/public/${slug}/photos` : '/public/photos').then((r) => r.data),
 };
+

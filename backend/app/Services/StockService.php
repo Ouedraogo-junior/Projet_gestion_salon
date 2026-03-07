@@ -16,216 +16,153 @@ class StockService
     public function traiterStockVente(Vente $vente): void
     {
         foreach ($vente->details as $detail) {
-            if ($detail->type_article === 'produit' && $detail->produit_id) {
+            if ($detail->type_article === 'produit' && $detail->variante_id) {
                 $this->decrementerStock($detail);
                 $this->creerMouvementStock($detail, 'sortie');
             }
         }
     }
 
-    /**
-     * Restaurer les stocks lors d'une annulation
-     */
     public function restaurerStockVente(Vente $vente): void
     {
         foreach ($vente->details as $detail) {
-            if ($detail->type_article === 'produit' && $detail->produit_id) {
+            if ($detail->type_article === 'produit' && $detail->variante_id) {
                 $this->incrementerStock($detail);
                 $this->creerMouvementStock($detail, 'entree', 'Annulation vente');
             }
         }
     }
 
-    /**
-     * Décrémenter le stock approprié
-     */
     protected function decrementerStock(VenteDetail $detail): void
     {
-        $produit = $detail->produit;
-        
-        if (!$produit) {
-            throw new Exception("Produit introuvable pour l'article {$detail->article_nom}");
+        $variante = $detail->variante;
+
+        if (!$variante) {
+            throw new Exception("Variante introuvable pour l'article {$detail->article_nom}");
         }
 
-        // ✅ Les produits en réserve ne peuvent pas être vendus directement
-        if ($produit->type_stock_principal === 'reserve') {
+        if ($variante->type_stock_principal === 'reserve') {
             throw new Exception(
-                "Le produit {$produit->nom} est en réserve. " .
-                "Veuillez d'abord le transférer vers le stock vente."
+                "La variante {$variante->produit->nom} est en réserve. " .
+                "Veuillez d'abord la transférer vers le stock vente."
             );
         }
 
-        // Déterminer le stock à décrémenter
-        $champStock = $this->determinerChampStock($produit, $detail);
+        $champStock = $this->determinerChampStock($variante, $detail);
 
-        if ($produit->$champStock < $detail->quantite) {
+        if ($variante->$champStock < $detail->quantite) {
             throw new Exception(
-                "Stock insuffisant pour {$produit->nom}. " .
-                "Disponible: {$produit->$champStock}, Demandé: {$detail->quantite}"
+                "Stock insuffisant pour {$variante->produit->nom}. " .
+                "Disponible: {$variante->$champStock}, Demandé: {$detail->quantite}"
             );
         }
 
-        $produit->decrement($champStock, $detail->quantite);
+        $variante->decrement($champStock, $detail->quantite);
     }
 
-    /**
-     * Incrémenter le stock approprié
-     */
     protected function incrementerStock(VenteDetail $detail): void
     {
-        $produit = $detail->produit;
-        
-        if (!$produit) {
-            return;
-        }
+        $variante = $detail->variante;
+        if (!$variante) return;
 
-        $champStock = $this->determinerChampStock($produit, $detail);
-        $produit->increment($champStock, $detail->quantite);
+        $champStock = $this->determinerChampStock($variante, $detail);
+        $variante->increment($champStock, $detail->quantite);
     }
 
-    /**
-     * Déterminer quel champ de stock utiliser
-     */
-    protected function determinerChampStock(Produit $produit, VenteDetail $detail): string
+    protected function determinerChampStock(\App\Models\ProduitVariante $variante, VenteDetail $detail): string
     {
-        // Si le prix correspond au prix de vente, c'est du stock vente
-        if ($detail->prix_unitaire == $produit->prix_vente) {
+        if ($detail->prix_unitaire == $variante->prix_vente) {
             return 'stock_vente';
         }
-        
-        // Sinon, c'est du stock d'utilisation
         return 'stock_utilisation';
     }
 
-    /**
-     * Créer un mouvement de stock
-     */
     protected function creerMouvementStock(VenteDetail $detail, string $type, string $motifCustom = null): void
     {
-        $motif = $motifCustom ?? "Vente #{$detail->vente->numero_facture}";
-        $produit = $detail->produit;
-        $champStock = $this->determinerChampStock($produit, $detail);
-        
-        // ✅ Déterminer le type_stock selon le champ utilisé
-        $typeStock = $champStock === 'stock_vente' ? 'vente' : 'utilisation';
+        $motif    = $motifCustom ?? "Vente #{$detail->vente->numero_facture}";
+        $variante = $detail->variante;
+        $champStock = $this->determinerChampStock($variante, $detail);
+        $typeStock  = $champStock === 'stock_vente' ? 'vente' : 'utilisation';
+
+        $stockAvant = $variante->$champStock;
+        $variante->refresh();
+        $stockApres = $variante->$champStock;
 
         MouvementStock::create([
-            'produit_id' => $detail->produit_id,
-            'vente_id' => $detail->vente_id,
-            'type_stock' => $typeStock, // ✅ AJOUTÉ
+            'variante_id'    => $detail->variante_id,
+            'vente_id'       => $detail->vente_id,
+            'type_stock'     => $typeStock,
             'type_mouvement' => $type,
-            'quantite' => $detail->quantite,
-            'stock_avant' => $this->getStockAvant($detail),
-            'stock_apres' => $this->getStockApres($detail, $type),
-            'motif' => $motif,
-            'user_id' => auth()->id(),
+            'quantite'       => $detail->quantite,
+            'stock_avant'    => $stockAvant,
+            'stock_apres'    => $stockApres,
+            'motif'          => $motif,
+            'user_id'        => auth()->id(),
         ]);
     }
 
-    /**
-     * Obtenir le stock avant mouvement
-     */
-    protected function getStockAvant(VenteDetail $detail): int
+    public function verifierDisponibilite(int $varianteId, int $quantite, string $sourceStock = 'vente'): array
     {
-        $produit = $detail->produit;
-        $champStock = $this->determinerChampStock($produit, $detail);
-        return $produit->$champStock;
-    }
+        $variante = \App\Models\ProduitVariante::find($varianteId);
 
-    /**
-     * Obtenir le stock après mouvement
-     */
-    protected function getStockApres(VenteDetail $detail, string $type): int
-    {
-        $produit = $detail->produit->fresh();
-        $champStock = $this->determinerChampStock($produit, $detail);
-        return $produit->$champStock;
-    }
-
-    /**
-     * Vérifier la disponibilité du stock
-     */
-    public function verifierDisponibilite(int $produitId, int $quantite, string $sourceStock = 'vente'): array
-    {
-        $produit = Produit::find($produitId);
-
-        if (!$produit) {
-            return [
-                'disponible' => false,
-                'message' => 'Produit introuvable',
-            ];
+        if (!$variante) {
+            return ['disponible' => false, 'message' => 'Variante introuvable'];
         }
 
-        // ✅ Bloquer les produits en réserve
-        if ($produit->type_stock_principal === 'reserve') {
+        if ($variante->type_stock_principal === 'reserve') {
             return [
-                'disponible' => false,
-                'message' => 'Ce produit est en réserve. Transférez-le vers le stock vente avant de vendre.',
+                'disponible'       => false,
+                'message'          => 'Cette variante est en réserve. Transférez-la avant de vendre.',
                 'stock_disponible' => 0,
             ];
         }
 
-        $champStock = $sourceStock === 'vente' ? 'stock_vente' : 'stock_utilisation';
-        $stockDisponible = $produit->$champStock;
+        $champStock      = $sourceStock === 'vente' ? 'stock_vente' : 'stock_utilisation';
+        $stockDisponible = $variante->$champStock;
 
         if ($stockDisponible < $quantite) {
             return [
-                'disponible' => false,
-                'message' => "Stock insuffisant. Disponible: {$stockDisponible}",
+                'disponible'       => false,
+                'message'          => "Stock insuffisant. Disponible: {$stockDisponible}",
                 'stock_disponible' => $stockDisponible,
             ];
         }
 
-        return [
-            'disponible' => true,
-            'stock_disponible' => $stockDisponible,
-        ];
+        return ['disponible' => true, 'stock_disponible' => $stockDisponible];
     }
 
-    /**
-     * Obtenir les produits en alerte de stock
-     */
     public function getProduitsEnAlerte(): array
     {
-        $produitsVenteAlerte = Produit::whereColumn('stock_vente', '<=', 'seuil_alerte')
-            ->where('is_active', true)
-            ->get()
-            ->map(function ($produit) {
-                return [
-                    'produit' => $produit,
+        $variantes = \App\Models\ProduitVariante::where('is_active', true)
+            ->with('produit')
+            ->get();
+
+        $alertes = [];
+
+        foreach ($variantes as $v) {
+            if ($v->seuil_alerte && $v->stock_vente <= $v->seuil_alerte) {
+                $alertes[] = [
+                    'variante'   => $v,
                     'type_stock' => 'vente',
-                    'niveau' => $produit->stock_vente <= $produit->seuil_critique ? 'critique' : 'alerte',
+                    'niveau'     => $v->stock_vente <= ($v->seuil_critique ?? 0) ? 'critique' : 'alerte',
                 ];
-            });
-
-        $produitsUtilisationAlerte = Produit::whereColumn('stock_utilisation', '<=', 'seuil_alerte_utilisation')
-            ->where('is_active', true)
-            ->get()
-            ->map(function ($produit) {
-                return [
-                    'produit' => $produit,
+            }
+            if ($v->seuil_alerte_utilisation && $v->stock_utilisation <= $v->seuil_alerte_utilisation) {
+                $alertes[] = [
+                    'variante'   => $v,
                     'type_stock' => 'utilisation',
-                    'niveau' => $produit->stock_utilisation <= $produit->seuil_critique_utilisation ? 'critique' : 'alerte',
+                    'niveau'     => $v->stock_utilisation <= ($v->seuil_critique_utilisation ?? 0) ? 'critique' : 'alerte',
                 ];
-            });
-
-        // ✅ AJOUT: Alertes pour le stock réserve
-        $produitsReserveAlerte = Produit::whereNotNull('seuil_alerte_reserve')
-            ->whereColumn('stock_reserve', '<=', 'seuil_alerte_reserve')
-            ->where('is_active', true)
-            ->get()
-            ->map(function ($produit) {
-                return [
-                    'produit' => $produit,
+            }
+            if ($v->seuil_alerte_reserve && $v->stock_reserve <= $v->seuil_alerte_reserve) {
+                $alertes[] = [
+                    'variante'   => $v,
                     'type_stock' => 'reserve',
-                    'niveau' => $produit->stock_reserve <= ($produit->seuil_critique_reserve ?? 0) ? 'critique' : 'alerte',
+                    'niveau'     => $v->stock_reserve <= ($v->seuil_critique_reserve ?? 0) ? 'critique' : 'alerte',
                 ];
-            });
+            }
+        }
 
-        return array_merge(
-            $produitsVenteAlerte->toArray(), 
-            $produitsUtilisationAlerte->toArray(),
-            $produitsReserveAlerte->toArray()
-        );
+        return $alertes;
     }
 }

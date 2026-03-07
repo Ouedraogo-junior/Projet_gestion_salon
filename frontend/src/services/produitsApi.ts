@@ -1,7 +1,36 @@
 // src/services/produitApi.ts
 import { tokenStorage } from '@/utils/tokenStorage';
+import type {
+  ProduitFilters,
+  TransfertFilters,
+  MouvementFilters,
+  CategorieFilters,
+  AttributFilters,
+  ProduitFormData,
+  TransfertFormData,
+  CategorieFormData,
+  AttributFormData,
+} from '@/types/produit.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+const toStringParams = (params: Record<string, any>): Record<string, string> => {
+  const result: Record<string, string> = {};
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      result[key] = String(value);
+    }
+  });
+  return result;
+};
+
+// ============================================================
+// SERVICE
+// ============================================================
 
 class ProduitsApiService {
   private async request(endpoint: string, options: RequestInit = {}) {
@@ -9,7 +38,7 @@ class ProduitsApiService {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...options.headers,
     };
 
@@ -20,10 +49,10 @@ class ProduitsApiService {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ 
-          message: 'Erreur serveur' 
-        }));
-        throw new Error(error.message || `Erreur ${response.status}`);
+        const error = await response.json().catch(() => ({ message: 'Erreur serveur' }));
+        const err: any = new Error(error.message || `Erreur ${response.status}`);
+        err.response = { data: error, status: response.status };
+        throw err;
       }
 
       return await response.json();
@@ -36,185 +65,135 @@ class ProduitsApiService {
   // ========================================
   // CATÉGORIES
   // ========================================
+
   categories = {
-    // Liste avec filtres (ajout du support with_attributs et with_produits)
-    getAll: (params: any = {}) => 
-      this.request(`/categories?${new URLSearchParams(params)}`),
-    
-    // Méthode index (alias de getAll pour compatibilité)
-    index: (params: any = {}) => this.categories.getAll(params),
-    
-    // Détails d'une catégorie - AJOUTÉ
-    show: (id: number) => 
+    getAll: (params: CategorieFilters = {}) =>
+      this.request(`/categories?${new URLSearchParams(toStringParams(params))}`),
+
+    index: (params: CategorieFilters = {}) => this.categories.getAll(params),
+
+    show: (id: number) =>
       this.request(`/categories/${id}?with_attributs=1&with_produits=1`),
-    
-    create: (data: any) => 
-      this.request('/categories', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    update: (id: number, data: any) => 
-      this.request(`/categories/${id}`, { 
-        method: 'PUT', 
-        body: JSON.stringify(data) 
-      }),
-    
-    delete: (id: number) => 
+
+    create: (data: CategorieFormData) =>
+      this.request('/categories', { method: 'POST', body: JSON.stringify(data) }),
+
+    update: (id: number, data: Partial<CategorieFormData>) =>
+      this.request(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+    delete: (id: number) =>
       this.request(`/categories/${id}`, { method: 'DELETE' }),
-    
-    toggleActive: (id: number) => 
+
+    toggleActive: (id: number) =>
       this.request(`/categories/${id}/toggle-active`, { method: 'POST' }),
-    
-    // Obtenir les attributs d'une catégorie
-    getAttributs: (id: number) => 
+
+    getAttributs: (id: number) =>
       this.request(`/categories/${id}/attributs`),
-    
-    // Associer un attribut à une catégorie
-    associerAttribut: (categorieId: number, data: any) => 
-      this.request(`/categories/${categorieId}/attributs`, { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
+
+    associerAttribut: (categorieId: number, data: any) =>
+      this.request(`/categories/${categorieId}/attributs`, {
+        method: 'POST',
+        body: JSON.stringify(data),
       }),
-    
-    // Dissocier un attribut d'une catégorie - AJOUTÉ
-    dissocierAttribut: (categorieId: number, attributId: number) => 
-      this.request(`/categories/${categorieId}/attributs`, { 
+
+    dissocierAttribut: (categorieId: number, attributId: number) =>
+      this.request(`/categories/${categorieId}/attributs`, {
         method: 'DELETE',
-        body: JSON.stringify({ attribut_id: attributId })
+        body: JSON.stringify({ attribut_id: attributId }),
       }),
   };
 
   // ========================================
   // ATTRIBUTS
   // ========================================
+
   attributs = {
-    // Liste avec filtres (ajout du support with_categories)
-    getAll: (params: any = {}) => 
-      this.request(`/attributs?${new URLSearchParams(params)}`),
-    
-    // Méthode index (alias de getAll pour compatibilité)
-    index: (params: any = {}) => this.attributs.getAll(params),
-    
-    // Détails d'un attribut - AJOUTÉ
-    show: (id: number) => 
+    getAll: (params: AttributFilters = {}) =>
+      this.request(`/attributs?${new URLSearchParams(toStringParams(params))}`),
+
+    index: (params: AttributFilters = {}) => this.attributs.getAll(params),
+
+    show: (id: number) =>
       this.request(`/attributs/${id}?with_categories=1`),
-    
-    create: (data: any) => 
-      this.request('/attributs', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    update: (id: number, data: any) => 
-      this.request(`/attributs/${id}`, { 
-        method: 'PUT', 
-        body: JSON.stringify(data) 
-      }),
-    
-    delete: (id: number) => 
+
+    create: (data: AttributFormData) =>
+      this.request('/attributs', { method: 'POST', body: JSON.stringify(data) }),
+
+    update: (id: number, data: Partial<AttributFormData>) =>
+      this.request(`/attributs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+    delete: (id: number) =>
       this.request(`/attributs/${id}`, { method: 'DELETE' }),
-    
-    // Ajouter une valeur possible
-    ajouterValeur: (id: number, data: any) => 
-      this.request(`/attributs/${id}/valeurs`, { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    ajouterValeurPossible: (id: number, data: any) => 
-      this.attributs.ajouterValeur(id, data),
-    
-    // Supprimer une valeur possible
-    supprimerValeur: (id: number, data: any) => 
-      this.request(`/attributs/${id}/valeurs`, { 
-        method: 'DELETE', 
-        body: JSON.stringify(data) 
-      }),
-    
-    supprimerValeurPossible: (id: number, data: any) => 
-      this.attributs.supprimerValeur(id, data),
+
+    ajouterValeur: (id: number, data: any) =>
+      this.request(`/attributs/${id}/valeurs`, { method: 'POST', body: JSON.stringify(data) }),
+
+    ajouterValeurPossible: (id: number, data: any) => this.attributs.ajouterValeur(id, data),
+
+    supprimerValeur: (id: number, data: any) =>
+      this.request(`/attributs/${id}/valeurs`, { method: 'DELETE', body: JSON.stringify(data) }),
+
+    supprimerValeurPossible: (id: number, data: any) => this.attributs.supprimerValeur(id, data),
   };
 
   // ========================================
   // PRODUITS
   // ========================================
-  produits = {
-    // Liste avec filtres
-    getAll: (params: any = {}) => {
-      // URLSearchParams ignore les valeurs undefined/null
-      // S'assurer que tous les params sont des strings
-      const stringParams: Record<string, string> = {};
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          stringParams[key] = String(value);
-        }
-      });
-      return this.request(`/produits?${new URLSearchParams(stringParams)}`);
-    },
-    // Méthode index (alias de getAll pour compatibilité)
-    index: (params: any = {}) => this.produits.getAll(params),
-    
-    // Détails complets d'un produit - AJOUTÉ (MÉTHODE MANQUANTE)
-    show: (id: number) => 
-      this.request(`/produits/${id}`),
-    
-    create: (data: any) => 
-      this.request('/produits', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    update: (id: number, data: any) => 
-      this.request(`/produits/${id}`, { 
-        method: 'PUT', 
-        body: JSON.stringify(data) 
-      }),
-    
-    delete: (id: number) => 
-      this.request(`/produits/${id}`, { method: 'DELETE' }),
-    
-    toggleActive: (id: number) => 
-      this.request(`/produits/${id}/toggle-active`, { method: 'POST' }),
-    
-    // Obtenir les produits en alerte
-    getAlertes: () => 
-      this.request('/produits/alertes'),
-    
-    alertes: () => this.produits.getAlertes(),
-    
-    // Historique des mouvements
-    getMouvements: (id: number) => 
-      this.request(`/produits/${id}/mouvements`),
-    
-    mouvements: (id: number) => this.produits.getMouvements(id),
 
-    // Upload photo produit
+  produits = {
+    getAll: (params: ProduitFilters = {}) =>
+      this.request(`/produits?${new URLSearchParams(toStringParams(params))}`),
+
+    index: (params: ProduitFilters = {}) => this.produits.getAll(params),
+
+    show: (id: number) =>
+      this.request(`/produits/${id}`),
+
+    create: (data: ProduitFormData) =>
+      this.request('/produits', { method: 'POST', body: JSON.stringify(data) }),
+
+    update: (id: number, data: Partial<ProduitFormData>) =>
+      this.request(`/produits/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+    delete: (id: number) =>
+      this.request(`/produits/${id}`, { method: 'DELETE' }),
+
+    toggleActive: (id: number) =>
+      this.request(`/produits/${id}/toggle-active`, { method: 'POST' }),
+
+    // Alertes
+    getAlertes: (params: { type?: 'vente' | 'utilisation' | 'reserve' | 'all' } = {}) =>
+      this.request(`/produits/alertes?${new URLSearchParams(toStringParams(params))}`),
+
+    alertes: (params: any = {}) => this.produits.getAlertes(params),
+
+    // Mouvements d'un produit (toutes variantes ou variante spécifique)
+    getMouvements: (id: number, params: MouvementFilters = {}) =>
+      this.request(`/produits/${id}/mouvements?${new URLSearchParams(toStringParams(params))}`),
+
+    mouvements: (id: number, params: MouvementFilters = {}) =>
+      this.produits.getMouvements(id, params),
+
+    // Photo
     uploadPhoto: async (id: number, file: File) => {
       const token = tokenStorage.getToken();
-      
-      if (!token) {
-        throw new Error('Token d\'authentification manquant');
-      }
+      if (!token) throw new Error('Token d\'authentification manquant');
 
       const formData = new FormData();
       formData.append('photo', file);
-      
+
       try {
         const response = await fetch(`${API_BASE_URL}/produits/${id}/photo`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-            // NE PAS mettre Content-Type, FormData le gère automatiquement
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
           },
-          body: formData
+          body: formData,
         });
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({ 
-            message: 'Erreur serveur' 
-          }));
+          const error = await response.json().catch(() => ({ message: 'Erreur serveur' }));
           throw new Error(error.message || `Erreur ${response.status}`);
         }
 
@@ -224,25 +203,27 @@ class ProduitsApiService {
         throw error;
       }
     },
-    
-    // Supprimer photo produit
+
     deletePhoto: (id: number) =>
       this.request(`/produits/${id}/photo`, { method: 'DELETE' }),
 
-    // Obtenir les produits en attente de validation
+    // Validation
     enAttente: (params: any = {}) =>
-    this.request(`/produits/en-attente?${new URLSearchParams(params)}`),
+      this.request(`/produits/en-attente?${new URLSearchParams(toStringParams(params))}`),
 
-    valider: (id: number) =>
-      this.request(`/produits/${id}/valider`, { method: 'PATCH' }),
-
-    rejeter: (id: number, motif: string) =>
-      this.request(`/produits/${id}/rejeter`, {
+    valider: (id: number, varianteId?: number) =>
+      this.request(`/produits/${id}/valider`, {
         method: 'PATCH',
-        body: JSON.stringify({ motif }),
+        body: JSON.stringify(varianteId ? { variante_id: varianteId } : {}),
       }),
 
-    modifierEtValider: (id: number, data: any) =>
+    rejeter: (id: number, motif: string, varianteId?: number) =>
+      this.request(`/produits/${id}/rejeter`, {
+        method: 'PATCH',
+        body: JSON.stringify({ motif, ...(varianteId ? { variante_id: varianteId } : {}) }),
+      }),
+
+    modifierEtValider: (id: number, data: Partial<ProduitFormData>) =>
       this.request(`/produits/${id}/modifier-valider`, {
         method: 'PATCH',
         body: JSON.stringify(data),
@@ -250,69 +231,88 @@ class ProduitsApiService {
   };
 
   // ========================================
+  // VARIANTES (endpoints directs)
+  // ========================================
+
+  variantes = {
+    show: (varianteId: number) =>
+      this.request(`/variantes/${varianteId}`),
+
+    update: (varianteId: number, data: any) =>
+      this.request(`/variantes/${varianteId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+
+    delete: (varianteId: number) =>
+      this.request(`/variantes/${varianteId}`, { method: 'DELETE' }),
+
+    toggleActive: (varianteId: number) =>
+      this.request(`/variantes/${varianteId}/toggle-active`, { method: 'POST' }),
+
+    getMouvements: (varianteId: number, params: MouvementFilters = {}) =>
+      this.request(`/variantes/${varianteId}/mouvements?${new URLSearchParams(toStringParams(params))}`),
+
+    getTransferts: (varianteId: number, params: TransfertFilters = {}) =>
+      this.request(`/variantes/${varianteId}/transferts?${new URLSearchParams(toStringParams(params))}`),
+  };
+
+  // ========================================
   // MOUVEMENTS STOCK
   // ========================================
+
   mouvements = {
-    getAll: (params: any = {}) => 
-      this.request(`/mouvements-stock?${new URLSearchParams(params)}`),
-    
-    index: (params: any = {}) => this.mouvements.getAll(params),
-    
-    show: (id: number) => 
+    getAll: (params: MouvementFilters = {}) =>
+      this.request(`/mouvements-stock?${new URLSearchParams(toStringParams(params))}`),
+
+    index: (params: MouvementFilters = {}) => this.mouvements.getAll(params),
+
+    show: (id: number) =>
       this.request(`/mouvements-stock/${id}`),
-    
-    create: (data: any) => 
-      this.request('/mouvements-stock', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    ajuster: (data: any) => 
-      this.request('/mouvements-stock/ajuster', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    export: () => 
+
+    create: (data: any) =>
+      this.request('/mouvements-stock', { method: 'POST', body: JSON.stringify(data) }),
+
+    ajuster: (data: any) =>
+      this.request('/mouvements-stock/ajuster', { method: 'POST', body: JSON.stringify(data) }),
+
+    export: () =>
       this.request('/mouvements-stock/export'),
   };
 
-  // Alias pour compatibilité
   mouvementsStock = this.mouvements;
 
   // ========================================
   // TRANSFERTS STOCK
   // ========================================
+
   transferts = {
-    getAll: (params: any = {}) => 
-      this.request(`/transferts?${new URLSearchParams(params)}`),
-    
-    index: (params: any = {}) => this.transferts.getAll(params),
-    
-    show: (id: number) => 
+    getAll: (params: TransfertFilters = {}) =>
+      this.request(`/transferts?${new URLSearchParams(toStringParams(params))}`),
+
+    index: (params: TransfertFilters = {}) => this.transferts.getAll(params),
+
+    show: (id: number) =>
       this.request(`/transferts/${id}`),
-    
-    create: (data: any) => 
-      this.request('/transferts', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
-      }),
-    
-    delete: (id: number) => 
+
+    create: (data: TransfertFormData) =>
+      this.request('/transferts', { method: 'POST', body: JSON.stringify(data) }),
+
+    delete: (id: number) =>
       this.request(`/transferts/${id}`, { method: 'DELETE' }),
-    
-    valider: (id: number) => 
+
+    valider: (id: number) =>
       this.request(`/transferts/${id}/valider`, { method: 'POST' }),
-    
-    getEnAttente: () => 
+
+    getEnAttente: () =>
       this.request('/transferts/en-attente'),
-    
+
     enAttente: () => this.transferts.getEnAttente(),
-    
-    validerEnMasse: (data: any) => 
-      this.request('/transferts/valider-masse', { 
-        method: 'POST', 
-        body: JSON.stringify(data) 
+
+    validerEnMasse: (data: { ids: number[] }) =>
+      this.request('/transferts/valider-masse', {
+        method: 'POST',
+        body: JSON.stringify(data),
       }),
   };
 }

@@ -17,7 +17,7 @@ class ConfectionController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Confection::with(['user', 'categorie', 'produit']);
+            $query = Confection::with(['user', 'categorie', 'variante.produit']);
 
             // Filtres
             if ($request->filled('statut')) {
@@ -75,8 +75,8 @@ class ConfectionController extends Controller
             $confection = Confection::with([
                 'user',
                 'categorie',
-                'produit',
-                'details.produit',
+                'variante.produit',
+                'details.variante.produit',
                 'attributs.attribut',
                 'mouvements'
             ])->findOrFail($id);
@@ -121,7 +121,7 @@ class ConfectionController extends Controller
                 $prixTotal = $detail['quantite_utilisee'] * $detail['prix_unitaire'];
                 
                 $confection->details()->create([
-                    'produit_id' => $detail['produit_id'],
+                    'variante_id' => $detail['variante_id'],
                     'quantite_utilisee' => $detail['quantite_utilisee'],
                     'prix_unitaire' => $detail['prix_unitaire'],
                     'prix_total' => $prixTotal,
@@ -149,7 +149,7 @@ class ConfectionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Confection créée avec succès',
-                'data' => $confection->load(['details.produit', 'attributs'])
+                'data' => $confection->load(['details.variante.produit', 'attributs'])
             ], 201);
 
         } catch (\Exception $e) {
@@ -244,7 +244,7 @@ class ConfectionController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Confection terminée avec succès',
-                    'data' => $confection->load('produit')
+                    'data' => $confection->load('variante.produit')
                 ]);
             }
 

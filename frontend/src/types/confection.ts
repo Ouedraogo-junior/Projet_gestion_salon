@@ -1,11 +1,9 @@
 // src/types/confection.ts
-
-import type { Categorie, Attribut, Produit, MouvementStock } from './produit.types';
+import type { Categorie, Attribut, ProduitVariante, MouvementStock } from './produit.types';
 
 export type StatutConfection = 'en_cours' | 'terminee' | 'annulee';
 export type DestinationConfection = 'vente' | 'utilisation' | 'mixte';
 
-// Interface User compatible avec le projet
 export interface User {
   id: number;
   nom: string;
@@ -23,7 +21,7 @@ export interface User {
 export interface Confection {
   id: number;
   numero_confection: string;
-  produit_id: number | null;
+  variante_id: number | null; // produit_id → variante_id
   user_id: number;
   categorie_id: number;
   nom_produit: string;
@@ -38,15 +36,13 @@ export interface Confection {
   statut: StatutConfection;
   created_at: string;
   updated_at: string;
-  
   // Relations
   user?: User;
   categorie?: Categorie;
-  produit?: Produit;
+  variante?: ProduitVariante; // produit → variante
   details?: ConfectionDetail[];
   attributs?: ConfectionAttribut[];
   mouvements?: MouvementStock[];
-  
   // Attributs calculés
   statut_libelle?: string;
   destination_libelle?: string;
@@ -57,15 +53,17 @@ export interface Confection {
 export interface ConfectionDetail {
   id: number;
   confection_id: number;
-  produit_id: number;
+  variante_id: number;
   quantite_utilisee: number;
   prix_unitaire: number;
   prix_total: number;
   created_at: string;
   updated_at: string;
-  
-  // Relation
-  produit?: Produit;
+  variante?: {
+    id: number;
+    reference?: string;
+    produit?: { id: number; nom: string };
+  };
 }
 
 export interface ConfectionAttribut {
@@ -75,12 +73,9 @@ export interface ConfectionAttribut {
   valeur: string;
   created_at: string;
   updated_at: string;
-  
-  // Relation
   attribut?: Attribut;
 }
 
-// Données pour créer une confection
 export interface CreateConfectionData {
   user_id: number;
   categorie_id: number;
@@ -96,7 +91,7 @@ export interface CreateConfectionData {
 }
 
 export interface CreateConfectionDetailData {
-  produit_id: number;
+  variante_id: number; // produit_id → variante_id
   quantite_utilisee: number;
   prix_unitaire: number;
 }
@@ -106,7 +101,6 @@ export interface CreateConfectionAttributData {
   valeur: string;
 }
 
-// Données pour mettre à jour une confection
 export interface UpdateConfectionData {
   nom_produit?: string;
   quantite_produite?: number;
@@ -116,7 +110,6 @@ export interface UpdateConfectionData {
   prix_vente_unitaire?: number;
 }
 
-// Paramètres de filtrage
 export interface ConfectionFilters {
   statut?: StatutConfection;
   destination?: DestinationConfection;
@@ -130,7 +123,6 @@ export interface ConfectionFilters {
   page?: number;
 }
 
-// Réponse paginée (compatible avec le format du projet)
 export interface ConfectionPaginatedResponse {
   data: Confection[];
   current_page: number;
@@ -141,7 +133,6 @@ export interface ConfectionPaginatedResponse {
   to: number;
 }
 
-// Statistiques
 export interface ConfectionStatistiques {
   total_confections: number;
   en_cours: number;
@@ -157,7 +148,6 @@ export interface ConfectionStatistiques {
   valeur_potentielle: number;
 }
 
-// Réponse API standard (compatible avec le format du projet)
 export interface ApiResponse<T> {
   success: boolean;
   data: T;

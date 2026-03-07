@@ -55,7 +55,7 @@ export default function ConfectionsPage() {
             Gérez la production de vos produits personnalisés
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} size="lg" className="w-full sm:w-auto">
+        <Button onClick={() => setDialogOpen(true)} size="lg" className="bg-blue-600 text-white font-semibold text-xs sm:text-sm w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Nouvelle confection
         </Button>

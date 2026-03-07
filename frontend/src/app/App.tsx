@@ -13,11 +13,9 @@ import Login from './pages/Login';
 import { useState } from 'react';
 import { Menu } from 'lucide-react';
 
-
 // Pages existantes
 import { Dashboard } from './pages/Dashboard';
 import { ProduitsPage } from './pages/Produits/ProduitsPage';
-//import { Marketing } from './pages/Marketing';
 import { Parametres } from './pages/Parametres';
 
 // Modules importés
@@ -44,6 +42,9 @@ import RapportsPage from './pages/Rapports/RapportsPage';
 // Profil utilisateur
 import Profil from '@/app/pages/Profil';
 
+// ✅ AJOUT — Page création produit (pleine page, nouvel onglet)
+import { ProduitCreatePage } from './pages/Produits/ProduitCreatePage';
+
 // Pour l'installation de la PWA
 import { InstallPWA } from './components/InstallPWA';
 
@@ -65,9 +66,7 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-64">
-        {/* Passer la fonction onMenuClick au Header */}
         <Header onMenuClick={() => setSidebarOpen(true)} />
-
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
@@ -83,7 +82,7 @@ function App() {
         <AuthProvider>
           <NotificationProvider>
             <Routes>
-              {/* Page d'accueil publique - Vue principale */}
+              {/* Pages publiques */}
               <Route path="/" element={<VuePubliqueMain><AccueilPage /></VuePubliqueMain>} />
               <Route path="/services" element={<VuePubliqueMain><ServicesPage /></VuePubliqueMain>} />
               <Route path="/public-produits" element={<VuePubliqueMain><ProduitsPagePublic /></VuePubliqueMain>} />
@@ -96,145 +95,118 @@ function App() {
               <Route path="/public/:slug/public-produits" element={<VuePubliqueMain><ProduitsPage /></VuePubliqueMain>} />
               <Route path="/public/:slug/galerie" element={<VuePubliqueMain><GaleriePage /></VuePubliqueMain>} />
               <Route path="/public/:slug/public-rendez-vous" element={<VuePubliqueMain><VuePubliqueRendezVous /></VuePubliqueMain>} />
-              
-              {/* Routes publiques */}
+
+              {/* Auth */}
               <Route path="/login" element={<Login />} />
-              {/* <Route path="/prendre-rendez-vous" element={<VuePubliqueRendezVous />} /> */}
+
+              {/* ✅ AJOUT — Route création produit : pleine page, sans sidebar/header */}
+              <Route
+                path="/produits/nouveau"
+                element={
+                  <PrivateRoute>
+                    <ProduitCreatePage />
+                  </PrivateRoute>
+                }
+              />
 
               {/* Routes protégées avec Layout */}
               <Route
                 path="/dashboard"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <Dashboard />
-                    </MainLayout>
+                    <MainLayout><Dashboard /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/clients"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <ClientsPage />
-                    </MainLayout>
+                    <MainLayout><ClientsPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/produits"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <ProduitsPage />
-                    </MainLayout>
+                    <MainLayout><ProduitsPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/confections"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <ConfectionsPage />
-                    </MainLayout>
+                    <MainLayout><ConfectionsPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/prestations"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <GestionPrestations />
-                    </MainLayout>
+                    <MainLayout><GestionPrestations /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/ventes"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <VentesPage />
-                    </MainLayout>
+                    <MainLayout><VentesPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/rendez-vous"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <RendezVousPage />
-                    </MainLayout>
+                    <MainLayout><RendezVousPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/pointages"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <PointagesPage />
-                    </MainLayout>
+                    <MainLayout><PointagesPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/depenses"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <DepensesPage />
-                    </MainLayout>
+                    <MainLayout><DepensesPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/profil"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <Profil />
-                    </MainLayout>
+                    <MainLayout><Profil /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/rapports"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <RapportsPage />
-                    </MainLayout>
+                    <MainLayout><RapportsPage /></MainLayout>
                   </PrivateRoute>
                 }
               />
-
               <Route
                 path="/parametres"
                 element={
                   <PrivateRoute>
-                    <MainLayout>
-                      <Parametres />
-                    </MainLayout>
+                    <MainLayout><Parametres /></MainLayout>
                   </PrivateRoute>
                 }
               />
 
-              {/* Redirection pour les routes inconnues */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <InstallPWA />

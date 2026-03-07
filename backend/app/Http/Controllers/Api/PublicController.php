@@ -10,45 +10,59 @@ use App\Models\TypePrestation;
 use Illuminate\Http\Request;
 use App\Models\PhotoClient;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class PublicController extends Controller
 {
-    // Méthode pour obtenir le salon par défaut (le premier actif)
     public function getSalonDefaut()
     {
-        $salon = Salon::where('is_active', true)
-            ->orderBy('id')
-            ->first();
+        $salon = Salon::where('is_active', true)->orderBy('id')->first();
 
         if (!$salon) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Aucun salon actif trouvé'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Aucun salon actif trouvé'], 404);
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'id' => $salon->id,
-                'nom' => $salon->nom,
-                'slug' => $salon->slug,
-                'telephone' => $salon->telephone,
-                'adresse' => $salon->adresse,
+                'id'          => $salon->id,
+                'nom'         => $salon->nom,
+                'slug'        => $salon->slug,
+                'telephone'   => $salon->telephone,
+                'adresse'     => $salon->adresse,
                 'description' => $salon->description ?? null,
-                'horaires' => $salon->horaires ?? null,
-                'photo_url' => $salon->photo_url ?? null,
+                'horaires'    => $salon->horaires ?? null,
+                'photo_url'   => $salon->photo_url ?? null,
+            ]
+        ]);
+    }
+
+    public function salonInfo($slug = null)
+    {
+        $salon = $slug
+            ? Salon::where('slug', $slug)->firstOrFail()
+            : Salon::where('is_active', true)->orderBy('id')->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id'          => $salon->id,
+                'nom'         => $salon->nom,
+                'telephone'   => $salon->telephone,
+                'adresse'     => $salon->adresse,
+                'description' => $salon->description ?? null,
+                'horaires'    => $salon->horaires ?? null,
+                'photo_url'   => $salon->photo_url ?? null,
+                'logo_url'    => $salon->logo_url ?? null,
             ]
         ]);
     }
 
     public function prestations($slug = null)
     {
-        $salon = $slug 
+        $salon = $slug
             ? Salon::where('slug', $slug)->firstOrFail()
             : Salon::where('is_active', true)->orderBy('id')->firstOrFail();
-        
+
         $prestations = TypePrestation::where('salon_id', $salon->id)
             ->where('actif', true)
             ->select('id', 'nom', 'description', 'duree_estimee_minutes', 'prix_base', 'ordre')
@@ -56,189 +70,145 @@ class PublicController extends Controller
             ->orderBy('nom')
             ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $prestations
-        ]);
+        return response()->json(['success' => true, 'data' => $prestations]);
     }
 
     public function produits($slug = null)
     {
-        $salon = $slug 
+        $salon = $slug
             ? Salon::where('slug', $slug)->firstOrFail()
             : Salon::where('is_active', true)->orderBy('id')->firstOrFail();
-        
+
+        // On charge les produits avec leurs variantes actives et validées
         $produits = Produit::where('salon_id', $salon->id)
             ->where('is_active', true)
             ->where('visible_public', true)
-            ->whereIn('type_stock_principal', ['vente', 'mixte'])
-            ->where('stock_vente', '>', 0)
-            ->select(
-                'id', 
-                'nom', 
-                'description', 
-                'marque',
-                'prix_vente', 
-                'prix_promo',
-                'date_debut_promo',
-                'date_fin_promo',
-                'photo_url',
-                'stock_vente'
-            )
+            ->with(['variantes' => function ($q) {
+                $q->where('is_active', true)
+                  ->where('statut_validation', 'valide')
+                  ->whereIn('type_stock_principal', ['vente', 'mixte'])
+                  ->where('stock_vente', '>', 0);
+            }])
             ->get()
+            ->filter(fn($p) => $p->variantes->isNotEmpty()) // exclure produits sans variante dispo
             ->map(function ($produit) {
-                // Traiter l'URL de la photo
+                // On prend la variante la moins chère disponible comme représentante
+                $variante = $produit->variantes->sortBy('prix_vente')->first();
+
                 if ($produit->photo_url) {
                     $cleanPath = preg_replace('/^storage\//', '', $produit->photo_url);
                     $produit->photo_url = url('storage/' . $cleanPath);
                 }
-                
-                $produit->prix_actuel = $this->getPrixActuel($produit);
-                $produit->en_promo = $this->estEnPromo($produit);
-                return $produit;
+
+                return [
+                    'id'              => $produit->id,
+                    'nom'             => $produit->nom,
+                    'description'     => $produit->description,
+                    'marque'          => $produit->marque,
+                    'photo_url'       => $produit->photo_url,
+                    'prix_vente'      => (float) $variante->prix_vente,
+                    'prix_promo'      => $variante->prix_promo ? (float) $variante->prix_promo : null,
+                    'date_debut_promo' => $variante->date_debut_promo,
+                    'date_fin_promo'  => $variante->date_fin_promo,
+                    'stock_vente'     => (int) $variante->stock_vente,
+                    'prix_actuel'     => (float) $this->getPrixActuel($variante),
+                    'en_promo'        => $this->estEnPromo($variante),
+                    'variantes_count' => $produit->variantes->count(),
+                ];
+            })
+            ->values();
+
+        return response()->json(['success' => true, 'data' => $produits]);
+    }
+
+    public function produitDetails($id)
+    {
+        try {
+            $produit = Produit::with([
+                'categorie:id,nom,couleur',
+                'variantes' => function ($q) {
+                    $q->where('is_active', true)
+                      ->where('statut_validation', 'valide')
+                      ->with(['valeursAttributs.attribut:id,nom,type_valeur,unite']);
+                }
+            ])
+            ->where('id', $id)
+            ->where('is_active', true)
+            ->where('visible_public', true)
+            ->first();
+
+            if (!$produit) {
+                return response()->json(['success' => false, 'message' => 'Produit non trouvé'], 404);
+            }
+
+            if ($produit->photo_url) {
+                $cleanPath = preg_replace('/^storage\//', '', $produit->photo_url);
+                $produit->photo_url = url('storage/' . $cleanPath);
+            }
+
+            $variantes = $produit->variantes->map(function ($v) {
+                return [
+                    'id'                   => $v->id,
+                    'reference'            => $v->reference,
+                    'prix_vente'           => (float) $v->prix_vente,
+                    'prix_promo'           => $v->prix_promo ? (float) $v->prix_promo : null,
+                    'date_debut_promo'     => $v->date_debut_promo,
+                    'date_fin_promo'       => $v->date_fin_promo,
+                    'stock_vente'          => (int) $v->stock_vente,
+                    'type_stock_principal' => $v->type_stock_principal,
+                    'prix_actuel'          => (float) $this->getPrixActuel($v),
+                    'en_promo'             => $this->estEnPromo($v),
+                    'valeurs_attributs'    => $v->valeursAttributs->map(fn($va) => [
+                        'id'         => $va->id,
+                        'attribut_id' => $va->attribut_id,
+                        'valeur'     => $va->valeur,
+                        'attribut'   => [
+                            'id'          => $va->attribut->id,
+                            'nom'         => $va->attribut->nom,
+                            'type_valeur' => $va->attribut->type_valeur,
+                            'unite'       => $va->attribut->unite ?? null,
+                        ]
+                    ])->toArray()
+                ];
             });
 
-        return response()->json([
-            'success' => true,
-            'data' => $produits
-        ]);
-    }
+            $data = [
+                'id'          => $produit->id,
+                'nom'         => $produit->nom,
+                'description' => $produit->description,
+                'marque'      => $produit->marque,
+                'photo_url'   => $produit->photo_url,
+                'categorie'   => $produit->categorie ? [
+                    'id'      => $produit->categorie->id,
+                    'nom'     => $produit->categorie->nom,
+                    'couleur' => $produit->categorie->couleur,
+                ] : null,
+                'variantes'   => $variantes,
+            ];
 
-    /**
-     * ✅ NOUVELLE MÉTHODE - Détails d'un produit public avec attributs
-     */
-     public function produitDetails($id)
-{
-    try {
-        // ✅ Charger le produit avec toutes ses relations en une seule fois
-        $produit = Produit::with([
-            'categorie:id,nom,couleur',
-            'valeursAttributs.attribut:id,nom,type_valeur,unite'
-        ])
-        ->where('id', $id)
-        ->where('is_active', true)
-        ->where('visible_public', true)
-        ->first();
+            return response()->json(['success' => true, 'data' => $data]);
 
-        if (!$produit) {
+        } catch (\Exception $e) {
+            Log::error('Erreur détails produit public: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Produit non trouvé'
-            ], 404);
+                'message' => 'Erreur lors du chargement du produit',
+                'error'   => config('app.debug') ? $e->getMessage() : 'Erreur serveur'
+            ], 500);
         }
-
-        // Traiter l'URL de la photo
-        if ($produit->photo_url) {
-            $cleanPath = preg_replace('/^storage\//', '', $produit->photo_url);
-            $produit->photo_url = url('storage/' . $cleanPath);
-        }
-
-        // ✅ Préparer les données avec les valeurs d'attributs
-        $data = [
-            'id' => $produit->id,
-            'nom' => $produit->nom,
-            'description' => $produit->description,
-            'marque' => $produit->marque,
-            'prix_vente' => (float) $produit->prix_vente,
-            'prix_promo' => $produit->prix_promo ? (float) $produit->prix_promo : null,
-            'date_debut_promo' => $produit->date_debut_promo,
-            'date_fin_promo' => $produit->date_fin_promo,
-            'photo_url' => $produit->photo_url,
-            'stock_vente' => (int) $produit->stock_vente,
-            'prix_actuel' => (float) $this->getPrixActuel($produit),
-            'en_promo' => $this->estEnPromo($produit),
-            'categorie' => $produit->categorie ? [
-                'id' => $produit->categorie->id,
-                'nom' => $produit->categorie->nom,
-                'couleur' => $produit->categorie->couleur,
-            ] : null,
-            'valeurs_attributs' => $produit->valeursAttributs->map(function($va) {
-                return [
-                    'id' => $va->id,
-                    'attribut_id' => $va->attribut_id,
-                    'valeur' => $va->valeur,
-                    'attribut' => [
-                        'id' => $va->attribut->id,
-                        'nom' => $va->attribut->nom,
-                        'type_valeur' => $va->attribut->type_valeur,
-                        'unite' => $va->attribut->unite ?? null,
-                    ]
-                ];
-            })->toArray()
-        ];
-
-        return response()->json([
-            'success' => true,
-            'data' => $data
-        ]);
-
-    } catch (\Exception $e) {
-        \Log::error('❌ Erreur détails produit public: ' . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Erreur lors du chargement du produit',
-            'error' => config('app.debug') ? $e->getMessage() : 'Erreur serveur'
-        ], 500);
-    }
-}
-
-    public function salonInfo($slug = null)
-    {
-        $salon = $slug 
-            ? Salon::where('slug', $slug)->firstOrFail()
-            : Salon::where('is_active', true)->orderBy('id')->firstOrFail();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $salon->id,
-                'nom' => $salon->nom,
-                'telephone' => $salon->telephone,
-                'adresse' => $salon->adresse,
-                'description' => $salon->description ?? null,
-                'horaires' => $salon->horaires ?? null,
-                'photo_url' => $salon->photo_url ?? null,
-                'logo_url' => $salon->logo_url ?? null,
-            ]
-        ]);
     }
 
-    private function getPrixActuel($produit)
-    {
-        if ($this->estEnPromo($produit)) {
-            return $produit->prix_promo;
-        }
-        return $produit->prix_vente;
-    }
-
-    private function estEnPromo($produit)
-    {
-        if (!$produit->prix_promo || !$produit->date_debut_promo || !$produit->date_fin_promo) {
-            return false;
-        }
-
-        $maintenant = now();
-        return $maintenant->between($produit->date_debut_promo, $produit->date_fin_promo);
-    }
-
-    
     public function photosPubliques($slug = null)
     {
         try {
-            if ($slug) {
-                $salon = Salon::where('slug', $slug)->first();
-            } else {
-                $salon = Salon::orderBy('id')->first();
-            }
+            $salon = $slug
+                ? Salon::where('slug', $slug)->first()
+                : Salon::orderBy('id')->first();
 
             if (!$salon) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucun salon trouvé'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Aucun salon trouvé'], 404);
             }
-            
+
             $photos = PhotoClient::where('is_public', true)
                 ->where('type_photo', 'apres')
                 ->select('id', 'photo_url', 'description', 'date_prise')
@@ -246,23 +216,31 @@ class PublicController extends Controller
                 ->limit(12)
                 ->get()
                 ->map(function ($photo) {
-                    // Enlever "storage/" si présent au début
                     $cleanPath = preg_replace('/^storage\//', '', $photo->photo_url);
-                    // Construire l'URL complète
                     $photo->photo_url = url('storage/' . $cleanPath);
                     return $photo;
                 });
 
-            return response()->json([
-                'success' => true,
-                'data' => $photos
-            ]);
+            return response()->json(['success' => true, 'data' => $photos]);
+
         } catch (\Exception $e) {
             Log::error('Erreur photos publiques: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private function getPrixActuel($variante)
+    {
+        return $this->estEnPromo($variante) ? $variante->prix_promo : $variante->prix_vente;
+    }
+
+    private function estEnPromo($variante)
+    {
+        if (!$variante->prix_promo || !$variante->date_debut_promo || !$variante->date_fin_promo) {
+            return false;
+        }
+        return now()->between($variante->date_debut_promo, $variante->date_fin_promo);
     }
 }

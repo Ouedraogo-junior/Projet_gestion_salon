@@ -22,7 +22,7 @@ import type {
   CreateVenteDTO,
   SourceStock,
 } from '../../../types/vente.types';
-import type { Produit } from '../../../types/produit.types';
+import type { Produit, ProduitVariante } from '../../../types/produit.types';
 import type { TypePrestation } from '../../../types/prestation.types';
 
 interface Coiffeur {
@@ -37,30 +37,24 @@ interface Coiffeur {
 }
 
 export const NouvelleVente: React.FC = () => {
-  // États
   const [clientData, setClientData] = useState<{
     client_id?: number;
     nouveau_client?: NouveauClient;
     client_anonyme?: ClientAnonyme;
   }>({});
   const [clientSelectionne, setClientSelectionne] = useState<Client | null>(null);
-  const [coiffeurId, setCoiffeurId] = useState<number | undefined>();
-  const [paiements, setPaiements] = useState<Paiement[]>([]);
-  const [reduction, setReduction] = useState<Reduction | undefined>();
+  const [coiffeurId, setCoiffeurId]     = useState<number | undefined>();
+  const [paiements, setPaiements]       = useState<Paiement[]>([]);
+  const [reduction, setReduction]       = useState<Reduction | undefined>();
   const [pointsUtilises, setPointsUtilises] = useState(0);
-  const [notes, setNotes] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [notes, setNotes]               = useState('');
+  const [isLoading, setIsLoading]       = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [lastVente, setLastVente] = useState<{ id: number; numero_facture: string } | null>(null);
-
-  // Listes pour les selects
-  const [coiffeurs, setCoiffeurs] = useState<Coiffeur[]>([]);
+  const [lastVente, setLastVente]       = useState<{ id: number; numero_facture: string } | null>(null);
+  const [coiffeurs, setCoiffeurs]       = useState<Coiffeur[]>([]);
   const [isLoadingCoiffeurs, setIsLoadingCoiffeurs] = useState(false);
-  
-  // Onglet actif pour basculer entre produits et prestations
-  const [activeTab, setActiveTab] = useState<'prestations' | 'produits'>('prestations');
+  const [activeTab, setActiveTab]       = useState<'prestations' | 'produits'>('prestations');
 
-  // Hooks personnalisés
   const {
     articles,
     ajouterArticle,
@@ -78,19 +72,13 @@ export const NouvelleVente: React.FC = () => {
     pointsUtilises,
   });
 
-  // Charger les coiffeurs au montage
-  useEffect(() => {
-    loadCoiffeurs();
-  }, []);
+  useEffect(() => { loadCoiffeurs(); }, []);
 
   const loadCoiffeurs = async () => {
     setIsLoadingCoiffeurs(true);
     try {
       const response = await userApi.getCoiffeurs();
-      
-      if (response.success) {
-        setCoiffeurs(response.data);
-      }
+      if (response.success) setCoiffeurs(response.data);
     } catch (error) {
       console.error('Erreur chargement coiffeurs:', error);
       setCoiffeurs([]);
@@ -101,129 +89,100 @@ export const NouvelleVente: React.FC = () => {
 
   const handleClientSelect = async (data: any) => {
     setClientData(data);
-    
+
     if (data.client_id) {
-      // Client existant - récupérer depuis l'API
       try {
         const response = await clientApi.getClient(data.client_id);
-        if (response.success) {
-          setClientSelectionne(response.data.client);
-        }
+        if (response.success) setClientSelectionne(response.data.client);
       } catch (error) {
         console.error('Erreur récupération client:', error);
         setClientSelectionne(null);
       }
     } else if (data.nouveau_client) {
-      // Nouveau client - créer un objet temporaire pour l'affichage
-      const tempClient: Client = {
-        id: 0, // ID temporaire
-        nom: data.nouveau_client.nom || 'Client',
+      setClientSelectionne({
+        id: 0, nom: data.nouveau_client.nom || 'Client',
         prenom: data.nouveau_client.prenom || 'Nouveau',
-        telephone: data.nouveau_client.telephone,
-        email: data.nouveau_client.email,
-        points_fidelite: 0,
-        date_naissance: undefined,
-        adresse: undefined,
-        ville: undefined,
-        quartier: undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        nombre_visites: 0,
-        derniere_visite: undefined,
-        total_depense: 0,
-        moyenne_depense: 0,
-        statut: 'actif'
-      };
-      setClientSelectionne(tempClient);
+        telephone: data.nouveau_client.telephone, email: data.nouveau_client.email,
+        points_fidelite: 0, date_naissance: undefined, adresse: undefined,
+        ville: undefined, quartier: undefined, created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), nombre_visites: 0,
+        derniere_visite: undefined, total_depense: 0, moyenne_depense: 0, statut: 'actif',
+      });
     } else if (data.client_anonyme) {
-      // Client anonyme - créer un objet temporaire pour l'affichage
-      const tempClient: Client = {
-        id: 0, // ID temporaire
-        nom: data.client_anonyme.nom || 'Anonyme',
-        prenom: 'Client',
-        telephone: data.client_anonyme.telephone || 'Non renseigné',
-        email: undefined,
-        points_fidelite: 0,
-        date_naissance: undefined,
-        adresse: undefined,
-        ville: undefined,
-        quartier: undefined,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        nombre_visites: 0,
-        derniere_visite: undefined,
-        total_depense: 0,
-        moyenne_depense: 0,
-        statut: 'actif'
-      };
-      setClientSelectionne(tempClient);
+      setClientSelectionne({
+        id: 0, nom: data.client_anonyme.nom || 'Anonyme', prenom: 'Client',
+        telephone: data.client_anonyme.telephone || 'Non renseigné', email: undefined,
+        points_fidelite: 0, date_naissance: undefined, adresse: undefined,
+        ville: undefined, quartier: undefined, created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), nombre_visites: 0,
+        derniere_visite: undefined, total_depense: 0, moyenne_depense: 0, statut: 'actif',
+      });
     } else {
       setClientSelectionne(null);
     }
   };
 
-  const handleSelectPrestation = (prestation: TypePrestation, quantite: number) => {
+  const handleSelectPrestation = (prestation: TypePrestation) => {
     ajouterArticle(
-      prestation.id,
-      'prestation',
-      prestation.nom,
-      prestation.prix_base,
-      undefined,
-      undefined
+      prestation.id, 'prestation', prestation.nom,
+      prestation.prix_base, undefined, undefined
     );
   };
 
-  const handleSelectProduit = (produit: Produit, quantite: number, sourceStock: SourceStock) => {
-    const prix = getPrixProduit(produit);
-    
+  // ── ADAPTÉ : reçoit maintenant la variante ──────────────────
+  const handleSelectProduit = (
+    produit: Produit,
+    quantite: number,
+    sourceStock: SourceStock,
+    variante: ProduitVariante,
+  ) => {
+    const prix = getPrixVariante(variante);
+
+    // Label : nom produit + attributs variante si présents
+    const attrLabel = variante.attributs && variante.attributs.length > 0
+      ? variante.attributs.map(a => a.valeur_formatee ?? a.valeur).join(' · ')
+      : variante.reference ?? null;
+
+    const nomArticle = attrLabel
+      ? `${produit.nom} — ${attrLabel}`
+      : produit.nom;
+
     ajouterArticle(
-      produit.id,
+      variante.id,          // ← on utilise l'id de la variante, pas du produit parent
       'produit',
-      produit.nom,
+      nomArticle,
       prix,
       sourceStock,
-      produit.reference
+      variante.reference ?? produit.marque,
     );
   };
 
-  const getPrixProduit = (produit: Produit): number => {
-    if (produit.prix_promo && produit.date_debut_promo && produit.date_fin_promo) {
-      const now = new Date();
-      const debut = new Date(produit.date_debut_promo);
-      const fin = new Date(produit.date_fin_promo);
-      
-      if (now >= debut && now <= fin) {
-        return produit.prix_promo;
-      }
-    }
-    
-    return produit.prix_vente;
+  // ── Prix depuis la variante ─────────────────────────────────
+  const getPrixVariante = (variante: ProduitVariante): number => {
+    if (variante.en_promotion && variante.prix_promo) return variante.prix_promo;
+    return variante.prix_vente ?? 0;
   };
 
   const handleValiderVente = async () => {
-    // Validation
     if (articles.length === 0) {
       alert('Veuillez ajouter au moins un article');
       return;
     }
-
     if (!clientData.client_id && !clientData.nouveau_client && !clientData.client_anonyme) {
       alert('Veuillez sélectionner un client');
       return;
     }
-
     const validation = validerPaiements(paiements);
     if (!validation.estValide) {
       alert(`Paiement insuffisant. Il manque ${formaterMontant(validation.montantManquant)}`);
       return;
     }
 
-    // Préparer les données
     const venteData: CreateVenteDTO = {
       ...clientData,
       coiffeur_id: coiffeurId,
       articles: articles.map((a) => ({
-        id: a.id,
+        id: a.id,           // ← variante_id
         type: a.type,
         quantite: a.quantite,
         prix_unitaire: a.prix_unitaire,
@@ -236,22 +195,12 @@ export const NouvelleVente: React.FC = () => {
       notes,
     };
 
-    // Enregistrer
     setIsLoading(true);
     try {
       const response = await venteApi.createVente(venteData);
-      
       if (response.success) {
-        // Sauvegarder les infos de la vente
-        setLastVente({
-          id: response.data.id,
-          numero_facture: response.data.numero_facture
-        });
-        
-        // Afficher le modal de succès
+        setLastVente({ id: response.data.id, numero_facture: response.data.numero_facture });
         setShowSuccessModal(true);
-        
-        // Réinitialiser le formulaire
         resetForm();
       }
     } catch (error: any) {
@@ -263,9 +212,10 @@ export const NouvelleVente: React.FC = () => {
 
   const handlePrintReceipt = () => {
     if (!lastVente) return;
-    
-    const receiptUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/ventes/${lastVente.id}/receipt`;
-    window.open(receiptUrl, '_blank');
+    window.open(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/ventes/${lastVente.id}/receipt`,
+      '_blank'
+    );
   };
 
   const resetForm = () => {
@@ -282,17 +232,16 @@ export const NouvelleVente: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-2 sm:p-3 lg:p-4">
       <div className="max-w-7xl mx-auto">
+
         {/* En-tête */}
         <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-3 sm:mb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h1 className="text-xl sm:text-2xl font-bold">Nouvelle Vente</h1>
             <div className="flex gap-2">
-              <button
-                onClick={resetForm}
-                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border rounded hover:bg-gray-100 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
-              >
+              <button onClick={resetForm}
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 border rounded hover:bg-gray-100 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                 <X size={16} className="sm:w-[18px] sm:h-[18px]" />
-                <span>Annuler</span>
+                Annuler
               </button>
               <button
                 onClick={handleValiderVente}
@@ -307,17 +256,14 @@ export const NouvelleVente: React.FC = () => {
           </div>
         </div>
 
-        {/* Contenu principal */}
+        {/* Contenu */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-          {/* Colonne gauche - Client et Articles */}
-          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-            {/* Sélection client */}
-            <ClientSelector
-              onClientSelect={handleClientSelect}
-              clientSelectionne={clientSelectionne}
-            />
 
-            {/* Sélection articles - Onglets */}
+          {/* Colonne gauche */}
+          <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+            <ClientSelector onClientSelect={handleClientSelect} clientSelectionne={clientSelectionne} />
+
+            {/* Onglets Prestations / Produits */}
             <div className="bg-white rounded-lg border overflow-hidden">
               <div className="border-b flex">
                 <button
@@ -351,7 +297,7 @@ export const NouvelleVente: React.FC = () => {
               </div>
             </div>
 
-            {/* Coiffeur (optionnel) */}
+            {/* Coiffeur */}
             <div className="bg-white p-3 sm:p-4 rounded-lg border">
               <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">
                 Coiffeur / Employé (optionnel)
@@ -362,20 +308,13 @@ export const NouvelleVente: React.FC = () => {
                 className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm sm:text-base"
                 disabled={isLoadingCoiffeurs}
               >
-                <option value="">
-                  {isLoadingCoiffeurs ? 'Chargement...' : 'Aucun coiffeur sélectionné'}
-                </option>
-                {coiffeurs.map((coiffeur) => (
-                  <option key={coiffeur.id} value={coiffeur.id}>
-                    {coiffeur.prenom} {coiffeur.nom} {coiffeur.specialite ? `- ${coiffeur.specialite}` : ''}
+                <option value="">{isLoadingCoiffeurs ? 'Chargement...' : 'Aucun coiffeur sélectionné'}</option>
+                {coiffeurs.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.prenom} {c.nom}{c.specialite ? ` - ${c.specialite}` : ''}
                   </option>
                 ))}
               </select>
-              {coiffeurs.length === 0 && !isLoadingCoiffeurs && (
-                <p className="mt-2 text-xs sm:text-sm text-gray-500">
-                  Aucun employé disponible
-                </p>
-              )}
             </div>
 
             {/* Notes */}
@@ -391,9 +330,8 @@ export const NouvelleVente: React.FC = () => {
             </div>
           </div>
 
-          {/* Colonne droite - Panier et Paiement */}
+          {/* Colonne droite */}
           <div className="space-y-3 sm:space-y-4">
-            {/* Panier */}
             <Panier
               articles={articles}
               onQuantiteChange={modifierQuantite}
@@ -406,7 +344,6 @@ export const NouvelleVente: React.FC = () => {
               clientSelectionne={clientSelectionne}
             />
 
-            {/* Paiement */}
             {articles.length > 0 && (
               <PaiementForm
                 montantTotal={totaux.montantTTC}
@@ -416,8 +353,7 @@ export const NouvelleVente: React.FC = () => {
           </div>
         </div>
       </div>
-      
-      {/* Modal de succès */}
+
       <VenteSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}

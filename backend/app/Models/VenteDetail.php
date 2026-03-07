@@ -17,7 +17,7 @@ class VenteDetail extends Model
         'type_article',
         'article_nom',
         'prestation_id',
-        'produit_id',
+        'variante_id',
         'produit_reference',
         'quantite',
         'prix_unitaire',
@@ -26,28 +26,29 @@ class VenteDetail extends Model
     ];
 
     protected $casts = [
-        'quantite' => 'integer',
+        'quantite'     => 'integer',
         'prix_unitaire' => 'decimal:2',
-        'prix_total' => 'decimal:2',
-        'reduction' => 'decimal:2',
+        'prix_total'   => 'decimal:2',
+        'reduction'    => 'decimal:2',
     ];
 
     protected $attributes = [
-        'quantite' => 1,
+        'quantite'  => 1,
         'reduction' => 0,
     ];
 
-    /**
-     * Relations
-     */
+    // ========================================
+    // RELATIONS
+    // ========================================
+
     public function vente(): BelongsTo
     {
         return $this->belongsTo(Vente::class);
     }
 
-    public function produit(): BelongsTo
+    public function variante(): BelongsTo
     {
-        return $this->belongsTo(Produit::class);
+        return $this->belongsTo(ProduitVariante::class, 'variante_id');
     }
 
     public function prestation(): BelongsTo
@@ -55,9 +56,10 @@ class VenteDetail extends Model
         return $this->belongsTo(TypePrestation::class, 'prestation_id');
     }
 
-    /**
-     * Scopes
-     */
+    // ========================================
+    // SCOPES
+    // ========================================
+
     public function scopePrestations($query)
     {
         return $query->where('type_article', 'prestation');
@@ -73,9 +75,10 @@ class VenteDetail extends Model
         return $query->where('vente_id', $venteId);
     }
 
-    /**
-     * Accessors
-     */
+    // ========================================
+    // ACCESSEURS
+    // ========================================
+
     public function getEstPrestationAttribute(): bool
     {
         return $this->type_article === 'prestation';
@@ -96,9 +99,10 @@ class VenteDetail extends Model
         return (float) ($this->prix_total - $this->reduction);
     }
 
-    /**
-     * Méthodes utilitaires
-     */
+    // ========================================
+    // MÉTHODES UTILITAIRES
+    // ========================================
+
     public function calculerPrixTotal(): void
     {
         $this->prix_total = ($this->quantite * $this->prix_unitaire) - $this->reduction;
@@ -106,29 +110,39 @@ class VenteDetail extends Model
 
     public function updateStock(): void
     {
-        if ($this->type_article === 'produit' && $this->produit_id) {
-            $produit = $this->produit;
-            if ($produit) {
-                // Décrémenter le stock approprié
-                $produit->decrement('stock_vente', $this->quantite);
-            }
+        if ($this->type_article === 'produit' && $this->variante_id) {
+            MouvementStock::enregistrerMouvement(
+                varianteId:    $this->variante_id,
+                typeStock:     'vente',
+                typeMouvement: 'sortie',
+                quantite:      $this->quantite,
+                motif:         "Vente #{$this->vente_id}",
+                venteId:       $this->vente_id,
+                userId:        auth()->id()
+            );
         }
     }
 
     public function restaurerStock(): void
     {
-        if ($this->type_article === 'produit' && $this->produit_id) {
-            $produit = $this->produit;
-            if ($produit) {
-                $produit->increment('stock_vente', $this->quantite);
-            }
+        if ($this->type_article === 'produit' && $this->variante_id) {
+            MouvementStock::enregistrerMouvement(
+                varianteId:    $this->variante_id,
+                typeStock:     'vente',
+                typeMouvement: 'entree',
+                quantite:      $this->quantite,
+                motif:         "Annulation vente #{$this->vente_id}",
+                venteId:       $this->vente_id,
+                userId:        auth()->id()
+            );
         }
     }
 
-    /**
-     * Boot method
-     */
-    protected static function boot()
+    // ========================================
+    // BOOT
+    // ========================================
+
+    protected static function boot(): void
     {
         parent::boot();
 

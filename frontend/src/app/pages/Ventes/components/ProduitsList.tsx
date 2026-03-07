@@ -1,21 +1,22 @@
 // src/app/pages/ventes/components/ProduitsList.tsx
 
 import React, { useState, useEffect } from 'react';
-import { Search, Package, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Search, Package, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { produitsApi } from '../../../../services/produitsApi';
-import type { Produit, Categorie } from '../../../../types/produit.types';
+import type { Produit, ProduitVariante, Categorie } from '../../../../types/produit.types';
 import type { SourceStock } from '../../../../types/vente.types';
 
 interface ProduitsListProps {
-  onSelect: (produit: Produit, quantite: number, sourceStock: SourceStock) => void;
+  onSelect: (produit: Produit, quantite: number, sourceStock: SourceStock, variante: ProduitVariante) => void;
 }
 
 export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
-  const [produits, setProduits] = useState<Produit[]>([]);
-  const [categories, setCategories] = useState<Categorie[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [produits, setProduits]                 = useState<Produit[]>([]);
+  const [categories, setCategories]             = useState<Categorie[]>([]);
+  const [loading, setLoading]                   = useState(false);
+  const [searchTerm, setSearchTerm]             = useState('');
   const [selectedCategorie, setSelectedCategorie] = useState<number | undefined>();
+  const [expandedProduit, setExpandedProduit]   = useState<number | null>(null);
 
   useEffect(() => {
     chargerCategories();
@@ -23,75 +24,37 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      chargerProduits();
-    }, 300);
+    const timer = setTimeout(() => chargerProduits(), 300);
     return () => clearTimeout(timer);
   }, [searchTerm, selectedCategorie]);
 
   const chargerCategories = async () => {
     try {
       const response = await produitsApi.categories.getAll({ actives_only: true });
-      if (response.success) {
-        setCategories(response.data.data || response.data);
-      }
+      if (response.success) setCategories(response.data.data || response.data);
     } catch (error) {
       console.error('Erreur chargement catégories:', error);
     }
   };
 
   const chargerProduits = async () => {
-  setLoading(true);
-  try {
-    const filters: any = {
-      actifs_only: 'true',
-      statut_validation: 'valide', // ← ajouter
-      per_page: '500',             // ← augmenter
-    };
+    setLoading(true);
+    try {
+      const filters: any = {
+        actifs_only:        'true',
+        statut_validation:  'valide',
+        per_page:           '500',
+      };
+      if (searchTerm)        filters.search        = searchTerm;
+      if (selectedCategorie) filters.categorie_id  = String(selectedCategorie);
 
-    if (searchTerm) filters.search = searchTerm;
-    if (selectedCategorie) filters.categorie_id = String(selectedCategorie);
-
-    const response = await produitsApi.produits.getAll(filters);
-    if (response.success) {
-      setProduits(response.data.data || response.data);
+      const response = await produitsApi.produits.getAll(filters);
+      if (response.success) setProduits(response.data.data || response.data);
+    } catch (error) {
+      console.error('Erreur chargement produits:', error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Erreur chargement produits:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const getPrixAffichage = (produit: Produit) => {
-    if (produit.prix_promo && produit.date_debut_promo && produit.date_fin_promo) {
-      const now = new Date();
-      const debut = new Date(produit.date_debut_promo);
-      const fin = new Date(produit.date_fin_promo);
-      if (now >= debut && now <= fin) {
-        return produit.prix_promo;
-      }
-    }
-    return produit.prix_vente;
-  };
-
-  const isEnPromotion = (produit: Produit) => {
-    if (produit.prix_promo && produit.date_debut_promo && produit.date_fin_promo) {
-      const now = new Date();
-      const debut = new Date(produit.date_debut_promo);
-      const fin = new Date(produit.date_fin_promo);
-      return now >= debut && now <= fin;
-    }
-    return false;
-  };
-
-  const handleAjouterProduit = (produit: Produit, source: SourceStock = 'vente') => {
-    const stockDisponible = source === 'vente' ? produit.stock_vente : produit.stock_utilisation;
-    if (stockDisponible < 1) {
-      alert('Stock insuffisant');
-      return;
-    }
-    onSelect(produit, 1, source);
   };
 
   const getImageUrl = (photoUrl?: string) => {
@@ -99,6 +62,84 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
     const cleanUrl = photoUrl.replace(/^(storage\/)+/, '');
     return `${import.meta.env.VITE_API_URL}/storage/${cleanUrl}`;
   };
+
+  // ── Helpers variante ──────────────────────────────────────
+
+  const getPrixVariante = (v: ProduitVariante): number => {
+    if (v.en_promotion && v.prix_promo) return v.prix_promo;
+    return v.prix_vente ?? 0;
+  };
+
+  const getStockVenteVariante = (v: ProduitVariante): number =>
+    ['vente', 'mixte'].includes(v.type_stock_principal)
+      ? (v.stock_vente ?? 0)
+      : 0;
+
+  const getSeuilCritiqueVariante = (v: ProduitVariante): number =>
+    v.seuil_critique ?? 0;
+
+  // ── Handler sélection variante ────────────────────────────
+
+  const handleSelectVariante = (produit: Produit, variante: ProduitVariante) => {
+    const stock = getStockVenteVariante(variante);
+    if (stock < 1) {
+      alert('Stock insuffisant pour cette variante');
+      return;
+    }
+    onSelect(produit, 1, 'vente', variante);
+    // Refermer après sélection si multi-variantes
+    if ((produit.variantes?.length ?? 0) > 1) setExpandedProduit(null);
+  };
+
+  // ── Rendu d'une ligne variante ────────────────────────────
+
+  const renderVarianteLigne = (produit: Produit, variante: ProduitVariante) => {
+    const prix         = getPrixVariante(variante);
+    const stockVente   = getStockVenteVariante(variante);
+    const seuilCrit    = getSeuilCritiqueVariante(variante);
+    const stockCritique = stockVente <= seuilCrit && seuilCrit > 0;
+
+    // Label : attributs ou référence
+    const attrLabel = variante.attributs && variante.attributs.length > 0
+      ? variante.attributs.map(a => a.valeur_formatee ?? a.valeur).join(' · ')
+      : variante.reference ?? `Variante #${variante.id}`;
+
+    return (
+      <div key={variante.id}
+        className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-800 truncate">{attrLabel}</p>
+          <div className="flex items-center gap-3 mt-0.5">
+            <span className="text-sm font-bold text-green-600">
+              {prix.toLocaleString()} F
+            </span>
+            {variante.en_promotion && variante.prix_promo && (
+              <span className="text-xs text-gray-400 line-through">
+                {(variante.prix_vente ?? 0).toLocaleString()} F
+              </span>
+            )}
+            <span className={`text-xs ${stockCritique ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+              Stock : {stockVente}
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => handleSelectVariante(produit, variante)}
+          disabled={stockVente < 1}
+          className="flex-shrink-0 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 transition"
+        >
+          <ShoppingCart size={12} />
+          Ajouter
+        </button>
+      </div>
+    );
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <div className="bg-white rounded-lg border p-4">
@@ -115,7 +156,7 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Rechercher un produit..."
-          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
         />
       </div>
 
@@ -124,9 +165,7 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
         <button
           onClick={() => setSelectedCategorie(undefined)}
           className={`px-3 py-1 rounded-lg whitespace-nowrap text-sm transition ${
-            selectedCategorie === undefined
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 hover:bg-gray-200'
+            selectedCategorie === undefined ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
           }`}
         >
           Tout
@@ -136,9 +175,7 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
             key={cat.id}
             onClick={() => setSelectedCategorie(cat.id)}
             className={`px-3 py-1 rounded-lg whitespace-nowrap text-sm transition ${
-              selectedCategorie === cat.id
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
+              selectedCategorie === cat.id ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
             }`}
           >
             {cat.nom}
@@ -154,89 +191,87 @@ export const ProduitsList: React.FC<ProduitsListProps> = ({ onSelect }) => {
           <div className="text-center py-8 text-gray-500">Aucun produit trouvé</div>
         ) : (
           produits.map((produit) => {
-            const prix = getPrixAffichage(produit);
-            const enPromo = isEnPromotion(produit);
-            const imageUrl = produit.photo_url ? getImageUrl(produit.photo_url) : null;
+            const variantes      = produit.variantes ?? [];
+            const imageUrl       = produit.photo_url ? getImageUrl(produit.photo_url) : null;
+            const hasMultiple    = variantes.length > 1;
+            const isExpanded     = expandedProduit === produit.id;
+            const premiereVariante = variantes[0];
+
+            // Fourchette de prix
+            const prixMin = produit.prix_min ?? getPrixVariante(premiereVariante ?? {} as ProduitVariante);
+            const prixMax = produit.prix_max ?? prixMin;
+            const prixLabel = prixMin !== prixMax
+              ? `${prixMin.toLocaleString()} – ${prixMax.toLocaleString()} F`
+              : `${(prixMin ?? 0).toLocaleString()} F`;
+
+            // Stock total vente agrégé
+            const stockTotalVente = variantes.reduce((s, v) => s + getStockVenteVariante(v), 0);
 
             return (
-              <div
-                key={produit.id}
-                className="border rounded-lg p-3 hover:bg-gray-50 transition"
-              >
-                <div className="flex items-start gap-3">
+              <div key={produit.id} className="border rounded-lg overflow-hidden hover:shadow-sm transition">
+
+                {/* Header produit parent */}
+                <div className="flex items-start gap-3 p-3">
                   {/* Image */}
-                  <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                     {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={produit.nom}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center bg-gray-200"><svg class="text-gray-400" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></div>';
-                        }}
+                      <img src={imageUrl} alt={produit.nom} className="w-full h-full object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                       />
                     ) : (
-                      <Package size={24} className="text-gray-400" />
+                      <Package size={20} className="text-gray-400" />
                     )}
                   </div>
 
-                  {/* Informations */}
+                  {/* Infos produit */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm truncate">{produit.nom}</h4>
-                    {produit.reference && (
-                      <p className="text-xs text-gray-500">Réf: {produit.reference}</p>
+                    {produit.marque && (
+                      <p className="text-xs text-gray-400">{produit.marque}</p>
                     )}
-                    
-                    {/* Prix */}
-                    <div className="mt-1">
-                      {enPromo ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-green-600">
-                            {prix.toLocaleString()} F
-                          </span>
-                          <span className="text-xs text-gray-500 line-through">
-                            {produit.prix_vente.toLocaleString()} F
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm font-bold">
-                          {prix.toLocaleString()} F
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm font-bold text-green-600">{prixLabel}</span>
+                      <span className={`text-xs ${stockTotalVente === 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                        Stock : {stockTotalVente}
+                      </span>
+                      {hasMultiple && (
+                        <span className="text-xs bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">
+                          {variantes.length} variantes
                         </span>
                       )}
                     </div>
-
-                    {/* Stock */}
-                    <div className="flex gap-2 text-xs mt-1">
-                      <span className={produit.stock_vente <= produit.seuil_critique ? 'text-red-600' : 'text-gray-600'}>
-                        Vente: {produit.stock_vente}
-                      </span>
-                      <span className={produit.stock_utilisation <= produit.seuil_critique_utilisation ? 'text-red-600' : 'text-gray-600'}>
-                        Util: {produit.stock_utilisation}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Boutons d'action */}
-                  <div className="flex flex-col gap-1">
+                  {/* Bouton : produit à 1 seule variante → ajouter direct */}
+                  {!hasMultiple && premiereVariante && (
                     <button
-                      onClick={() => handleAjouterProduit(produit, 'vente')}
-                      disabled={produit.stock_vente < 1}
-                      className="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
+                      onClick={() => handleSelectVariante(produit, premiereVariante)}
+                      disabled={getStockVenteVariante(premiereVariante) < 1}
+                      className="flex-shrink-0 px-3 py-1.5 bg-green-500 text-white rounded-lg text-xs font-medium hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 transition"
                     >
                       <ShoppingCart size={12} />
-                      Vente
+                      Ajouter
                     </button>
-                    {/* <button
-                      onClick={() => handleAjouterProduit(produit, 'utilisation')}
-                      disabled={produit.stock_utilisation < 1}
-                      className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1"
+                  )}
+
+                  {/* Bouton : multi-variantes → expand */}
+                  {hasMultiple && (
+                    <button
+                      onClick={() => setExpandedProduit(isExpanded ? null : produit.id)}
+                      className="flex-shrink-0 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-medium hover:bg-indigo-100 flex items-center gap-1 transition"
                     >
-                      <ShoppingCart size={12} />
-                      Util
-                    </button> */}
-                  </div>
+                      Variantes
+                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  )}
                 </div>
+
+                {/* Variantes dépliées */}
+                {hasMultiple && isExpanded && (
+                  <div className="border-t bg-white px-3 pb-3 pt-2 space-y-2">
+                    {variantes.map(v => renderVarianteLigne(produit, v))}
+                  </div>
+                )}
               </div>
             );
           })

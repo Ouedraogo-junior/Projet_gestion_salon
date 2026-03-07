@@ -124,8 +124,20 @@ export interface Vente {
   
   // Relations
   client?: Client;
-  vendeur?: { id: number; name: string };
-  coiffeur?: { id: number; name: string };
+   vendeur?: {
+    id: number;
+    nom: string;
+    prenom: string;
+    nom_complet: string;
+    name: string;
+  };
+  coiffeur?: {
+    id: number;
+    nom: string;
+    prenom: string;
+    nom_complet: string;
+    name: string;
+  };
   details?: VenteDetail[];
   paiements?: Paiement[];
 }

@@ -1,46 +1,30 @@
 // src/app/pages/Depenses/components/DepenseFilters.tsx
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
+import { CategorieDepense } from '@/types/depense';
 
 interface DepenseFiltersProps {
   mois: number;
   annee: number;
-  categorie: string;
+  categorieId?: number;
+  categories: CategorieDepense[];
   onMoisChange: (mois: number) => void;
   onAnneeChange: (annee: number) => void;
-  onCategorieChange: (categorie: string) => void;
+  onCategorieChange: (id: number | undefined) => void;
 }
 
 const MOIS = [
-  { value: 1, label: 'Janvier' },
-  { value: 2, label: 'Février' },
-  { value: 3, label: 'Mars' },
-  { value: 4, label: 'Avril' },
-  { value: 5, label: 'Mai' },
-  { value: 6, label: 'Juin' },
-  { value: 7, label: 'Juillet' },
-  { value: 8, label: 'Août' },
-  { value: 9, label: 'Septembre' },
-  { value: 10, label: 'Octobre' },
-  { value: 11, label: 'Novembre' },
-  { value: 12, label: 'Décembre' },
-];
-
-const CATEGORIES = [
-  { value: 'tous', label: 'Toutes' }, // Changé de '' à 'tous'
-  { value: 'detergent', label: 'Détergent' },
-  { value: 'materiel', label: 'Matériel' },
-  { value: 'fourniture', label: 'Fourniture' },
-  { value: 'autre', label: 'Autre' },
+  { value: 1, label: 'Janvier' }, { value: 2, label: 'Février' },
+  { value: 3, label: 'Mars' }, { value: 4, label: 'Avril' },
+  { value: 5, label: 'Mai' }, { value: 6, label: 'Juin' },
+  { value: 7, label: 'Juillet' }, { value: 8, label: 'Août' },
+  { value: 9, label: 'Septembre' }, { value: 10, label: 'Octobre' },
+  { value: 11, label: 'Novembre' }, { value: 12, label: 'Décembre' },
 ];
 
 export const DepenseFilters = ({
-  mois,
-  annee,
-  categorie,
-  onMoisChange,
-  onAnneeChange,
-  onCategorieChange,
+  mois, annee, categorieId, categories,
+  onMoisChange, onAnneeChange, onCategorieChange,
 }: DepenseFiltersProps) => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -50,14 +34,10 @@ export const DepenseFilters = ({
       <div className="space-y-2">
         <Label>Mois</Label>
         <Select value={mois.toString()} onValueChange={(v) => onMoisChange(Number(v))}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {MOIS.map((m) => (
-              <SelectItem key={m.value} value={m.value.toString()}>
-                {m.label}
-              </SelectItem>
+              <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -66,14 +46,10 @@ export const DepenseFilters = ({
       <div className="space-y-2">
         <Label>Année</Label>
         <Select value={annee.toString()} onValueChange={(v) => onAnneeChange(Number(v))}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {years.map((y) => (
-              <SelectItem key={y} value={y.toString()}>
-                {y}
-              </SelectItem>
+              <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -81,14 +57,17 @@ export const DepenseFilters = ({
 
       <div className="space-y-2">
         <Label>Catégorie</Label>
-        <Select value={categorie || 'tous'} onValueChange={onCategorieChange}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
+        <Select
+          value={categorieId?.toString() ?? 'tous'}
+          onValueChange={(v) => onCategorieChange(v === 'tous' ? undefined : Number(v))}
+        >
+          <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {CATEGORIES.map((c) => (
-              <SelectItem key={c.value} value={c.value}>
-                {c.label}
+            <SelectItem value="tous">Toutes</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id.toString()}>
+                {c.icone && <span className="mr-1">{c.icone}</span>}
+                {c.nom}
               </SelectItem>
             ))}
           </SelectContent>

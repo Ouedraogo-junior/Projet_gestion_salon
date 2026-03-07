@@ -1,245 +1,208 @@
 // src/app/pages/public/components/ProduitDetailsModal.tsx
-import { useEffect, useState } from 'react';
-import { X, Package, ShoppingCart, ImageOff, Sparkles, Tag, ArrowLeftRight } from 'lucide-react';
-import { publicApiService } from '@/services/publicApi';
-import { useCurrency } from '@/hooks/useCurrency';
-import { CurrencySelector } from './CurrencySelector';
 
-interface ProduitDetailsModalProps {
+import React, { useEffect, useState } from 'react';
+import { X, ShoppingCart, Loader2, Check } from 'lucide-react';
+import { publicApiService } from '@/services/publicApi';
+import type { ProduitPublicDetail, VariantePublique } from '@/types/public.types';
+
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   produitId: number;
-  salonTel: string;
-  salonNom: string;
+  onAddToCart: (produit: ProduitPublicDetail, variante: VariantePublique) => void;
 }
 
-export function ProduitDetailsModal({ 
-  isOpen, 
-  onClose, 
+const fmt = (v: number) =>
+  new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(v);
+
+export const ProduitDetailsModal: React.FC<Props> = ({
+  isOpen,
+  onClose,
   produitId,
-  salonTel,
-  salonNom 
-}: ProduitDetailsModalProps) {
-  const [produit, setProduit] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
-  
-  const { 
-    selectedCurrency, 
-    changeCurrency, 
-    convertAmount, 
-    formatCurrency,
-    getCurrencyInfo,
-    loading: currencyLoading 
-  } = useCurrency();
+  onAddToCart,
+}) => {
+  const [produit, setProduit] = useState<ProduitPublicDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedVariante, setSelectedVariante] = useState<VariantePublique | null>(null);
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
-    if (isOpen && produitId) {
-      loadProduitDetails();
-    }
+    if (!isOpen) return;
+    setLoading(true);
+    setProduit(null);
+    setSelectedVariante(null);
+    publicApiService
+      .getProduitDetails(produitId)
+      .then((res) => {
+        if (res.success) {
+          setProduit(res.data);
+          // Pré-sélectionner la première variante disponible
+          const dispo = res.data.variantes.find((v) => v.stock_vente > 0);
+          setSelectedVariante(dispo ?? res.data.variantes[0] ?? null);
+        }
+      })
+      .finally(() => setLoading(false));
   }, [isOpen, produitId]);
-
-  const loadProduitDetails = async () => {
-    try {
-      setLoading(true);
-      const response = await publicApiService.getProduitDetails(produitId);
-      
-      if (response.success && response.data) {
-        setProduit(response.data);
-        setImageError(false);
-      }
-    } catch (error) {
-      //console.error('❌ Erreur:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCurrencyXOF = (value: number | null | undefined) => {
-    return new Intl.NumberFormat('fr-FR').format(value ?? 0);
-  };
-
-  const handleCommander = () => {
-    const message = `Bonjour ${salonNom}, je suis intéressé(e) par le produit : ${produit?.nom}`;
-    const whatsappUrl = `https://wa.me/${salonTel.replace(/\s/g, '')}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
 
   if (!isOpen) return null;
 
-  const currencyInfo = getCurrencyInfo();
-  const convertedPrice = produit ? convertAmount(produit.prix_vente) : 0;
+  const handleAdd = () => {
+    if (!produit || !selectedVariante) return;
+    onAddToCart(produit, selectedVariante);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  const varianteLabel = (v: VariantePublique) => {
+    if (v.valeurs_attributs.length === 0) return v.reference ?? `#${v.id}`;
+    return v.valeurs_attributs.map((va) => va.valeur).join(' – ');
+  };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-      onClick={onClose}
-    >
-      {/* Modal Content */}
-      <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden relative"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-indigo-50 to-purple-50">
-          <h3 className="text-xl font-bold text-gray-900">Détails du produit</h3>
-          <div className="flex items-center gap-3">
-            <CurrencySelector 
-              selectedCurrency={selectedCurrency}
-              onCurrencyChange={changeCurrency}
-            />
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-2"
-            >
-              <X size={24} />
-            </button>
-          </div>
+        <div className="flex items-center justify-between p-5 border-b sticky top-0 bg-white z-10">
+          <h2 className="text-lg font-bold text-gray-800">Détails du produit</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition">
+            <X size={20} />
+          </button>
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
-              <p className="mt-2 text-gray-600">Chargement...</p>
+        <div className="p-5">
+          {loading && (
+            <div className="flex justify-center py-12">
+              <Loader2 className="animate-spin text-indigo-600" size={36} />
             </div>
-          ) : produit ? (
-            <div className="space-y-6">
-              {/* Grille principale */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Photo */}
-                <div>
-                  <div className="aspect-square bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl overflow-hidden">
-                    {produit.photo_url && !imageError ? (
-                      <img
-                        src={produit.photo_url}
-                        alt={produit.nom}
-                        className="w-full h-full object-cover"
-                        onError={() => setImageError(true)}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        <ImageOff size={80} className="text-gray-300" />
-                        <p className="text-sm text-gray-400 mt-2">Aucune photo</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+          )}
 
-                {/* Infos */}
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-3xl font-bold text-gray-900">{produit.nom}</h2>
-                    {produit.marque && (
-                      <p className="text-lg text-gray-600 mt-1">
-                        Marque: <span className="font-semibold">{produit.marque}</span>
-                      </p>
-                    )}
-                    {/* {produit.categorie && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-sm text-gray-500">Catégorie:</span>
-                        <span 
-                          className="px-3 py-1 rounded-full text-sm font-medium text-white"
-                          style={{ backgroundColor: produit.categorie.couleur || '#6366f1' }}
-                        >
-                          {produit.categorie.nom}
-                        </span>
-                      </div>
-                    )} */}
-                  </div>
+          {!loading && produit && (
+            <div className="space-y-5">
+              {/* Image */}
+              {produit.photo_url && (
+                <img
+                  src={produit.photo_url}
+                  alt={produit.nom}
+                  className="w-full h-56 object-cover rounded-xl"
+                />
+              )}
 
-                  {/* Prix */}
-                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl space-y-3">
-                    {/* Prix en FCFA */}
-                    <div>
-                      <div className="text-sm text-gray-600 mb-1">Prix en FCFA</div>
-                      <div className="text-2xl font-bold text-indigo-600">
-                        {formatCurrencyXOF(produit.prix_vente)} FCFA
-                      </div>
-                    </div>
-
-                    {/* Prix converti */}
-                    {selectedCurrency !== 'XOF' && (
-                      <>
-                        <div className="flex items-center justify-center">
-                          <ArrowLeftRight size={16} className="text-gray-400" />
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-600 mb-1 flex items-center gap-2">
-                            <span>Prix en {currencyInfo?.name}</span>
-                            {currencyLoading && (
-                              <div className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-indigo-600 border-r-transparent"></div>
-                            )}
-                          </div>
-                          <div className="text-2xl font-bold text-purple-600">
-                            {currencyInfo?.symbol} {formatCurrency(convertedPrice)}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Description */}
-                  {produit.description && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-700">{produit.description}</p>
-                    </div>
-                  )}
-
-                  {/* Stock */}
-                  <div className="flex items-center gap-2">
-                    <Package size={18} className="text-gray-500" />
-                    <span className="text-gray-600">
-                      Stock: <span className={`font-semibold ${produit.stock_vente === 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {produit.stock_vente === 0 ? 'Épuisé' : 'En stock'}
-                      </span>
-                    </span>
-                  </div>
-
-                  {/* Bouton */}
-                  <button
-                    onClick={handleCommander}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700"
+              {/* Infos produit */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{produit.nom}</h3>
+                {produit.marque && (
+                  <p className="text-sm text-gray-500 mt-1">{produit.marque}</p>
+                )}
+                {produit.categorie && (
+                  <span
+                    className="inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                    style={{ backgroundColor: produit.categorie.couleur ?? '#6366f1' }}
                   >
-                    <ShoppingCart size={20} />
-                    Commander via WhatsApp
-                  </button>
-                </div>
+                    {produit.categorie.nom}
+                  </span>
+                )}
+                {produit.description && (
+                  <p className="mt-3 text-sm text-gray-600">{produit.description}</p>
+                )}
               </div>
 
-              {/* Caractéristiques */}
-              {produit.valeurs_attributs && produit.valeurs_attributs.length > 0 && (
-                <div className="border border-gray-200 rounded-xl p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Sparkles className="text-indigo-600" size={24} />
-                    Caractéristiques
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {produit.valeurs_attributs.map((va: any) => (
-                      <div key={va.id} className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-600">{va.attribut.nom}</p>
-                            <p className="text-lg font-bold text-gray-900">
-                              {va.valeur} {va.attribut.unite || ''}
-                            </p>
-                          </div>
-                          <Tag className="text-indigo-400" size={20} />
-                        </div>
+              {/* Sélection variante */}
+              {produit.variantes.length > 1 && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    Choisissez une option
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {produit.variantes.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => setSelectedVariante(v)}
+                        disabled={v.stock_vente === 0}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition
+                          ${selectedVariante?.id === v.id
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-semibold'
+                            : 'border-gray-200 text-gray-700 hover:border-indigo-300'}
+                          ${v.stock_vente === 0 ? 'opacity-40 cursor-not-allowed line-through' : ''}
+                        `}
+                      >
+                        {varianteLabel(v)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Prix variante sélectionnée */}
+              {selectedVariante && (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-1">
+                  {selectedVariante.en_promo && selectedVariante.prix_promo ? (
+                    <div className="flex items-baseline gap-3">
+                      <span className="text-2xl font-bold text-red-600">
+                        {fmt(selectedVariante.prix_promo)} FCFA
+                      </span>
+                      <span className="text-sm text-gray-400 line-through">
+                        {fmt(selectedVariante.prix_vente)} FCFA
+                      </span>
+                      <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">
+                        -{Math.round(((selectedVariante.prix_vente - selectedVariante.prix_promo) / selectedVariante.prix_vente) * 100)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-2xl font-bold text-indigo-600">
+                      {fmt(selectedVariante.prix_vente)} FCFA
+                    </span>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    {selectedVariante.stock_vente > 0
+                      ? `${selectedVariante.stock_vente} en stock`
+                      : 'Épuisé'}
+                  </p>
+                </div>
+              )}
+
+              {/* Attributs de la variante sélectionnée */}
+              {selectedVariante && selectedVariante.valeurs_attributs.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Caractéristiques</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedVariante.valeurs_attributs.map((va) => (
+                      <div key={va.id} className="bg-gray-50 rounded-lg p-2.5">
+                        <p className="text-xs text-gray-400">{va.attribut.nom}</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {va.valeur}
+                          {va.attribut.unite ? ` ${va.attribut.unite}` : ''}
+                        </p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Produit non trouvé</p>
-            </div>
           )}
         </div>
+
+        {/* Footer — bouton ajouter */}
+        {!loading && produit && selectedVariante && (
+          <div className="p-5 border-t sticky bottom-0 bg-white">
+            <button
+              onClick={handleAdd}
+              disabled={selectedVariante.stock_vente === 0 || added}
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all
+                ${added
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
+            >
+              {added ? (
+                <><Check size={20} /> Ajouté au panier</>
+              ) : (
+                <><ShoppingCart size={20} /> Ajouter au panier</>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};

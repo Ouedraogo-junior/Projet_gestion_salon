@@ -16,15 +16,10 @@ interface DepenseCardProps {
   onDelete: (id: number) => void;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  detergent: 'bg-blue-100 text-blue-800',
-  materiel: 'bg-green-100 text-green-800',
-  fourniture: 'bg-purple-100 text-purple-800',
-  autre: 'bg-gray-100 text-gray-800',
-};
-
 export const DepenseCard = ({ depense, onEdit, onDelete }: DepenseCardProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // const categorie = depense.categorie_depense;
 
   return (
     <>
@@ -34,7 +29,7 @@ export const DepenseCard = ({ depense, onEdit, onDelete }: DepenseCardProps) => 
             <div className="flex-1">
               <h3 className="font-semibold text-lg">{depense.libelle}</h3>
               <p className="text-2xl font-bold text-primary mt-1">
-                {depense.montant.toLocaleString('fr-FR')} FCFA
+                {Number(depense.montant).toLocaleString('fr-FR')} FCFA
               </p>
             </div>
             <DropdownMenu>
@@ -56,9 +51,25 @@ export const DepenseCard = ({ depense, onEdit, onDelete }: DepenseCardProps) => 
             </DropdownMenu>
           </div>
 
-          <Badge className={CATEGORY_COLORS[depense.categorie] || CATEGORY_COLORS.autre}>
-            {depense.categorie}
-          </Badge>
+          {depense.categorie_depense && (
+            <Badge
+              style={
+                depense.categorie_depense.couleur
+                  ? {
+                      backgroundColor: depense.categorie_depense.couleur + '20',
+                      color: depense.categorie_depense.couleur,
+                      borderColor: depense.categorie_depense.couleur + '40',
+                    }
+                  : undefined
+              }
+              variant="outline"
+            >
+              {depense.categorie_depense.icone && (
+                <span className="mr-1">{depense.categorie_depense.icone}</span>
+              )}
+              {depense.categorie_depense.nom}
+            </Badge>
+          )}
 
           {depense.description && (
             <p className="text-sm text-muted-foreground mt-3">{depense.description}</p>
@@ -74,7 +85,7 @@ export const DepenseCard = ({ depense, onEdit, onDelete }: DepenseCardProps) => 
             {depense.user && (
               <div className="flex items-center gap-1">
                 <User className="h-4 w-4" />
-                {depense.user.name}
+                {depense.user.prenom} {depense.user.nom}
               </div>
             )}
           </div>
@@ -91,7 +102,7 @@ export const DepenseCard = ({ depense, onEdit, onDelete }: DepenseCardProps) => 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onDelete(depense.id)} className="bg-red-600">
+            <AlertDialogAction onClick={() => { onDelete(depense.id); setShowDeleteDialog(false); }} className="bg-red-600">
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>

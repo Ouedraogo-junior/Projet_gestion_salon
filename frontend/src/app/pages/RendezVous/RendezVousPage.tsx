@@ -128,7 +128,7 @@ export const RendezVousPage: React.FC = () => {
 
             <button
               onClick={() => setShowNouveauRDV(true)}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition flex items-center justify-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-orange-700 transition flex items-center justify-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Nouveau rendez-vous

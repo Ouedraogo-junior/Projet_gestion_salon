@@ -1,7 +1,7 @@
 // src/app/pages/prestations/components/PrestationCard.tsx
 
 import React from 'react';
-import { Edit2, Trash2, Clock, Eye, EyeOff, GripVertical } from 'lucide-react';
+import { Edit2, Trash2, Clock, Eye, EyeOff, GripVertical, CheckCircle, XCircle } from 'lucide-react';
 import type { TypePrestation } from '../../../../types/prestation.types';
 
 interface PrestationCardProps {
@@ -12,126 +12,104 @@ interface PrestationCardProps {
   isDragging?: boolean;
 }
 
+const formatPrix = (prix: number) =>
+  new Intl.NumberFormat('fr-FR').format(prix) + ' FCFA';
+
+const formatDuree = (minutes: number | null) => {
+  if (!minutes) return 'Non définie';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h}h`;
+  return `${m}min`;
+};
+
 export const PrestationCard: React.FC<PrestationCardProps> = ({
-  prestation,
-  onEdit,
-  onDelete,
-  onToggleActif,
-  isDragging = false,
+  prestation, onEdit, onDelete, onToggleActif, isDragging = false,
 }) => {
-  const formatPrix = (prix: number) => {
-    return new Intl.NumberFormat('fr-FR').format(prix) + ' FCFA';
-  };
-
-  const formatDuree = (minutes: number | null) => {
-    if (!minutes) return 'Non définie';
-    const heures = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-
-    if (heures > 0 && mins > 0) return `${heures}h ${mins}min`;
-    if (heures > 0) return `${heures}h`;
-    return `${mins}min`;
-  };
-
   return (
-    <div
-      className={`bg-white rounded-xl border-2 hover:shadow-lg transition-all duration-300 group ${
-        isDragging ? 'shadow-2xl scale-105 rotate-2' : ''
-      } ${prestation.actif ? 'border-gray-200' : 'border-gray-300 opacity-60'}`}
-    >
-      {/* Header avec drag handle */}
-      <div className="p-5 border-b border-gray-100 flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1">
-          <div className="mt-1 cursor-move text-gray-400 hover:text-gray-600 transition">
-            <GripVertical size={20} />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-gray-900 mb-1">{prestation.nom}</h3>
-            {prestation.description && (
-              <p className="text-sm text-gray-600 line-clamp-2">{prestation.description}</p>
-            )}
-          </div>
+    <div className={`bg-white border rounded-lg hover:border-blue-200 hover:shadow-sm transition-all overflow-hidden ${
+      isDragging ? 'shadow-lg scale-[1.02]' : ''
+    } ${prestation.actif ? 'border-gray-100' : 'border-gray-100 opacity-60'}`}>
+
+      {/* Header */}
+      <div className="flex items-start gap-3 px-4 pt-4 pb-3">
+        <div className="mt-0.5 cursor-move text-gray-300 hover:text-gray-500 transition flex-shrink-0">
+          <GripVertical size={18} />
         </div>
 
-        {/* Badge statut */}
-        <div>
-          {prestation.actif ? (
-            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Actif
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full">
-              <div className="w-2 h-2 bg-gray-400 rounded-full" />
-              Inactif
-            </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-gray-900 leading-tight">{prestation.nom}</h3>
+            {prestation.actif ? (
+              <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-[11px] font-medium rounded-full border border-green-100">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                Actif
+              </span>
+            ) : (
+              <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 text-gray-500 text-[11px] font-medium rounded-full border border-gray-200">
+                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
+                Inactif
+              </span>
+            )}
+          </div>
+          {prestation.description && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{prestation.description}</p>
           )}
         </div>
       </div>
 
       {/* Détails */}
-      <div className="p-5 space-y-3">
-        {/* Prix */}
+      <div className="px-4 pb-3 space-y-2 border-t border-gray-50 pt-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">Prix de base</span>
-          <span className="text-xl font-bold text-purple-600">{formatPrix(prestation.prix_base)}</span>
+          <span className="text-xs text-gray-500">Prix de base</span>
+          <span className="text-sm font-bold text-blue-600">{formatPrix(prestation.prix_base)}</span>
         </div>
 
-        {/* Durée */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-            <Clock size={16} />
-            Durée estimée
+          <span className="text-xs text-gray-500 flex items-center gap-1">
+            <Clock size={12} /> Durée
           </span>
-          <span className="text-sm font-semibold text-gray-900">
-            {formatDuree(prestation.duree_estimee_minutes)}
-          </span>
+          <span className="text-xs font-medium text-gray-700">{formatDuree(prestation.duree_estimee_minutes)}</span>
         </div>
 
-        {/* Ordre */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">Position</span>
-          <span className="text-sm font-semibold text-gray-900">#{prestation.ordre + 1}</span>
+          <span className="text-xs text-gray-500">Position</span>
+          <span className="text-xs font-medium text-gray-700">#{prestation.ordre + 1}</span>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="p-4 bg-gray-50 rounded-b-xl flex gap-2 border-t border-gray-100">
-        {/* Activer/Désactiver */}
+      <div className="flex items-center gap-1.5 px-4 py-3 border-t border-gray-100 bg-gray-50/50">
         <button
           onClick={() => onToggleActif(prestation.id)}
-          className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
             prestation.actif
-              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              : 'bg-green-100 text-green-700 hover:bg-green-200'
+              ? 'text-gray-600 hover:bg-gray-100'
+              : 'text-green-600 hover:bg-green-50'
           }`}
           title={prestation.actif ? 'Désactiver' : 'Activer'}
         >
-          {prestation.actif ? <EyeOff size={18} /> : <Eye size={18} />}
+          {prestation.actif ? <EyeOff size={14} /> : <Eye size={14} />}
           {prestation.actif ? 'Désactiver' : 'Activer'}
         </button>
 
-        {/* Modifier */}
         <button
           onClick={() => onEdit(prestation)}
-          className="px-4 py-2.5 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition-all flex items-center justify-center gap-2"
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-orange-500 hover:bg-orange-50 rounded-lg text-xs font-medium transition-colors"
           title="Modifier"
         >
-          <Edit2 size={18} />
-          Modifier
+          <Edit2 size={14} /> Modifier
         </button>
 
-        {/* Supprimer */}
         <button
           onClick={() => {
-            if (confirm(`Voulez-vous vraiment supprimer "${prestation.nom}" ?`)) {
-              onDelete(prestation.id);
-            }
+            if (confirm(`Supprimer "${prestation.nom}" ?`)) onDelete(prestation.id);
           }}
-          className="px-4 py-2.5 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-all"
+          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
           title="Supprimer"
         >
-          <Trash2 size={18} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>

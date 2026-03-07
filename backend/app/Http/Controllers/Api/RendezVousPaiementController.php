@@ -217,7 +217,7 @@ public function genererRecuAcompte($rendezVousId)
 
         // Générer le PDF
         $pdf = Pdf::loadView('receipts.rendez_vous_acompte', compact('rendezVous', 'paiementAcompte', 'salon'))
-            ->setPaper([0, 0, 297.64, 419.53], 'portrait'); // A6
+            ->setPaper([0, 0, 226.77, 1000], 'portrait');
 
         return $pdf->stream("recu_acompte_RDV_{$rendezVous->id}.pdf");
     } catch (\Exception $e) {
@@ -264,7 +264,7 @@ public function genererRecuAcompte($rendezVousId)
 
             // Générer le PDF
             $pdf = Pdf::loadView('receipts.rendez_vous_final', compact('rendezVous', 'vente', 'salon'))
-                ->setPaper([0, 0, 297.64, 419.53], 'portrait'); // A6
+                ->setPaper([0, 0, 226.77, 1000], 'portrait');
 
             return $pdf->stream("recu_final_RDV_{$rendezVous->id}.pdf");
 

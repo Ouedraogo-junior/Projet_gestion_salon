@@ -179,7 +179,12 @@ export default function ConfectionDetailDialog({
                     <div className="block sm:hidden space-y-2">
                       {confection.details.map((detail) => (
                         <div key={detail.id} className="rounded-lg border p-3 space-y-2 bg-white">
-                          <div className="font-medium text-sm">{detail.produit?.nom || '-'}</div>
+                          <div className="font-medium text-sm">
+                            {detail.variante?.produit?.nom || '-'}
+                            {detail.variante?.reference && (
+                              <span className="text-xs text-muted-foreground ml-1">({detail.variante.reference})</span>
+                            )}
+                          </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
                               <span className="text-muted-foreground">Quantité:</span>
@@ -214,8 +219,11 @@ export default function ConfectionDetailDialog({
                             {confection.details.map((detail) => (
                               <TableRow key={detail.id}>
                                 <TableCell className="font-medium text-xs sm:text-sm">
-                                  {detail.produit?.nom || '-'}
-                                </TableCell>
+                                    {detail.variante?.produit?.nom || '-'}
+                                    {detail.variante?.reference && (
+                                      <span className="block text-xs text-muted-foreground">{detail.variante.reference}</span>
+                                    )}
+                                  </TableCell>
                                 <TableCell className="text-right text-xs sm:text-sm">
                                   {detail.quantite_utilisee}
                                 </TableCell>
@@ -272,7 +280,7 @@ export default function ConfectionDetailDialog({
                               {mouvement.type_mouvement}
                             </Badge>
                           </div>
-                          <div className="text-sm font-medium">{mouvement.produit?.nom || '-'}</div>
+                          <div className="text-sm font-medium">{mouvement.variante?.produit?.nom || '-'}</div>
                           <div className="text-xs text-muted-foreground">
                             Quantité: <span className="font-medium text-foreground">
                               {mouvement.type_mouvement === 'sortie' && '-'}{mouvement.quantite}
@@ -305,7 +313,7 @@ export default function ConfectionDetailDialog({
                                     {mouvement.type_mouvement}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-xs sm:text-sm">{mouvement.produit?.nom || '-'}</TableCell>
+                                <TableCell className="text-xs sm:text-sm">{mouvement.variante?.produit?.nom || '-'}</TableCell>
                                 <TableCell className="text-right text-xs sm:text-sm">
                                   {mouvement.type_mouvement === 'sortie' && '-'}
                                   {mouvement.quantite}

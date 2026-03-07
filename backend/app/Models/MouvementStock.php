@@ -13,7 +13,7 @@ class MouvementStock extends Model
     protected $table = 'mouvements_stock';
 
     protected $fillable = [
-        'produit_id',
+        'variante_id',
         'type_stock',
         'type_mouvement',
         'quantite',
@@ -27,165 +27,127 @@ class MouvementStock extends Model
     ];
 
     protected $casts = [
-        'quantite' => 'integer',
+        'quantite'    => 'integer',
         'stock_avant' => 'integer',
         'stock_apres' => 'integer',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'created_at'  => 'datetime',
+        'updated_at'  => 'datetime',
     ];
 
-    /**
-     * Relation avec le produit
-     */
-    public function produit(): BelongsTo
+    // ========================================
+    // RELATIONS
+    // ========================================
+
+    public function variante(): BelongsTo
     {
-        return $this->belongsTo(Produit::class);
+        return $this->belongsTo(ProduitVariante::class, 'variante_id');
     }
 
-    /**
-     * Relation avec la vente (si sortie pour vente)
-     */
     public function vente(): BelongsTo
     {
         return $this->belongsTo(Vente::class);
     }
 
-    /**
-     * Relation avec le transfert (si mouvement de transfert inter-stock)
-     */
     public function transfert(): BelongsTo
     {
         return $this->belongsTo(TransfertStock::class);
     }
 
-    /**
-     * Relation avec la confection (si entrée depuis confection)
-     */
     public function confection(): BelongsTo
     {
         return $this->belongsTo(Confection::class);
     }
 
-    /**
-     * Relation avec l'utilisateur qui a effectué le mouvement
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Scope pour filtrer par type de stock
-     */
+    // ========================================
+    // SCOPES
+    // ========================================
+
     public function scopeTypeStock($query, string $type)
     {
         return $query->where('type_stock', $type);
     }
 
-    /**
-     * Scope pour filtrer par type de mouvement
-     */
     public function scopeTypeMouvement($query, string $type)
     {
         return $query->where('type_mouvement', $type);
     }
 
-    /**
-     * Scope pour les entrées
-     */
     public function scopeEntrees($query)
     {
         return $query->where('type_mouvement', 'entree');
     }
 
-    /**
-     * Scope pour les sorties
-     */
     public function scopeSorties($query)
     {
         return $query->where('type_mouvement', 'sortie');
     }
 
-    /**
-     * Scope pour un produit spécifique
-     */
-    public function scopePourProduit($query, int $produitId)
+    public function scopePourVariante($query, int $varianteId)
     {
-        return $query->where('produit_id', $produitId);
+        return $query->where('variante_id', $varianteId);
     }
 
-    /**
-     * Scope pour une période donnée
-     */
     public function scopePeriode($query, $dateDebut, $dateFin)
     {
         return $query->whereBetween('created_at', [$dateDebut, $dateFin]);
     }
 
-    /**
-     * Vérifie si c'est un mouvement d'entrée
-     */
+    // ========================================
+    // HELPERS
+    // ========================================
+
     public function isEntree(): bool
     {
         return $this->type_mouvement === 'entree';
     }
 
-    /**
-     * Vérifie si c'est un mouvement de sortie
-     */
     public function isSortie(): bool
     {
         return $this->type_mouvement === 'sortie';
     }
 
-    /**
-     * Vérifie si c'est un ajustement
-     */
     public function isAjustement(): bool
     {
         return $this->type_mouvement === 'ajustement';
     }
 
-    /**
-     * Vérifie si c'est un inventaire
-     */
     public function isInventaire(): bool
     {
         return $this->type_mouvement === 'inventaire';
     }
 
-    /**
-     * Obtient le libellé du type de mouvement
-     */
     public function getTypeMouvementLibelleAttribute(): string
     {
         return match($this->type_mouvement) {
-            'entree' => 'Entrée',
-            'sortie' => 'Sortie',
-            'ajustement' => 'Ajustement',
-            'inventaire' => 'Inventaire',
-            default => 'Inconnu',
+            'entree'      => 'Entrée',
+            'sortie'      => 'Sortie',
+            'ajustement'  => 'Ajustement',
+            'inventaire'  => 'Inventaire',
+            default       => 'Inconnu',
         };
     }
 
-    /**
-     * Obtient le libellé du type de stock
-     */
     public function getTypeStockLibelleAttribute(): string
     {
         return match($this->type_stock) {
-            'vente' => 'Stock Vente',
-            'utilisation' => 'Stock Utilisation',
-            'reserve' => 'Stock Réserve', // ✅ AJOUT
-            default => 'Inconnu',
+            'vente'        => 'Stock Vente',
+            'utilisation'  => 'Stock Utilisation',
+            'reserve'      => 'Stock Réserve',
+            default        => 'Inconnu',
         };
     }
 
-    /**
-     * Enregistre un mouvement de stock
-     */
+    // ========================================
+    // MÉTHODE PRINCIPALE
+    // ========================================
+
     public static function enregistrerMouvement(
-        int $produitId,
+        int $varianteId,
         string $typeStock,
         string $typeMouvement,
         int $quantite,
@@ -195,45 +157,41 @@ class MouvementStock extends Model
         ?int $confectionId = null,
         ?int $userId = null
     ): self {
-        $produit = Produit::findOrFail($produitId);
-        
-        // ✅ MODIFICATION - Gérer les 3 types de stock
+        $variante = ProduitVariante::findOrFail($varianteId);
+
         $stockAvant = match($typeStock) {
-            'vente' => $produit->stock_vente,
-            'utilisation' => $produit->stock_utilisation,
-            'reserve' => $produit->stock_reserve, // ← AJOUT
-            default => 0,
+            'vente'       => $variante->stock_vente,
+            'utilisation' => $variante->stock_utilisation,
+            'reserve'     => $variante->stock_reserve,
+            default       => 0,
         };
 
-        // Calculer le nouveau stock
         $stockApres = match($typeMouvement) {
-            'entree' => $stockAvant + $quantite,
-            'sortie' => $stockAvant - $quantite,
-            'ajustement', 'inventaire' => $quantite, // quantite = nouveau stock
-            default => $stockAvant,
+            'entree'                  => $stockAvant + $quantite,
+            'sortie'                  => $stockAvant - $quantite,
+            'ajustement', 'inventaire' => $quantite,
+            default                   => $stockAvant,
         };
 
-        // Créer le mouvement
         $mouvement = self::create([
-            'produit_id' => $produitId,
-            'type_stock' => $typeStock,
+            'variante_id'   => $varianteId,
+            'type_stock'    => $typeStock,
             'type_mouvement' => $typeMouvement,
-            'quantite' => abs($quantite),
-            'stock_avant' => $stockAvant,
-            'stock_apres' => $stockApres,
-            'motif' => $motif,
-            'vente_id' => $venteId,
-            'transfert_id' => $transfertId,
+            'quantite'      => abs($quantite),
+            'stock_avant'   => $stockAvant,
+            'stock_apres'   => $stockApres,
+            'motif'         => $motif,
+            'vente_id'      => $venteId,
+            'transfert_id'  => $transfertId,
             'confection_id' => $confectionId,
-            'user_id' => $userId ?? auth()->id(),
+            'user_id'       => $userId ?? auth()->id(),
         ]);
 
-        // ✅ MODIFICATION - Mettre à jour le bon champ de stock
         match($typeStock) {
-            'vente' => $produit->update(['stock_vente' => $stockApres]),
-            'utilisation' => $produit->update(['stock_utilisation' => $stockApres]),
-            'reserve' => $produit->update(['stock_reserve' => $stockApres]), // ← AJOUT
-            default => null,
+            'vente'       => $variante->update(['stock_vente' => $stockApres]),
+            'utilisation' => $variante->update(['stock_utilisation' => $stockApres]),
+            'reserve'     => $variante->update(['stock_reserve' => $stockApres]),
+            default       => null,
         };
 
         return $mouvement;

@@ -1,9 +1,10 @@
 // src/hooks/useDepenses.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { depenseService } from '@/services/depenseService';
-import { DepenseFormData, DepenseFilters } from '@/types/depense';
-import { toast } from 'sonner';  //react-hot-toast
+import { depenseService, categorieDepenseService } from '@/services/depenseService';
+import { DepenseFormData, DepenseFilters, CategorieDepenseFormData } from '@/types/depense';
+import { toast } from 'sonner';
 
+// ── Dépenses ──────────────────────────────────────────────
 export const useDepenses = (filters?: DepenseFilters) => {
   return useQuery({
     queryKey: ['depenses', filters],
@@ -21,7 +22,6 @@ export const useDepense = (id: number) => {
 
 export const useCreateDepense = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (data: DepenseFormData) => depenseService.create(data),
     onSuccess: () => {
@@ -29,14 +29,13 @@ export const useCreateDepense = () => {
       toast.success('Dépense ajoutée avec succès');
     },
     onError: () => {
-      toast.error('Erreur lors de l\'ajout de la dépense');
+      toast.error("Erreur lors de l'ajout de la dépense");
     },
   });
 };
 
 export const useUpdateDepense = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<DepenseFormData> }) =>
       depenseService.update(id, data),
@@ -52,7 +51,6 @@ export const useUpdateDepense = () => {
 
 export const useDeleteDepense = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (id: number) => depenseService.delete(id),
     onSuccess: () => {
@@ -76,5 +74,57 @@ export const useStatsCategorie = (mois?: number, annee?: number) => {
   return useQuery({
     queryKey: ['depenses-stats', mois, annee],
     queryFn: () => depenseService.getStatsParCategorie(mois, annee),
+  });
+};
+
+// ── Catégories dépenses ───────────────────────────────────
+export const useCategoriesDepenses = () => {
+  return useQuery({
+    queryKey: ['categories-depenses'],
+    queryFn: () => categorieDepenseService.getAll(),
+  });
+};
+
+export const useCreateCategorieDepense = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CategorieDepenseFormData) => categorieDepenseService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories-depenses'] });
+      toast.success('Catégorie créée avec succès');
+    },
+    onError: () => {
+      toast.error('Erreur lors de la création de la catégorie');
+    },
+  });
+};
+
+export const useUpdateCategorieDepense = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<CategorieDepenseFormData> }) =>
+      categorieDepenseService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories-depenses'] });
+      toast.success('Catégorie modifiée avec succès');
+    },
+    onError: () => {
+      toast.error('Erreur lors de la modification de la catégorie');
+    },
+  });
+};
+
+export const useDeleteCategorieDepense = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => categorieDepenseService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories-depenses'] });
+      toast.success('Catégorie supprimée avec succès');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Erreur lors de la suppression';
+      toast.error(message);
+    },
   });
 };

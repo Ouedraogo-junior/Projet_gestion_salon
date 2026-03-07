@@ -359,7 +359,7 @@ export const VenteHistorique: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {vente.vendeur?.name || '-'}
+                        {vente.vendeur?.nom_complet || '-'}
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                         {formatMontant(vente.montant_total_ttc)}
@@ -472,7 +472,7 @@ export const VenteHistorique: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-xs sm:text-sm text-gray-500">Vendeur</p>
-                  <p className="font-medium text-sm sm:text-base truncate">{venteSelectionnee.vendeur?.name || '-'}</p>
+                  <p className="font-medium text-sm sm:text-base truncate">{venteSelectionnee.vendeur?.nom_complet || '-'}</p>
                 </div>
               </div>
 

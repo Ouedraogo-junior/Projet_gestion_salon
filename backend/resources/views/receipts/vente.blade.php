@@ -2,507 +2,423 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reçu - {{ $vente->numero_facture }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         @page {
-            size: 105mm 148mm;
+            size: 80mm auto;
             margin: 0;
         }
+
         body {
-            font-family: 'DejaVu Sans', 'Helvetica', sans-serif;
-            font-size: 8px;
-            color: #1a1a1a;
-            line-height: 1.4;
-            padding: 8mm 6mm;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 7.5px;
+            color: #000;
+            line-height: 1.45;
         }
-        
-        /* En-tête avec logo à gauche et infos à droite */
-        .header {
-            display: table;
-            width: 100%;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #1a1a1a;
-        }
-        .header-left {
-            display: table-cell;
-            width: 35%;
-            vertical-align: top;
-        }
-        .logo-container {
-            max-width: 30mm;
-            max-height: 12mm;
-            margin-bottom: 3px;
-            overflow: hidden;
-        }
-        .logo-container img {
-            max-width: 100%;
-            max-height: 12mm;
-            height: auto;
-            display: block;
-        }
-        .salon-name {
-            font-size: 9px;
-            font-weight: bold;
-            color: #1a1a1a;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            line-height: 1.2;
-            margin-top: 2px;
-        }
-        .header-right {
-            display: table-cell;
-            width: 60%;
-            text-align: right;
-            font-size: 7px;
-            line-height: 1.5;
-            vertical-align: top;
-        }
-        .header-right .info-line {
-            margin: 1px 0;
-            color: #4a4a4a;
-        }
-        .header-right .info-line strong {
-            color: #1a1a1a;
-        }
-        
-        /* Titre centré */
-        .receipt-title {
-            text-align: center;
-            margin: 6px 0;
-            padding: 4px 0;
-            background: #1a1a1a;
-            color: #fff;
-            font-size: 9px;
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-        
-        /* Sections avec style moderne */
-        .info-section {
-            display: table;
-            width: 100%;
-            margin-bottom: 6px;
-            border-spacing: 4px 0;
-        }
-        .info-block {
-            display: table-cell;
-            width: 50%;
-            background: #f8f8f8;
-            padding: 4px;
-            border-left: 2px solid #1a1a1a;
-            vertical-align: top;
-        }
-        .info-block-title {
-            font-size: 7px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-            color: #1a1a1a;
-        }
-        .info-block p {
-            font-size: 7px;
-            margin: 1.5px 0;
-            color: #4a4a4a;
-        }
-        .info-block p strong {
-            color: #1a1a1a;
-            min-width: 18mm;
-            display: inline-block;
-        }
-        
-        /* Tableau moderne */
-        .items-section {
-            margin: 6px 0;
-        }
-        .section-header {
-            font-size: 7px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-            padding-bottom: 2px;
-            border-bottom: 1px solid #1a1a1a;
-        }
-        table {
+
+        /*
+         * SOLUTION DOMPDF pour les marges :
+         * @page margin est ignoré par certaines versions de DomPDF.
+         * On utilise une table wrapper qui occupe 100% de la page
+         * avec une cellule intérieure qui a du padding — c'est la seule
+         * méthode garantie pour avoir des marges gauche/droite en DomPDF.
+         */
+        .page-wrapper {
             width: 100%;
             border-collapse: collapse;
-            margin: 3px 0;
         }
-        table thead {
-            background: #1a1a1a;
-            color: #fff;
+        .page-wrapper td.inner {
+            padding: 4mm 7mm 6mm 7mm;
         }
-        table th {
-            padding: 3px 2px;
-            text-align: left;
-            font-size: 7px;
+
+        /* ── SÉPARATEURS ── */
+        .sep-double { border-top: 2px solid #000; margin: 2mm 0; }
+        .sep-single { border-top: 1px solid #000;  margin: 1.5mm 0; }
+        .sep-dashed { border-top: 1px dashed #000;  margin: 1.5mm 0; }
+
+        /* ── EN-TÊTE ── */
+        .salon-nom {
+            font-size: 13px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        table td {
-            padding: 3px 2px;
-            border-bottom: 1px solid #e8e8e8;
-            font-size: 7px;
-        }
-        table tbody tr:last-child td {
-            border-bottom: 1px solid #1a1a1a;
-        }
-        .item-name {
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        .item-ref {
-            font-size: 6px;
-            color: #888;
-            font-style: italic;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .text-center {
+            letter-spacing: 1px;
             text-align: center;
         }
-        
-        /* Badge de type */
-        .badge {
-            display: inline-block;
-            padding: 1px 4px;
-            border-radius: 2px;
-            font-size: 6px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .badge-prestation {
-            background: #1a1a1a;
+        .salon-info { font-size: 7px; color: #333; text-align: center; }
+
+        /* ── BANDEAU TITRE ── */
+        .title-band {
+            background: #000;
             color: #fff;
-        }
-        .badge-produit {
-            background: #e8e8e8;
-            color: #1a1a1a;
-        }
-        
-        /* Section totaux moderne */
-        .totals-section {
-            margin-top: 6px;
-            padding: 5px;
-            background: #f8f8f8;
-        }
-        .total-line {
-            display: table;
-            width: 100%;
+            text-align: center;
+            font-size: 8px;
+            font-weight: bold;
+            letter-spacing: 2px;
             padding: 2px 0;
-            font-size: 7px;
+            margin: 1.5mm 0;
         }
-        .total-line span:first-child {
-            display: table-cell;
-            text-align: left;
+
+        /* ── TABLES INFO (label / valeur) ── */
+        .info-table { width: 100%; border-collapse: collapse; }
+        .info-table td {
+            font-size: 7.5px;
+            padding: 1.5px 0;
+            vertical-align: top;
         }
-        .total-line span:last-child {
-            display: table-cell;
-            text-align: right;
-        }
-        .total-line.subtotal {
-            color: #4a4a4a;
-        }
-        .total-line.reduction {
-            color: #d32f2f;
-            font-style: italic;
-        }
-        .total-line.grand-total {
-            margin-top: 4px;
-            padding-top: 4px;
-            border-top: 2px solid #1a1a1a;
-            font-size: 10px;
+        .info-table td.lbl { width: 40%; color: #555; }
+        .info-table td.val { width: 60%; font-weight: bold; }
+
+        /* ── STATUT ── */
+        .statut {
+            font-size: 6.5px;
             font-weight: bold;
+            padding: 0 3px;
+            border: 1px solid;
         }
-        .total-line.paid,
-        .total-line.change {
-            font-size: 7px;
-            color: #388e3c;
+        .statut-paye    { border-color: #006600; color: #006600; }
+        .statut-partiel { border-color: #bb6600; color: #bb6600; }
+        .statut-impaye  { border-color: #cc0000; color: #cc0000; }
+
+        /* ── TABLEAU ARTICLES ── */
+        .articles {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 1mm 0;
         }
-        .total-line.remaining {
-            font-weight: bold;
-            color: #d32f2f;
-            background: #fff;
-            padding: 3px;
-            margin-top: 2px;
-        }
-        
-        /* Box d'informations additionnelles */
-        .info-box {
-            margin: 5px 0;
-            padding: 4px;
-            background: #fff;
-            border-left: 3px solid #1a1a1a;
-            font-size: 7px;
-        }
-        .info-box-title {
-            font-weight: bold;
-            margin-bottom: 2px;
+        .articles col.c-nom { width: 44%; }
+        .articles col.c-qty { width: 10%; }
+        .articles col.c-pu  { width: 23%; }
+        .articles col.c-tot { width: 23%; }
+
+        .articles th {
+            font-size: 6.5px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            font-size: 7px;
-        }
-        .info-box-content {
-            color: #4a4a4a;
-            line-height: 1.4;
-        }
-        
-        /* Points fidélité avec style */
-        .loyalty-box {
-            background: #f8f8f8;
-            border-left: 3px solid #1a1a1a;
-        }
-        
-        /* Footer élégant */
-        .footer {
-            margin-top: 8px;
-            padding-top: 5px;
-            border-top: 2px solid #1a1a1a;
-            text-align: center;
-        }
-        .thank-you {
-            font-size: 9px;
+            border-bottom: 1px solid #000;
+            padding: 1px 1px 2px 1px;
             font-weight: bold;
-            margin-bottom: 2px;
+        }
+        .articles th.c-nom { text-align: left; }
+        .articles th.c-qty { text-align: center; }
+        .articles th.c-pu  { text-align: right; }
+        .articles th.c-tot { text-align: right; }
+
+        .articles td {
+            font-size: 7.5px;
+            padding: 2px 1px;
+            border-bottom: 1px dashed #bbb;
+            vertical-align: top;
+        }
+        .articles td.c-nom { text-align: left; }
+        .articles td.c-qty { text-align: center; }
+        .articles td.c-pu  { text-align: right; }
+        .articles td.c-tot { text-align: right; font-weight: bold; }
+
+        .art-type { font-size: 6px; color: #666; font-style: italic; }
+        .art-red  { font-size: 6px; color: #cc0000; }
+
+        /* ── TABLES TOTAUX ── */
+        .totaux-table { width: 100%; border-collapse: collapse; }
+        .totaux-table td { font-size: 7.5px; padding: 1.5px 0; vertical-align: top; }
+        .totaux-table td.t-lbl { text-align: left;  width: 60%; }
+        .totaux-table td.t-val { text-align: right; width: 40%; font-weight: bold; }
+
+        .totaux-table tr.grand-total td { font-size: 11px; font-weight: bold; }
+        .totaux-table tr.subtotal  td   { color: #555; }
+        .totaux-table tr.reduction td   { color: #cc0000; font-style: italic; }
+        .totaux-table tr.paid      td   { color: #006600; }
+        .totaux-table tr.remaining td   { color: #cc0000; font-weight: bold; font-size: 8.5px; }
+
+        /* ── TABLES DÉTAIL (paiements / fidélité) ── */
+        .detail-table { width: 100%; border-collapse: collapse; }
+        .detail-table td { font-size: 7.5px; padding: 1px 0; vertical-align: top; }
+        .detail-table td.d-lbl { text-align: left;  width: 60%; }
+        .detail-table td.d-val { text-align: right; width: 40%; font-weight: bold; }
+        .detail-table td.d-ref { font-size: 6.5px; color: #555; padding-left: 8px; }
+
+        /* ── SECTION LABEL ── */
+        .section-label {
+            font-size: 6.5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #555;
+            margin-bottom: 1px;
         }
-        .print-time {
-            font-size: 6px;
-            color: #888;
-        }
-        
-        /* Statut badge */
-        .status-badge {
-            display: inline-block;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 7px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .status-paid {
-            background: #388e3c;
-            color: #fff;
-        }
-        .status-partial {
-            background: #f57c00;
-            color: #fff;
-        }
-        .status-unpaid {
-            background: #d32f2f;
-            color: #fff;
-        }
+
+        /* ── FOOTER ── */
+        .footer     { text-align: center; margin-top: 2mm; }
+        .merci      { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .small-gray { font-size: 6.5px; color: #777; }
     </style>
 </head>
 <body>
-    <!-- EN-TÊTE AVEC LOGO À GAUCHE ET INFOS À DROITE -->
-    <div class="header">
-        <div class="header-left">
-            @if($salon && $salon->logo_url)
-                <div class="logo-container">
-                    <img src="{{ public_path('storage/' . $salon->logo_url) }}" alt="Logo">
-                </div>
-            @endif
-            <div class="salon-name">{{ $salon ? $salon->nom : 'SALON DREADLOCKS' }}</div>
-        </div>
-        
-        <div class="header-right">
-            @if($salon)
-                <div class="info-line"><strong>Adresse:</strong> {{ $salon->adresse }}</div>
-                <div class="info-line"><strong>Tél:</strong> {{ $salon->telephone }}</div>
-                @if($salon->email)
-                    <div class="info-line"><strong>Email:</strong> {{ $salon->email }}</div>
-                @endif
-                @if($salon->horaires)
-                    <div class="info-line">{{ $salon->horaires }}</div>
-                @endif
-            @else
-                <div class="info-line">Adresse du salon</div>
-                <div class="info-line">Tél: +226 XX XX XX XX</div>
-            @endif
-        </div>
-    </div>
 
-    <!-- TITRE CENTRÉ -->
-    <div class="receipt-title">REÇU DE VENTE</div>
+{{-- Table wrapper : seule façon fiable d'avoir des marges en DomPDF --}}
+<table class="page-wrapper">
+<tr><td class="inner">
 
-    <!-- INFORMATIONS FACTURE ET CLIENT -->
-    <div class="info-section">
-        <div class="info-block">
-            <div class="info-block-title">Facture</div>
-            <p><strong>N°:</strong> {{ $vente->numero_facture }}</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($vente->date_vente)->format('d/m/Y H:i') }}</p>
-            <p><strong>Vendeur:</strong> {{ $vente->vendeur ? $vente->vendeur->nom : 'N/A' }}</p>
-            @if($vente->coiffeur)
-                <p><strong>Coiffeur:</strong> {{ $vente->coiffeur->nom }}</p>
-            @endif
-            <p>
-                <strong>Statut:</strong> 
-                <span class="status-badge status-{{ $vente->statut_paiement === 'paye' ? 'paid' : ($vente->statut_paiement === 'partiel' ? 'partial' : 'unpaid') }}">
-                    {{ $vente->statut_paiement === 'paye' ? 'Payé' : ($vente->statut_paiement === 'partiel' ? 'Partiel' : 'Impayé') }}
-                </span>
-            </p>
-        </div>
-
-        <div class="info-block">
-            <div class="info-block-title">Client</div>
-            @if($vente->client)
-                <p><strong>Nom:</strong> {{ $vente->client->nom }} {{ $vente->client->prenom }}</p>
-                <p><strong>Tél:</strong> {{ $vente->client->telephone }}</p>
-                @if($vente->client->email)
-                    <p><strong>Email:</strong> {{ $vente->client->email }}</p>
-                @endif
-                @if($vente->client->points_fidelite)
-                    <p><strong>Points:</strong> {{ $vente->client->points_fidelite }} pts</p>
-                @endif
-            @elseif($vente->client_nom)
-                <p><strong>Nom:</strong> {{ $vente->client_nom }}</p>
-                @if($vente->client_telephone)
-                    <p><strong>Tél:</strong> {{ $vente->client_telephone }}</p>
-                @endif
-            @else
-                <p>Client anonyme</p>
-            @endif
-        </div>
-    </div>
-
-    <!-- LISTE DES ARTICLES -->
-    <div class="items-section">
-        <div class="section-header">Détails de la vente</div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 40%;">Article</th>
-                    <th class="text-center" style="width: 15%;">Type</th>
-                    <th class="text-center" style="width: 10%;">Qté</th>
-                    <th class="text-right" style="width: 15%;">P.U.</th>
-                    <th class="text-right" style="width: 20%;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($vente->details as $detail)
-                    <tr>
-                        <td>
-                            <div class="item-name">{{ $detail->article_nom ?? 'Article inconnu' }}</div>
-                            @if($detail->produit_reference)
-                                <div class="item-ref">Réf: {{ $detail->produit_reference }}</div>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-{{ $detail->type_article }}">
-                                {{ $detail->type_article === 'prestation' ? 'Service' : 'Produit' }}
-                            </span>
-                        </td>
-                        <td class="text-center">{{ $detail->quantite }}</td>
-                        <td class="text-right">{{ number_format($detail->prix_unitaire, 0, ',', ' ') }}</td>
-                        <td class="text-right">
-                            <strong>{{ number_format($detail->prix_total, 0, ',', ' ') }}</strong>
-                            @if($detail->reduction > 0)
-                                <div style="font-size: 6px; color: #d32f2f;">-{{ number_format($detail->reduction, 0, ',', ' ') }}</div>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    <!-- TOTAUX -->
-    <div class="totals-section">
-        <div class="total-line subtotal">
-            <span>Sous-total HT</span>
-            <span>{{ number_format($vente->montant_total_ht, 0, ',', ' ') }} FCFA</span>
-        </div>
-        @if($vente->montant_reduction > 0)
-            <div class="total-line reduction">
-                <span>Réduction appliquée</span>
-                <span>-{{ number_format($vente->montant_reduction, 0, ',', ' ') }} FCFA</span>
+    {{-- ══════════════════════════════════════════════
+         LOGO DU SALON — décommenter pour activer
+         Nécessite : $salon->logo_url = chemin relatif
+         depuis storage/app/public/
+         Exemple   : "logos/mon-logo.png"
+    ══════════════════════════════════════════════ --}}
+    {{--
+    @if($salon && $salon->logo_url)
+        @php
+            $logoPath   = storage_path('app/public/' . $salon->logo_url);
+            $logoBase64 = null;
+            if (file_exists($logoPath)) {
+                $ext     = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+                $mimeMap = ['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif','webp'=>'image/webp'];
+                $mime    = $mimeMap[$ext] ?? 'image/png';
+                $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($logoPath));
+            }
+        @endphp
+        @if($logoBase64)
+            <div style="text-align:center; margin-bottom:2mm;">
+                <img src="{{ $logoBase64 }}" style="max-width:28mm; max-height:14mm;" alt="Logo">
             </div>
         @endif
-        <div class="total-line grand-total">
-            <span>TOTAL À PAYER</span>
-            <span>{{ number_format($vente->montant_total_ttc, 0, ',', ' ') }} FCFA</span>
-        </div>
+    @endif
+    --}}
+
+    {{-- ── EN-TÊTE ── --}}
+    <div class="salon-nom">{{ $salon->nom ?? 'SALON' }}</div>
+    @if($salon)
+        @if($salon->adresse)<div class="salon-info">{{ $salon->adresse }}</div>@endif
+        @if($salon->telephone)<div class="salon-info">Tél : {{ $salon->telephone }}</div>@endif
+        @if($salon->email)<div class="salon-info">{{ $salon->email }}</div>@endif
+    @endif
+
+    <div class="title-band">— REÇU DE VENTE —</div>
+
+    {{-- ── INFOS FACTURE ── --}}
+    <table class="info-table">
+        <tr>
+            <td class="lbl">N° Facture</td>
+            <td class="val">{{ $vente->numero_facture }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Date</td>
+            <td class="val">{{ \Carbon\Carbon::parse($vente->date_vente)->format('d/m/Y H:i') }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Vendeur</td>
+            <td class="val">{{ $vente->vendeur?->prenom }} {{ $vente->vendeur?->nom }}</td>
+        </tr>
+        @if($vente->coiffeur)
+        <tr>
+            <td class="lbl">Coiffeur</td>
+            <td class="val">{{ $vente->coiffeur->prenom }} {{ $vente->coiffeur->nom }}</td>
+        </tr>
+        @endif
+        <tr>
+            <td class="lbl">Statut</td>
+            <td class="val">
+                @php
+                    $statutClass = match($vente->statut_paiement) {
+                        'paye'    => 'statut-paye',
+                        'partiel' => 'statut-partiel',
+                        default   => 'statut-impaye',
+                    };
+                    $statutLabel = match($vente->statut_paiement) {
+                        'paye'    => 'PAYÉ',
+                        'partiel' => 'PARTIEL',
+                        default   => 'IMPAYÉ',
+                    };
+                @endphp
+                <span class="statut {{ $statutClass }}">{{ $statutLabel }}</span>
+            </td>
+        </tr>
+    </table>
+
+    <div class="sep-dashed"></div>
+
+    {{-- ── CLIENT ── --}}
+    <table class="info-table">
+        @if($vente->client)
+            <tr>
+                <td class="lbl">Client</td>
+                <td class="val">{{ $vente->client->prenom }} {{ $vente->client->nom }}</td>
+            </tr>
+            @if($vente->client->telephone)
+            <tr>
+                <td class="lbl">Tél</td>
+                <td class="val">{{ $vente->client->telephone }}</td>
+            </tr>
+            @endif
+            @if($vente->client->points_fidelite !== null)
+            <tr>
+                <td class="lbl">Pts fidélité</td>
+                <td class="val">{{ $vente->client->points_fidelite }} pts</td>
+            </tr>
+            @endif
+        @elseif($vente->client_nom)
+            <tr>
+                <td class="lbl">Client</td>
+                <td class="val">{{ $vente->client_nom }}</td>
+            </tr>
+            @if($vente->client_telephone)
+            <tr>
+                <td class="lbl">Tél</td>
+                <td class="val">{{ $vente->client_telephone }}</td>
+            </tr>
+            @endif
+        @else
+            <tr>
+                <td class="lbl">Client</td>
+                <td class="val" style="color:#555;">Anonyme</td>
+            </tr>
+        @endif
+    </table>
+
+    <div class="sep-double"></div>
+
+    {{-- ── ARTICLES ── --}}
+    <table class="articles">
+        <colgroup>
+            <col class="c-nom">
+            <col class="c-qty">
+            <col class="c-pu">
+            <col class="c-tot">
+        </colgroup>
+        <thead>
+            <tr>
+                <th class="c-nom">Article</th>
+                <th class="c-qty">Qté</th>
+                <th class="c-pu">P.U.</th>
+                <th class="c-tot">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($vente->details as $d)
+            <tr>
+                <td class="c-nom">
+                    {{ $d->article_nom }}
+                    <div class="art-type">{{ $d->type_article === 'prestation' ? 'Service' : 'Produit' }}</div>
+                    @if($d->reduction > 0)
+                        <div class="art-red">-{{ number_format($d->reduction, 0, ',', ' ') }} F</div>
+                    @endif
+                </td>
+                <td class="c-qty">{{ $d->quantite }}</td>
+                <td class="c-pu">{{ number_format($d->prix_unitaire, 0, ',', ' ') }}</td>
+                <td class="c-tot">{{ number_format($d->prix_total - ($d->reduction ?? 0), 0, ',', ' ') }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <div class="sep-single"></div>
+
+    {{-- ── TOTAUX ── --}}
+    <table class="totaux-table">
+        @if($vente->montant_prestations > 0 && $vente->montant_produits > 0)
+        <tr class="subtotal">
+            <td class="t-lbl">Services</td>
+            <td class="t-val">{{ number_format($vente->montant_prestations, 0, ',', ' ') }} F</td>
+        </tr>
+        <tr class="subtotal">
+            <td class="t-lbl">Produits</td>
+            <td class="t-val">{{ number_format($vente->montant_produits, 0, ',', ' ') }} F</td>
+        </tr>
+        @endif
+        @if($vente->montant_reduction > 0)
+        <tr class="reduction">
+            <td class="t-lbl">Réduction</td>
+            <td class="t-val">-{{ number_format($vente->montant_reduction, 0, ',', ' ') }} F</td>
+        </tr>
+        @endif
+        <tr><td colspan="2"><div class="sep-single"></div></td></tr>
+        <tr class="grand-total">
+            <td class="t-lbl">TOTAL</td>
+            <td class="t-val">{{ number_format($vente->montant_total_ttc, 0, ',', ' ') }} FCFA</td>
+        </tr>
+        <tr><td colspan="2"><div class="sep-single"></div></td></tr>
         @if($vente->montant_paye > 0)
-            <div class="total-line paid">
-                <span>Montant payé</span>
-                <span>{{ number_format($vente->montant_paye, 0, ',', ' ') }} FCFA</span>
-            </div>
+        <tr class="paid">
+            <td class="t-lbl">Payé</td>
+            <td class="t-val">{{ number_format($vente->montant_paye, 0, ',', ' ') }} F</td>
+        </tr>
         @endif
         @if($vente->montant_rendu > 0)
-            <div class="total-line change">
-                <span>Monnaie rendue</span>
-                <span>{{ number_format($vente->montant_rendu, 0, ',', ' ') }} FCFA</span>
-            </div>
+        <tr class="paid">
+            <td class="t-lbl">Rendu monnaie</td>
+            <td class="t-val">{{ number_format($vente->montant_rendu, 0, ',', ' ') }} F</td>
+        </tr>
         @endif
         @if($vente->solde_restant > 0)
-            <div class="total-line remaining">
-                <span>RESTE À PAYER</span>
-                <span>{{ number_format($vente->solde_restant, 0, ',', ' ') }} FCFA</span>
-            </div>
+        <tr class="remaining">
+            <td class="t-lbl">RESTE A PAYER</td>
+            <td class="t-val">{{ number_format($vente->solde_restant, 0, ',', ' ') }} F</td>
+        </tr>
         @endif
-    </div>
+    </table>
 
-    <!-- DÉTAILS PAIEMENTS -->
-    @if($vente->paiements && $vente->paiements->count() > 0)
-        <div class="info-box">
-            <div class="info-box-title">Modes de paiement</div>
-            <div class="info-box-content">
-                @foreach($vente->paiements as $paiement)
-                    <div style="margin: 1px 0;">
-                        • {{ ucfirst(str_replace('_', ' ', $paiement->mode_paiement)) }}: 
-                        <strong>{{ number_format($paiement->montant, 0, ',', ' ') }} FCFA</strong>
-                        @if($paiement->reference)
-                            <span style="font-size: 6px; color: #888;">(Réf: {{ $paiement->reference }})</span>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        </div>
+    {{-- ── DÉTAIL PAIEMENTS ── --}}
+    @if($vente->paiements?->count() > 0)
+        <div class="sep-dashed"></div>
+        <div class="section-label">Mode(s) de paiement</div>
+        <table class="detail-table">
+            @foreach($vente->paiements as $p)
+            <tr>
+                <td class="d-lbl">• {{ ucfirst(str_replace('_', ' ', $p->mode_paiement)) }}</td>
+                <td class="d-val">{{ number_format($p->montant, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            @if($p->reference_transaction)
+            <tr>
+                <td class="d-ref" colspan="2">Réf : {{ $p->reference_transaction }}</td>
+            </tr>
+            @endif
+            @endforeach
+        </table>
     @endif
 
-    <!-- PROGRAMME FIDÉLITÉ -->
+    {{-- ── PROGRAMME FIDÉLITÉ ── --}}
     @if($vente->points_utilises > 0 || $vente->points_gagnes > 0)
-        <div class="info-box loyalty-box">
-            <div class="info-box-title">Programme fidélité</div>
-            <div class="info-box-content">
-                @if($vente->points_utilises > 0)
-                    <div>• Points utilisés: <strong>{{ $vente->points_utilises }} pts</strong></div>
-                @endif
-                @if($vente->points_gagnes > 0)
-                    <div>• Points gagnés: <strong>{{ $vente->points_gagnes }} pts</strong></div>
-                @endif
-            </div>
-        </div>
+        <div class="sep-dashed"></div>
+        <div class="section-label">Programme fidélité</div>
+        <table class="detail-table">
+            @if($vente->points_utilises > 0)
+            <tr>
+                <td class="d-lbl">Points utilisés</td>
+                <td class="d-val">-{{ $vente->points_utilises }} pts</td>
+            </tr>
+            @endif
+            @if($vente->points_gagnes > 0)
+            <tr>
+                <td class="d-lbl">Points gagnés</td>
+                <td class="d-val">+{{ $vente->points_gagnes }} pts</td>
+            </tr>
+            @endif
+            @if($vente->client?->points_fidelite !== null)
+            <tr>
+                <td class="d-lbl" style="color:#555;">Solde actuel</td>
+                <td class="d-val" style="color:#555;">{{ $vente->client->points_fidelite }} pts</td>
+            </tr>
+            @endif
+        </table>
     @endif
 
-    <!-- NOTES -->
+    {{-- ── NOTES ── --}}
     @if($vente->notes)
-        <div class="info-box">
-            <div class="info-box-title">Note</div>
-            <div class="info-box-content" style="font-style: italic;">
-                {{ $vente->notes }}
-            </div>
-        </div>
+        <div class="sep-dashed"></div>
+        <div style="font-size:7px; color:#555; font-style:italic; line-height:1.4;">{{ $vente->notes }}</div>
     @endif
 
-    <!-- FOOTER -->
+    {{-- ── FOOTER ── --}}
+    <div class="sep-double"></div>
     <div class="footer">
-        <div class="thank-you">Merci de votre visite !</div>
-        <div class="print-time">Imprimé le {{ now()->format('d/m/Y à H:i') }}</div>
+        <div class="merci">Merci de votre visite !</div>
+        @if($salon?->slogan)
+            <div style="font-size:7px; color:#555; font-style:italic; margin-top:1px;">{{ $salon->slogan }}</div>
+        @endif
+        <div class="small-gray" style="margin-top:2px;">Edité le {{ \Carbon\Carbon::now()->format('d/m/Y à H:i') }}</div>
     </div>
+
+</td></tr>
+</table>
+
 </body>
 </html>

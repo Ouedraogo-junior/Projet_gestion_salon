@@ -9,7 +9,11 @@ interface StatsCardsProps {
 }
 
 export default function StatsCards({ filters }: StatsCardsProps) {
-  const { data, isLoading } = useConfectionStatistiques(filters.date_debut, filters.date_fin);
+  const dateDebut = filters.date_debut ?? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    .toISOString().split('T')[0];
+  const dateFin = filters.date_fin ?? new Date().toISOString().split('T')[0];
+
+  const { data, isLoading } = useConfectionStatistiques(dateDebut, dateFin);
 
   const stats = [
     {

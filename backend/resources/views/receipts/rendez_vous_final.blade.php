@@ -2,431 +2,354 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reçu final - RDV #{{ $rendezVous->id }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         @page {
-            size: 105mm 148mm;
+            size: 80mm auto;
             margin: 0;
         }
+
         body {
-            font-family: 'DejaVu Sans', 'Helvetica', sans-serif;
-            font-size: 8px;
-            color: #1a1a1a;
-            line-height: 1.4;
-            padding: 8mm 6mm;
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 7.5px;
+            color: #000;
+            line-height: 1.45;
         }
-        
-        .header {
-            display: table;
-            width: 100%;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #1a1a1a;
-        }
-        .header-left {
-            display: table-cell;
-            width: 35%;
-            vertical-align: top;
-        }
-        .logo-container {
-            max-width: 30mm;
-            max-height: 12mm;
-            margin-bottom: 3px;
-            overflow: hidden;
-        }
-        .logo-container img {
-            max-width: 100%;
-            max-height: 12mm;
-            height: auto;
-            display: block;
-        }
-        .salon-name {
-            font-size: 9px;
+
+        .page-wrapper { width: 100%; border-collapse: collapse; }
+        .page-wrapper td.inner { padding: 4mm 7mm 6mm 7mm; }
+
+        /* ── SÉPARATEURS ── */
+        .sep-double { border-top: 2px solid #000; margin: 2mm 0; }
+        .sep-single { border-top: 1px solid #000;  margin: 1.5mm 0; }
+        .sep-dashed { border-top: 1px dashed #000;  margin: 1.5mm 0; }
+
+        /* ── EN-TÊTE centré (style vente.blade) ── */
+        .salon-nom {
+            font-size: 13px;
             font-weight: bold;
-            color: #1a1a1a;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
-            line-height: 1.2;
-            margin-top: 2px;
-        }
-        .header-right {
-            display: table-cell;
-            width: 60%;
-            text-align: right;
-            font-size: 7px;
-            line-height: 1.5;
-            vertical-align: top;
-        }
-        .header-right .info-line {
-            margin: 1px 0;
-            color: #4a4a4a;
-        }
-        .header-right .info-line strong {
-            color: #1a1a1a;
-        }
-        
-        .receipt-title {
-            text-align: center;
-            margin: 6px 0;
-            padding: 4px 0;
-            background: #1a1a1a;
-            color: #fff;
-            font-size: 9px;
-            font-weight: bold;
             letter-spacing: 1px;
+            text-align: center;
         }
-        
-        .info-section {
-            display: table;
-            width: 100%;
-            margin-bottom: 6px;
-            border-spacing: 4px 0;
-        }
-        .info-block {
-            display: table-cell;
-            width: 50%;
-            background: #f8f8f8;
-            padding: 4px;
-            border-left: 2px solid #1a1a1a;
-            vertical-align: top;
-        }
-        .info-block-title {
-            font-size: 7px;
+        .salon-info { font-size: 7px; color: #333; text-align: center; }
+
+        /* ── BANDEAU TITRE ── */
+        .title-band {
+            background: #000;
+            color: #fff;
+            text-align: center;
+            font-size: 8px;
             font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-            color: #1a1a1a;
+            letter-spacing: 2px;
+            padding: 2px 0;
+            margin: 1.5mm 0;
         }
-        .info-block p {
-            font-size: 7px;
-            margin: 1.5px 0;
-            color: #4a4a4a;
-        }
-        .info-block p strong {
-            color: #1a1a1a;
-            min-width: 18mm;
-            display: inline-block;
-        }
-        
-        .items-section {
-            margin: 6px 0;
-        }
-        .section-header {
-            font-size: 7px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-            padding-bottom: 2px;
-            border-bottom: 1px solid #1a1a1a;
-        }
-        table {
+
+        /* ── TABLES INFO (label / valeur) ── */
+        .info-table { width: 100%; border-collapse: collapse; }
+        .info-table td { font-size: 7.5px; padding: 1.5px 0; vertical-align: top; }
+        .info-table td.lbl { width: 40%; color: #555; }
+        .info-table td.val { width: 60%; font-weight: bold; }
+
+        /* ── SECTION LABEL ── */
+        .section-label { font-size: 6.5px; text-transform: uppercase; color: #555; margin-bottom: 1px; }
+
+        /* ── TABLEAU ARTICLES ── */
+        .articles {
             width: 100%;
             border-collapse: collapse;
-            margin: 3px 0;
+            table-layout: fixed;
+            margin: 1mm 0;
         }
-        table thead {
-            background: #1a1a1a;
-            color: #fff;
-        }
-        table th {
-            padding: 3px 2px;
-            text-align: left;
-            font-size: 7px;
-            font-weight: bold;
+        .articles col.c-nom  { width: 42%; }
+        .articles col.c-type { width: 18%; }
+        .articles col.c-qty  { width: 10%; }
+        .articles col.c-tot  { width: 30%; }
+
+        .articles thead { background: #000; color: #fff; }
+        .articles th {
+            font-size: 6.5px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            padding: 2px 2px;
+            font-weight: bold;
         }
-        table td {
-            padding: 3px 2px;
+        .articles th.c-nom  { text-align: left; }
+        .articles th.c-type { text-align: center; }
+        .articles th.c-qty  { text-align: center; }
+        .articles th.c-tot  { text-align: right; }
+
+        .articles td {
+            font-size: 7px;
+            padding: 2px 2px;
             border-bottom: 1px solid #e8e8e8;
-            font-size: 7px;
+            vertical-align: top;
         }
-        table tbody tr:last-child td {
-            border-bottom: 1px solid #1a1a1a;
-        }
-        .item-name {
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .text-center {
-            text-align: center;
-        }
-        
+        .articles tbody tr:last-child td { border-bottom: 1px solid #000; }
+        .articles td.c-nom  { text-align: left; font-weight: bold; }
+        .articles td.c-type { text-align: center; }
+        .articles td.c-qty  { text-align: center; }
+        .articles td.c-tot  { text-align: right; font-weight: bold; }
+
         .badge {
-            display: inline-block;
-            padding: 1px 4px;
-            border-radius: 2px;
             font-size: 6px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            padding: 1px 3px;
         }
-        .badge-prestation {
-            background: #1a1a1a;
-            color: #fff;
-        }
-        .badge-produit {
-            background: #e8e8e8;
-            color: #1a1a1a;
-        }
-        
-        .totals-section {
-            margin-top: 6px;
-            padding: 5px;
-            background: #f8f8f8;
-        }
-        .total-line {
-            display: table;
-            width: 100%;
-            padding: 2px 0;
-            font-size: 7px;
-        }
-        .total-line span:first-child {
-            display: table-cell;
-            text-align: left;
-        }
-        .total-line span:last-child {
-            display: table-cell;
-            text-align: right;
-        }
-        .total-line.subtotal {
-            color: #4a4a4a;
-        }
-        .total-line.acompte {
-            color: #388e3c;
-            font-style: italic;
-        }
-        .total-line.grand-total {
-            margin-top: 4px;
-            padding-top: 4px;
-            border-top: 2px solid #1a1a1a;
-            font-size: 10px;
-            font-weight: bold;
-        }
-        .total-line.paid,
-        .total-line.change {
-            font-size: 7px;
-            color: #388e3c;
-        }
-        
-        .info-box {
-            margin: 5px 0;
-            padding: 4px;
-            background: #fff;
-            border-left: 3px solid #1a1a1a;
-            font-size: 7px;
-        }
-        .info-box-title {
-            font-weight: bold;
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            font-size: 7px;
-        }
-        .info-box-content {
-            color: #4a4a4a;
-            line-height: 1.4;
-        }
-        
-        .footer {
-            margin-top: 8px;
-            padding-top: 5px;
-            border-top: 2px solid #1a1a1a;
-            text-align: center;
-        }
-        .thank-you {
-            font-size: 9px;
-            font-weight: bold;
-            margin-bottom: 2px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .print-time {
-            font-size: 6px;
-            color: #888;
-        }
+        .badge-prestation { background: #000; color: #fff; }
+        .badge-produit    { background: #e8e8e8; color: #000; }
+
+        /* ── TABLES TOTAUX ── */
+        .totaux-table { width: 100%; border-collapse: collapse; }
+        .totaux-table td { font-size: 7.5px; padding: 1.5px 0; vertical-align: top; }
+        .totaux-table td.t-lbl { text-align: left;  width: 60%; }
+        .totaux-table td.t-val { text-align: right; width: 40%; font-weight: bold; }
+
+        .totaux-table tr.grand-total td { font-size: 11px; font-weight: bold; }
+        .totaux-table tr.subtotal  td   { color: #555; }
+        .totaux-table tr.acompte   td   { color: #388e3c; font-style: italic; }
+        .totaux-table tr.reduction td   { color: #cc0000; font-style: italic; }
+        .totaux-table tr.paid      td   { color: #006600; }
+        .totaux-table tr.change    td   { color: #006600; }
+
+        /* ── TABLES DÉTAIL (paiements / fidélité) ── */
+        .detail-table { width: 100%; border-collapse: collapse; }
+        .detail-table td { font-size: 7.5px; padding: 1px 0; vertical-align: top; }
+        .detail-table td.d-lbl { text-align: left;  width: 60%; }
+        .detail-table td.d-val { text-align: right; width: 40%; font-weight: bold; }
+        .detail-table td.d-ref { font-size: 6.5px; color: #555; padding-left: 8px; }
+
+        /* ── FOOTER ── */
+        .footer     { text-align: center; margin-top: 2mm; }
+        .merci      { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .small-gray { font-size: 6.5px; color: #777; }
     </style>
 </head>
 <body>
-    <!-- EN-TÊTE -->
-    <div class="header">
-        <div class="header-left">
-            @if($salon && $salon->logo_url)
-                <div class="logo-container">
-                    <img src="{{ public_path('storage/' . $salon->logo_url) }}" alt="Logo">
-                </div>
-            @endif
-            <div class="salon-name">{{ $salon ? $salon->nom : 'SALON DREADLOCKS' }}</div>
-        </div>
-        
-        <div class="header-right">
-            @if($salon)
-                <div class="info-line"><strong>Adresse:</strong> {{ $salon->adresse }}</div>
-                <div class="info-line"><strong>Tél:</strong> {{ $salon->telephone }}</div>
-                @if($salon->email)
-                    <div class="info-line"><strong>Email:</strong> {{ $salon->email }}</div>
-                @endif
-            @endif
-        </div>
-    </div>
 
-    <!-- TITRE -->
-    <div class="receipt-title">REÇU FINAL - PRESTATION</div>
+<table class="page-wrapper">
+<tr><td class="inner">
 
-    <!-- INFORMATIONS -->
-    <div class="info-section">
-        <div class="info-block">
-            <div class="info-block-title">Facture</div>
-            <p><strong>N°:</strong> {{ $vente->numero_facture }}</p>
-            <p><strong>RDV N°:</strong> RDV-{{ str_pad($rendezVous->id, 6, '0', STR_PAD_LEFT) }}</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($vente->date_vente)->format('d/m/Y H:i') }}</p>
-            @if($vente->coiffeur)
-                <p><strong>Coiffeur:</strong> {{ $vente->coiffeur->prenom }} {{ $vente->coiffeur->nom }}</p>
-            @endif
-            <p><strong>Vendeur:</strong> {{ $vente->vendeur->prenom ?? 'N/A' }}</p>
-        </div>
+    {{-- ══════════════════════════════════════════════
+         LOGO DU SALON — décommenter pour activer
+         Nécessite : $salon->logo_url = chemin relatif
+         depuis storage/app/public/
+         Exemple   : "logos/mon-logo.png"
+    ══════════════════════════════════════════════ --}}
+    {{--
+    @if($salon && $salon->logo_url)
+        @php
+            $logoPath   = storage_path('app/public/' . $salon->logo_url);
+            $logoBase64 = null;
+            if (file_exists($logoPath)) {
+                $ext     = strtolower(pathinfo($logoPath, PATHINFO_EXTENSION));
+                $mimeMap = ['png'=>'image/png','jpg'=>'image/jpeg','jpeg'=>'image/jpeg','gif'=>'image/gif','webp'=>'image/webp'];
+                $mime    = $mimeMap[$ext] ?? 'image/png';
+                $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($logoPath));
+            }
+        @endphp
+        @if($logoBase64)
+            <div style="text-align:center; margin-bottom:2mm;">
+                <img src="{{ $logoBase64 }}" style="max-width:28mm; max-height:14mm;" alt="Logo">
+            </div>
+        @endif
+    @endif
+    --}}
 
-        <div class="info-block">
-            <div class="info-block-title">Client</div>
-            <p><strong>Nom:</strong> {{ $rendezVous->client->prenom }} {{ $rendezVous->client->nom }}</p>
-            <p><strong>Tél:</strong> {{ $rendezVous->client->telephone }}</p>
-            @if($rendezVous->client->email)
-                <p><strong>Email:</strong> {{ $rendezVous->client->email }}</p>
-            @endif
-        </div>
-    </div>
+    {{-- ── EN-TÊTE ── --}}
+    <div class="salon-nom">{{ $salon->nom ?? 'SALON' }}</div>
+    @if($salon)
+        @if($salon->adresse)<div class="salon-info">{{ $salon->adresse }}</div>@endif
+        @if($salon->telephone)<div class="salon-info">Tél : {{ $salon->telephone }}</div>@endif
+        @if($salon->email)<div class="salon-info">{{ $salon->email }}</div>@endif
+    @endif
 
-    <!-- LISTE DES ARTICLES -->
-    <div class="items-section">
-        <div class="section-header">Détails</div>
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 45%;">Article</th>
-                    <th class="text-center" style="width: 15%;">Type</th>
-                    <th class="text-center" style="width: 10%;">Qté</th>
-                    <th class="text-right" style="width: 30%;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($vente->details as $detail)
-                    <tr>
-                        <td>
-                            <div class="item-name">{{ $detail->article_nom }}</div>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-{{ $detail->type_article }}">
-                                {{ $detail->type_article === 'prestation' ? 'Service' : 'Produit' }}
-                            </span>
-                        </td>
-                        <td class="text-center">{{ $detail->quantite }}</td>
-                        <td class="text-right">
-                            <strong>{{ number_format($detail->prix_total, 0, ',', ' ') }}</strong>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+    <div class="title-band">— REÇU FINAL — PRESTATION —</div>
 
-    <!-- TOTAUX -->
-    <div class="totals-section">
-        <div class="total-line subtotal">
-            <span>Sous-total</span>
-            <span>{{ number_format($vente->montant_total_ht, 0, ',', ' ') }} FCFA</span>
-        </div>
-        
+    {{-- ── INFOS FACTURE ── --}}
+    <table class="info-table">
+        <tr>
+            <td class="lbl">N° Facture</td>
+            <td class="val">{{ $vente->numero_facture }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">N° RDV</td>
+            <td class="val">RDV-{{ str_pad($rendezVous->id, 6, '0', STR_PAD_LEFT) }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Date</td>
+            <td class="val">{{ \Carbon\Carbon::parse($vente->date_vente)->format('d/m/Y H:i') }}</td>
+        </tr>
+        @if($vente->coiffeur)
+        <tr>
+            <td class="lbl">Coiffeur</td>
+            <td class="val">{{ $vente->coiffeur->prenom }} {{ $vente->coiffeur->nom }}</td>
+        </tr>
+        @endif
+        <tr>
+            <td class="lbl">Vendeur</td>
+            <td class="val">{{ $vente->vendeur->prenom ?? 'N/A' }} {{ $vente->vendeur->nom ?? '' }}</td>
+        </tr>
+    </table>
+
+    <div class="sep-dashed"></div>
+
+    {{-- ── CLIENT ── --}}
+    <table class="info-table">
+        <tr>
+            <td class="lbl">Client</td>
+            <td class="val">{{ $rendezVous->client->prenom }} {{ $rendezVous->client->nom }}</td>
+        </tr>
+        <tr>
+            <td class="lbl">Tél</td>
+            <td class="val">{{ $rendezVous->client->telephone }}</td>
+        </tr>
+        @if($rendezVous->client->email)
+        <tr>
+            <td class="lbl">Email</td>
+            <td class="val">{{ $rendezVous->client->email }}</td>
+        </tr>
+        @endif
+    </table>
+
+    <div class="sep-double"></div>
+
+    {{-- ── ARTICLES ── --}}
+    <div class="section-label">Détails</div>
+    <table class="articles">
+        <colgroup>
+            <col class="c-nom">
+            <col class="c-type">
+            <col class="c-qty">
+            <col class="c-tot">
+        </colgroup>
+        <thead>
+            <tr>
+                <th class="c-nom">Article</th>
+                <th class="c-type">Type</th>
+                <th class="c-qty">Qté</th>
+                <th class="c-tot">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($vente->details as $detail)
+            <tr>
+                <td class="c-nom">{{ $detail->article_nom }}</td>
+                <td class="c-type">
+                    <span class="badge badge-{{ $detail->type_article }}">
+                        {{ $detail->type_article === 'prestation' ? 'Service' : 'Produit' }}
+                    </span>
+                </td>
+                <td class="c-qty">{{ $detail->quantite }}</td>
+                <td class="c-tot">{{ number_format($detail->prix_total, 0, ',', ' ') }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <div class="sep-single"></div>
+
+    {{-- ── TOTAUX ── --}}
+    <table class="totaux-table">
+        <tr class="subtotal">
+            <td class="t-lbl">Sous-total</td>
+            <td class="t-val">{{ number_format($vente->montant_total_ht, 0, ',', ' ') }} FCFA</td>
+        </tr>
         @if($rendezVous->acompte_paye && $rendezVous->acompte_montant)
-            <div class="total-line acompte">
-                <span>Acompte déjà versé</span>
-                <span>-{{ number_format($rendezVous->acompte_montant, 0, ',', ' ') }} FCFA</span>
-            </div>
+        <tr class="acompte">
+            <td class="t-lbl">Acompte versé</td>
+            <td class="t-val">-{{ number_format($rendezVous->acompte_montant, 0, ',', ' ') }} FCFA</td>
+        </tr>
         @endif
-        
         @if($vente->montant_reduction > 0)
-            <div class="total-line acompte">
-                <span>Réduction</span>
-                <span>-{{ number_format($vente->montant_reduction, 0, ',', ' ') }} FCFA</span>
-            </div>
+        <tr class="reduction">
+            <td class="t-lbl">Réduction</td>
+            <td class="t-val">-{{ number_format($vente->montant_reduction, 0, ',', ' ') }} FCFA</td>
+        </tr>
         @endif
-        
-        <div class="total-line grand-total">
-            <span>TOTAL À PAYER</span>
-            <span>{{ number_format($vente->montant_total_ttc, 0, ',', ' ') }} FCFA</span>
-        </div>
-        
-        <div class="total-line paid">
-            <span>Montant payé</span>
-            <span>{{ number_format($vente->montant_paye, 0, ',', ' ') }} FCFA</span>
-        </div>
-        
+        <tr><td colspan="2"><div class="sep-single"></div></td></tr>
+        <tr class="grand-total">
+            <td class="t-lbl">TOTAL À PAYER</td>
+            <td class="t-val">{{ number_format($vente->montant_total_ttc, 0, ',', ' ') }} FCFA</td>
+        </tr>
+        <tr><td colspan="2"><div class="sep-single"></div></td></tr>
+        <tr class="paid">
+            <td class="t-lbl">Montant payé</td>
+            <td class="t-val">{{ number_format($vente->montant_paye, 0, ',', ' ') }} FCFA</td>
+        </tr>
         @if($vente->montant_rendu > 0)
-            <div class="total-line change">
-                <span>Monnaie rendue</span>
-                <span>{{ number_format($vente->montant_rendu, 0, ',', ' ') }} FCFA</span>
-            </div>
+        <tr class="change">
+            <td class="t-lbl">Monnaie rendue</td>
+            <td class="t-val">{{ number_format($vente->montant_rendu, 0, ',', ' ') }} FCFA</td>
+        </tr>
         @endif
-    </div>
+    </table>
 
-    <!-- DÉTAILS PAIEMENTS -->
+    {{-- ── MODES DE PAIEMENT ── --}}
     @if($vente->paiements && $vente->paiements->count() > 0)
-        <div class="info-box">
-            <div class="info-box-title">Modes de paiement</div>
-            <div class="info-box-content">
-                @php
-                    $acomptePaiement = $rendezVous->paiements && $rendezVous->paiements->count() > 0 
-                        ? $rendezVous->paiements->where('type_paiement', 'acompte')->first() 
-                        : null;
-                @endphp
-                @if($rendezVous->acompte_paye && $rendezVous->acompte_montant && $acomptePaiement)
-                    <div style="margin: 1px 0;">
-                        • Acompte: <strong>{{ number_format($rendezVous->acompte_montant, 0, ',', ' ') }} FCFA</strong>
-                        <span style="font-size: 6px; color: #888;">(Payé le {{ \Carbon\Carbon::parse($acomptePaiement->date_paiement)->format('d/m/Y') }})</span>
-                    </div>
-                @endif
-                @foreach($vente->paiements as $paiement)
-                    <div style="margin: 1px 0;">
-                        • {{ ucfirst(str_replace('_', ' ', $paiement->mode_paiement)) }}: 
-                        <strong>{{ number_format($paiement->montant, 0, ',', ' ') }} FCFA</strong>
-                        @if($paiement->reference_transaction)
-                            <span style="font-size: 6px; color: #888;">(Réf: {{ $paiement->reference_transaction }})</span>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        </div>
+        <div class="sep-dashed"></div>
+        <div class="section-label">Mode(s) de paiement</div>
+        <table class="detail-table">
+            @php
+                $acomptePaiement = ($rendezVous->paiements && $rendezVous->paiements->count() > 0)
+                    ? $rendezVous->paiements->where('type_paiement', 'acompte')->first()
+                    : null;
+            @endphp
+            @if($rendezVous->acompte_paye && $rendezVous->acompte_montant && $acomptePaiement)
+            <tr>
+                <td class="d-lbl">• Acompte</td>
+                <td class="d-val">{{ number_format($rendezVous->acompte_montant, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            <tr>
+                <td class="d-ref" colspan="2">{{ \Carbon\Carbon::parse($acomptePaiement->date_paiement)->format('d/m/Y') }}</td>
+            </tr>
+            @endif
+            @foreach($vente->paiements as $paiement)
+            <tr>
+                <td class="d-lbl">• {{ ucfirst(str_replace('_', ' ', $paiement->mode_paiement)) }}</td>
+                <td class="d-val">{{ number_format($paiement->montant, 0, ',', ' ') }} FCFA</td>
+            </tr>
+            @if($paiement->reference_transaction)
+            <tr>
+                <td class="d-ref" colspan="2">Réf : {{ $paiement->reference_transaction }}</td>
+            </tr>
+            @endif
+            @endforeach
+        </table>
     @endif
 
-    <!-- PROGRAMME FIDÉLITÉ -->
+    {{-- ── PROGRAMME FIDÉLITÉ ── --}}
     @if($vente->points_utilises > 0 || $vente->points_gagnes > 0)
-        <div class="info-box">
-            <div class="info-box-title">Programme fidélité</div>
-            <div class="info-box-content">
-                @if($vente->points_utilises > 0)
-                    <div>• Points utilisés: <strong>{{ $vente->points_utilises }} pts</strong></div>
-                @endif
-                @if($vente->points_gagnes > 0)
-                    <div>• Points gagnés: <strong>{{ $vente->points_gagnes }} pts</strong></div>
-                @endif
-            </div>
-        </div>
+        <div class="sep-dashed"></div>
+        <div class="section-label">Programme fidélité</div>
+        <table class="detail-table">
+            @if($vente->points_utilises > 0)
+            <tr>
+                <td class="d-lbl">Points utilisés</td>
+                <td class="d-val">-{{ $vente->points_utilises }} pts</td>
+            </tr>
+            @endif
+            @if($vente->points_gagnes > 0)
+            <tr>
+                <td class="d-lbl">Points gagnés</td>
+                <td class="d-val">+{{ $vente->points_gagnes }} pts</td>
+            </tr>
+            @endif
+        </table>
     @endif
 
-    <!-- FOOTER -->
+    {{-- ── FOOTER ── --}}
+    <div class="sep-double"></div>
     <div class="footer">
-        <div class="thank-you">Merci de votre visite !</div>
-        <div class="print-time">Imprimé le {{ now()->format('d/m/Y à H:i') }}</div>
+        <div class="merci">Merci de votre visite !</div>
+        <div class="small-gray" style="margin-top:2px;">Edité le {{ \Carbon\Carbon::now()->format('d/m/Y à H:i') }}</div>
     </div>
+
+</td></tr>
+</table>
+
 </body>
 </html>

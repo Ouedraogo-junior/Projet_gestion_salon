@@ -9,6 +9,7 @@ use App\Http\Resources\ProduitResource;
 use App\Http\Resources\ProduitCollection;
 use App\Http\Resources\MouvementStockResource;
 use App\Models\Produit;
+use App\Models\ProduitVariante;
 use App\Models\ProduitAttributValeur;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -18,41 +19,43 @@ use Illuminate\Support\Facades\Validator;
 
 class ProduitController extends Controller
 {
-    /**
-     * Liste tous les produits avec filtres et recherche
-     */
+    // ========================================
+    // INDEX
+    // ========================================
+
     public function index(Request $request): JsonResponse
     {
-        $query = Produit::query();
+        $query = Produit::query()->with(['categorie', 'variantes.valeursAttributs.attribut']);
         $user  = auth()->user();
-            if ($user->role !== 'gestionnaire') {
-                if ($request->input('statut_validation') === 'valide') {
-                    // Filtre strict caisse
-                    $query->where('statut_validation', 'valide');
-                } else {
-                    // Vue normale produits
-                    $query->where(function($q) use ($user) {
-                        $q->where('statut_validation', 'valide')
-                        ->orWhere(function($q2) use ($user) {
-                            $q2->where('cree_par', $user->id)
-                                ->whereIn('statut_validation', ['en_attente', 'rejete']);
-                        });
-                    });
-                }
+
+        if ($user->role !== 'gestionnaire') {
+            if ($request->input('statut_validation') === 'valide') {
+                $query->whereHas('variantes', fn($q) => $q->where('statut_validation', 'valide'));
             } else {
-            // Gestionnaire peut filtrer librement par statut
+                $query->whereHas('variantes', function ($q) use ($user) {
+                    $q->where('statut_validation', 'valide')
+                      ->orWhere(function ($q2) use ($user) {
+                          $q2->where('cree_par', $user->id)
+                             ->whereIn('statut_validation', ['en_attente', 'rejete']);
+                      });
+                });
+            }
+        } else {
             if ($request->filled('statut_validation')) {
-                $query->where('statut_validation', $request->statut_validation);
+                $query->whereHas('variantes', fn($q) =>
+                    $q->where('statut_validation', $request->statut_validation)
+                );
             }
         }
 
-        // Recherche par nom ou référence
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('nom', 'ILIKE', '%' . $search . '%')
-                ->orWhere('reference', 'ILIKE', '%' . $search . '%')
-                ->orWhere('marque', 'ILIKE', '%' . $search . '%');
+                  ->orWhere('marque', 'ILIKE', '%' . $search . '%')
+                  ->orWhereHas('variantes', fn($q2) =>
+                      $q2->where('reference', 'ILIKE', '%' . $search . '%')
+                  );
             });
         }
 
@@ -61,7 +64,9 @@ class ProduitController extends Controller
         }
 
         if ($request->filled('type_stock_principal')) {
-            $query->where('type_stock_principal', $request->type_stock_principal);
+            $query->whereHas('variantes', fn($q) =>
+                $q->where('type_stock_principal', $request->type_stock_principal)
+            );
         }
 
         if ($request->has('actifs_only')) {
@@ -69,86 +74,113 @@ class ProduitController extends Controller
         }
 
         if ($request->has('alerte_stock_vente')) {
-            $query->whereRaw('stock_vente <= seuil_alerte');
+            $query->whereHas('variantes', fn($q) =>
+                $q->whereRaw('stock_vente <= seuil_alerte')
+            );
         }
 
         if ($request->has('alerte_stock_utilisation')) {
-            $query->whereRaw('stock_utilisation <= seuil_alerte_utilisation');
+            $query->whereHas('variantes', fn($q) =>
+                $q->whereRaw('stock_utilisation <= seuil_alerte_utilisation')
+            );
         }
 
         if ($request->has('critique_stock_vente')) {
-            $query->whereRaw('stock_vente <= seuil_critique');
+            $query->whereHas('variantes', fn($q) =>
+                $q->whereRaw('stock_vente <= seuil_critique')
+            );
         }
 
         if ($request->has('en_promotion')) {
-            $query->whereNotNull('prix_promo')
-                ->whereNotNull('date_debut_promo')
-                ->whereNotNull('date_fin_promo')
-                ->whereDate('date_debut_promo', '<=', now())
-                ->whereDate('date_fin_promo', '>=', now());
+            $query->whereHas('variantes', fn($q) =>
+                $q->whereNotNull('prix_promo')
+                  ->whereNotNull('date_debut_promo')
+                  ->whereNotNull('date_fin_promo')
+                  ->whereDate('date_debut_promo', '<=', now())
+                  ->whereDate('date_fin_promo', '>=', now())
+            );
         }
-
-        $query->with(['categorie', 'valeursAttributs.attribut']);
 
         $sortField = $request->input('sort_by', 'nom');
         $sortOrder = $request->input('sort_order', 'asc');
-        $allowedSorts = ['nom', 'reference', 'prix_vente', 'prix_achat', 'stock_vente', 'stock_utilisation', 'created_at'];
+        $allowedSorts = ['nom', 'created_at'];
         if (in_array($sortField, $allowedSorts)) {
             $query->orderBy($sortField, $sortOrder);
         }
 
-        $perPage = min($request->input('per_page', 100), 500);
+        $perPage  = min($request->input('per_page', 100), 500);
         $produits = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
-            'data' => new ProduitCollection($produits),
+            'data'    => new ProduitCollection($produits),
             'message' => 'Produits récupérés avec succès',
         ]);
     }
 
-    /**
-     * Crée un nouveau produit avec ses attributs
-     */
+    // ========================================
+    // STORE
+    // ========================================
+
     public function store(StoreProduitRequest $request): JsonResponse
     {
         DB::beginTransaction();
         try {
-            $produitData = $request->except('attributs');
-            $produitData['seuil_alerte']               = $request->input('seuil_alerte') ?? null;
-            $produitData['seuil_critique']              = $request->input('seuil_critique') ?? null;
-            $produitData['seuil_alerte_utilisation']    = $request->input('seuil_alerte_utilisation') ?? null;
-            $produitData['seuil_critique_utilisation']  = $request->input('seuil_critique_utilisation') ?? null;
-
-            // Statut selon le rôle
             $user = auth()->user();
-            $produitData['cree_par']           = $user->id;
-            $produitData['statut_validation']  = $user->role === 'gestionnaire' ? 'valide' : 'en_attente';
 
-            // Si gestionnaire crée directement, on trace la validation
-            if ($user->role === 'gestionnaire') {
-                $produitData['valide_par'] = $user->id;
-                $produitData['valide_le']  = now();
-            }
+            // Créer le produit parent
+            $produit = Produit::create([
+                'nom'          => $request->nom,
+                'description'  => $request->description,
+                'categorie_id' => $request->categorie_id,
+                'marque'       => $request->marque,
+                'fournisseur'  => $request->fournisseur,
+                'photo_url'    => $request->photo_url,
+                'visible_public' => $request->input('visible_public', true),
+                'is_active'    => true,
+                'salon_id'     => $request->salon_id ?? 1,
+            ]);
 
-            $produit = Produit::create($produitData);
+            // Créer les variantes
+            foreach ($request->variantes as $varianteData) {
+                $varianteData['produit_id']        = $produit->id;
+                $varianteData['cree_par']          = $user->id;
+                $varianteData['statut_validation'] = $user->role === 'gestionnaire' ? 'valide' : 'en_attente';
 
-            if ($request->has('attributs') && is_array($request->attributs)) {
-                foreach ($request->attributs as $attributId => $valeur) {
-                    if (!empty($valeur)) {
-                        $produit->setAttribut($attributId, $valeur);
+                if ($user->role === 'gestionnaire') {
+                    $varianteData['valide_par'] = $user->id;
+                    $varianteData['valide_le']  = now();
+                }
+
+                // Seuils nullables
+                foreach (['seuil_alerte', 'seuil_critique', 'seuil_alerte_utilisation', 'seuil_critique_utilisation'] as $champ) {
+                    $varianteData[$champ] = $varianteData[$champ] ?? null;
+                }
+
+                $variante = ProduitVariante::create($varianteData);
+
+                // Attributs de la variante
+                if (!empty($varianteData['attributs']) && is_array($varianteData['attributs'])) {
+                    foreach ($varianteData['attributs'] as $attributId => $valeur) {
+                        if (!empty($valeur)) {
+                            $variante->setAttribut($attributId, $valeur);
+                        }
                     }
                 }
             }
 
             DB::commit();
 
-            // Notifier les gestionnaires si produit en attente
-            app(\App\Services\NotificationService::class)->notifierProduitSoumis($produit);
+            // Recharger les variantes avant la notification
+            $produit->load(['variantes']);
 
-            $produit->load(['categorie', 'valeursAttributs.attribut', 'createur']);
+            $premiereVariante = $produit->variantes->first();
+            if ($premiereVariante) {
+                app(\App\Services\NotificationService::class)->notifierProduitSoumis($premiereVariante);
+            }
 
-            $message = $produit->statut_validation === 'valide'
+            $statut  = $produit->variantes->first()->statut_validation;
+            $message = $statut === 'valide'
                 ? 'Produit créé et validé avec succès'
                 : 'Produit soumis pour validation';
 
@@ -167,100 +199,100 @@ class ProduitController extends Controller
         }
     }
 
-    /**
-     * Affiche un produit spécifique
-     */
+    // ========================================
+    // SHOW
+    // ========================================
+
     public function show(Produit $produit): JsonResponse
     {
         $produit->load([
             'categorie.attributs',
-            'valeursAttributs.attribut',
-            'mouvementsStock' => function($query) {
-                $query->latest()->limit(10);
-            },
-            'transferts' => function($query) {
-                $query->latest()->limit(5);
-            }
+            'variantes.valeursAttributs.attribut',
+            'variantes.mouvementsStock' => fn($q) => $q->latest()->limit(10),
+            'variantes.transferts'      => fn($q) => $q->latest()->limit(5),
         ]);
 
         return response()->json([
             'success' => true,
-            'data' => new ProduitResource($produit),
+            'data'    => new ProduitResource($produit),
             'message' => 'Produit récupéré avec succès',
         ]);
     }
 
-    /**
-     * Met à jour un produit
-     */
-   public function update(UpdateProduitRequest $request, Produit $produit): JsonResponse
+    // ========================================
+    // UPDATE
+    // ========================================
+
+    public function update(UpdateProduitRequest $request, Produit $produit): JsonResponse
     {
         $user = auth()->user();
 
-        // Contrôle d'accès pour coiffeur et gérant
-        if ($user->role !== 'gestionnaire') {
-            if ($produit->cree_par !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Vous ne pouvez modifier que vos propres produits',
-                ], 403);
-            }
-
-            if ($produit->statut_validation === 'valide') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Impossible de modifier un produit déjà validé',
-                ], 403);
-            }
-        }
-
         DB::beginTransaction();
         try {
-            $produitData = $request->except('attributs');
+            // Mettre à jour le produit parent
+            $produit->update($request->only(['nom', 'description', 'categorie_id', 'marque', 'fournisseur', 'visible_public', 'is_active']));
 
-            // Gérer les valeurs nullables pour les seuils
-            if ($request->has('seuil_alerte')) {
-                $produitData['seuil_alerte'] = $request->input('seuil_alerte') ?: null;
-            }
-            if ($request->has('seuil_critique')) {
-                $produitData['seuil_critique'] = $request->input('seuil_critique') ?: null;
-            }
-            if ($request->has('seuil_alerte_utilisation')) {
-                $produitData['seuil_alerte_utilisation'] = $request->input('seuil_alerte_utilisation') ?: null;
-            }
-            if ($request->has('seuil_critique_utilisation')) {
-                $produitData['seuil_critique_utilisation'] = $request->input('seuil_critique_utilisation') ?: null;
-            }
+            // Mettre à jour les variantes existantes ou en créer de nouvelles
+            if ($request->has('variantes') && is_array($request->variantes)) {
+                foreach ($request->variantes as $varianteData) {
 
-            // Si produit rejeté modifié par son créateur → repasse en attente
-            if ($user->role !== 'gestionnaire' && $produit->statut_validation === 'rejete') {
-                $produitData['statut_validation'] = 'en_attente';
-                $produitData['motif_rejet']       = null;
-                $produitData['valide_par']        = null;
-                $produitData['valide_le']         = null;
+                    // Variante existante → update
+                    if (!empty($varianteData['id'])) {
+                        $variante = ProduitVariante::findOrFail($varianteData['id']);
 
-                // Renotifier les gestionnaires
-                $produit->load('createur');
-                app(\App\Services\NotificationService::class)->notifierProduitSoumis(
-                    $produit->fill($produitData) // on passe les nouvelles données pour le message
-                );
-            }
+                        if ($user->role !== 'gestionnaire') {
+                            if ($variante->cree_par !== $user->id) {
+                                continue; // skip les variantes qui ne lui appartiennent pas
+                            }
+                            if ($variante->statut_validation === 'valide') {
+                                continue;
+                            }
+                            if ($variante->statut_validation === 'rejete') {
+                                $varianteData['statut_validation'] = 'en_attente';
+                                $varianteData['motif_rejet']       = null;
+                                $varianteData['valide_par']        = null;
+                                $varianteData['valide_le']         = null;
+                            }
+                        }
 
-            $produit->update($produitData);
+                        $variante->update($varianteData);
 
-            // Mettre à jour les attributs si fournis
-            if ($request->has('attributs') && is_array($request->attributs)) {
-                ProduitAttributValeur::supprimerPourProduit($produit->id);
-                foreach ($request->attributs as $attributId => $valeur) {
-                    if (!empty($valeur)) {
-                        $produit->setAttribut($attributId, $valeur);
+                        if (!empty($varianteData['attributs']) && is_array($varianteData['attributs'])) {
+                            ProduitAttributValeur::supprimerPourVariante($variante->id);
+                            foreach ($varianteData['attributs'] as $attributId => $valeur) {
+                                if (!empty($valeur)) {
+                                    $variante->setAttribut($attributId, $valeur);
+                                }
+                            }
+                        }
+
+                    // Nouvelle variante → create
+                    } else {
+                        $varianteData['produit_id']        = $produit->id;
+                        $varianteData['cree_par']          = $user->id;
+                        $varianteData['statut_validation'] = $user->role === 'gestionnaire' ? 'valide' : 'en_attente';
+
+                        if ($user->role === 'gestionnaire') {
+                            $varianteData['valide_par'] = $user->id;
+                            $varianteData['valide_le']  = now();
+                        }
+
+                        $variante = ProduitVariante::create($varianteData);
+
+                        if (!empty($varianteData['attributs']) && is_array($varianteData['attributs'])) {
+                            foreach ($varianteData['attributs'] as $attributId => $valeur) {
+                                if (!empty($valeur)) {
+                                    $variante->setAttribut($attributId, $valeur);
+                                }
+                            }
+                        }
                     }
                 }
             }
 
             DB::commit();
 
-            $produit->load(['categorie', 'valeursAttributs.attribut', 'createur', 'validateur']);
+            $produit->load(['categorie', 'variantes.valeursAttributs.attribut', 'variantes.createur', 'variantes.validateur']);
 
             return response()->json([
                 'success' => true,
@@ -268,41 +300,21 @@ class ProduitController extends Controller
                 'message' => 'Produit mis à jour avec succès',
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            $errors     = $e->errors();
-            $firstError = reset($errors)[0] ?? 'Erreur de validation';
-
-            return response()->json([
-                'success' => false,
-                'message' => $firstError,
-                'errors'  => $errors,
-            ], 422);
-
         } catch (\Exception $e) {
             DB::rollBack();
-
             return response()->json([
                 'success' => false,
                 'message' => 'Impossible de modifier le produit : ' . $e->getMessage(),
             ], 500);
         }
     }
-    /**
-     * Supprime un produit
-     */
+
+    // ========================================
+    // DESTROY
+    // ========================================
+
     public function destroy(Produit $produit): JsonResponse
     {
-        // Vérifier si le produit a des ventes
-        // Note: Vérification à adapter selon votre modèle Vente
-        // $ventesCount = $produit->ventes()->count();
-        // if ($ventesCount > 0) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Impossible de supprimer ce produit car il a des ventes associées',
-        //     ], 422);
-        // }
-
         $produit->delete();
 
         return response()->json([
@@ -311,294 +323,241 @@ class ProduitController extends Controller
         ]);
     }
 
-    /**
-     * Récupère les produits en alerte stock
-     */
+    // ========================================
+    // ALERTES
+    // ========================================
+
     public function alertes(Request $request): JsonResponse
     {
-        $query = Produit::query();
-        $typeAlerte = $request->input('type', 'all'); // all, vente, utilisation, reserve
+        $typeAlerte = $request->input('type', 'all');
 
-        if ($typeAlerte === 'vente' || $typeAlerte === 'all') {
-            $query->orWhereRaw('stock_vente <= seuil_alerte');
-        }
-
-        if ($typeAlerte === 'utilisation' || $typeAlerte === 'all') {
-            $query->orWhereRaw('stock_utilisation <= seuil_alerte_utilisation');
-        }
-
-        // ✅ AJOUT: Alertes réserve
-        if ($typeAlerte === 'reserve' || $typeAlerte === 'all') {
-            $query->orWhereRaw('stock_reserve <= seuil_alerte_reserve');
-        }
-
-        $query->where('is_active', true);
-        $query->with(['categorie']);
-        $produits = $query->get();
+        $variantes = ProduitVariante::query()
+            ->where('is_active', true)
+            ->when(in_array($typeAlerte, ['vente', 'all']),
+                fn($q) => $q->orWhereRaw('stock_vente <= seuil_alerte')
+            )
+            ->when(in_array($typeAlerte, ['utilisation', 'all']),
+                fn($q) => $q->orWhereRaw('stock_utilisation <= seuil_alerte_utilisation')
+            )
+            ->when(in_array($typeAlerte, ['reserve', 'all']),
+                fn($q) => $q->orWhereRaw('stock_reserve <= seuil_alerte_reserve')
+            )
+            ->with(['produit.categorie'])
+            ->get();
 
         return response()->json([
             'success' => true,
-            'data' => ProduitResource::collection($produits),
-            'stats' => [
-                'total_alertes' => $produits->count(),
-                'alertes_vente' => $produits->filter(fn($p) => $p->stock_vente <= ($p->seuil_alerte ?? 0))->count(),
-                'alertes_utilisation' => $produits->filter(fn($p) => $p->stock_utilisation <= ($p->seuil_alerte_utilisation ?? 0))->count(),
-                // ✅ AJOUT
-                'alertes_reserve' => $produits->filter(fn($p) => $p->stock_reserve <= ($p->seuil_alerte_reserve ?? 0))->count(),
-                'critiques_vente' => $produits->filter(fn($p) => $p->stock_vente <= ($p->seuil_critique ?? 0))->count(),
-                'critiques_utilisation' => $produits->filter(fn($p) => $p->stock_utilisation <= ($p->seuil_critique_utilisation ?? 0))->count(),
-                // ✅ AJOUT
-                'critiques_reserve' => $produits->filter(fn($p) => $p->stock_reserve <= ($p->seuil_critique_reserve ?? 0))->count(),
+            'data'    => $variantes,
+            'stats'   => [
+                'total_alertes'          => $variantes->count(),
+                'alertes_vente'          => $variantes->filter(fn($v) => $v->stock_vente <= ($v->seuil_alerte ?? 0))->count(),
+                'alertes_utilisation'    => $variantes->filter(fn($v) => $v->stock_utilisation <= ($v->seuil_alerte_utilisation ?? 0))->count(),
+                'alertes_reserve'        => $variantes->filter(fn($v) => $v->stock_reserve <= ($v->seuil_alerte_reserve ?? 0))->count(),
+                'critiques_vente'        => $variantes->filter(fn($v) => $v->stock_vente <= ($v->seuil_critique ?? 0))->count(),
+                'critiques_utilisation'  => $variantes->filter(fn($v) => $v->stock_utilisation <= ($v->seuil_critique_utilisation ?? 0))->count(),
+                'critiques_reserve'      => $variantes->filter(fn($v) => $v->stock_reserve <= ($v->seuil_critique_reserve ?? 0))->count(),
             ],
             'message' => 'Produits en alerte récupérés avec succès',
         ]);
     }
 
-    /**
-     * Récupère l'historique des mouvements d'un produit
-     */
+    // ========================================
+    // MOUVEMENTS
+    // ========================================
+
     public function mouvements(Request $request, Produit $produit): JsonResponse
     {
-        $query = $produit->mouvementsStock();
+        $varianteId = $request->input('variante_id');
 
-        // Filtrer par type de stock
+        // Si variante_id fourni → mouvements d'une variante spécifique
+        // Sinon → mouvements de toutes les variantes du produit
+        $query = $varianteId
+            ? \App\Models\MouvementStock::where('variante_id', $varianteId)
+            : \App\Models\MouvementStock::whereIn(
+                'variante_id',
+                $produit->variantes->pluck('id')
+              );
+
         if ($request->filled('type_stock')) {
             $query->where('type_stock', $request->type_stock);
         }
 
-        // Filtrer par type de mouvement
         if ($request->filled('type_mouvement')) {
             $query->where('type_mouvement', $request->type_mouvement);
         }
 
-        // Filtrer par période
         if ($request->filled('date_debut') && $request->filled('date_fin')) {
-            $query->whereBetween('created_at', [
-                $request->date_debut,
-                $request->date_fin
-            ]);
+            $query->whereBetween('created_at', [$request->date_debut, $request->date_fin]);
         }
 
-        $query->with(['user', 'vente', 'transfert', 'confection'])
-              ->latest();
+        $query->with(['user', 'vente', 'transfert', 'confection'])->latest();
 
-        $perPage = $request->input('per_page', 50);
-        $mouvements = $query->paginate($perPage);
+        $mouvements = $query->paginate($request->input('per_page', 50));
 
         return response()->json([
             'success' => true,
-            'data' => MouvementStockResource::collection($mouvements),
+            'data'    => MouvementStockResource::collection($mouvements),
             'message' => 'Historique des mouvements récupéré avec succès',
         ]);
     }
 
-    /**
-     * Active/désactive un produit
-     */
+    // ========================================
+    // TOGGLE ACTIVE
+    // ========================================
+
     public function toggleActive(Produit $produit): JsonResponse
     {
-        $produit->update([
-            'is_active' => !$produit->is_active
-        ]);
+        $produit->update(['is_active' => !$produit->is_active]);
 
         return response()->json([
             'success' => true,
-            'data' => new ProduitResource($produit),
-            'message' => $produit->is_active 
-                ? 'Produit activé avec succès' 
-                : 'Produit désactivé avec succès',
+            'data'    => new ProduitResource($produit),
+            'message' => $produit->is_active ? 'Produit activé avec succès' : 'Produit désactivé avec succès',
         ]);
     }
 
-    /**
-     * Upload photo produit
-     */
+    // ========================================
+    // UPLOAD / DELETE PHOTO
+    // ========================================
+
     public function uploadPhoto(Request $request, $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', // Max 5MB
+            'photo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Erreur de validation', 'errors' => $validator->errors()], 422);
         }
 
         try {
             $produit = Produit::findOrFail($id);
 
             if ($request->hasFile('photo')) {
-                // Supprimer l'ancienne photo si elle existe
                 if ($produit->photo_url && Storage::disk('public')->exists($produit->photo_url)) {
                     Storage::disk('public')->delete($produit->photo_url);
                 }
 
-                $file = $request->file('photo');
-                
-                // Nom de fichier sécurisé
+                $file         = $request->file('photo');
                 $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                $extension = $file->getClientOriginalExtension();
-                $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
-                $filename = 'produit_' . $produit->id . '_' . time() . '_' . $safeName . '.' . $extension;
-                
-                // Stocker dans public/storage/photos/produits
-                $path = $file->storeAs('photos/produits', $filename, 'public');
+                $extension    = $file->getClientOriginalExtension();
+                $safeName     = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
+                $filename     = 'produit_' . $produit->id . '_' . time() . '_' . $safeName . '.' . $extension;
+                $path         = $file->storeAs('photos/produits', $filename, 'public');
 
-                // Mettre à jour le produit
-                $produit->update([
-                    'photo_url' => $path
-                ]);
+                $produit->update(['photo_url' => $path]);
+                $produit->load(['categorie', 'variantes.valeursAttributs.attribut']);
 
-                // Recharger les relations
-                $produit->load(['categorie', 'valeursAttributs.attribut']);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Photo uploadée avec succès',
-                    'data' => new ProduitResource($produit)
-                ], 200);
+                return response()->json(['success' => true, 'message' => 'Photo uploadée avec succès', 'data' => new ProduitResource($produit)]);
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Aucun fichier fourni'
-            ], 400);
+            return response()->json(['success' => false, 'message' => 'Aucun fichier fourni'], 400);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'upload de la photo',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Erreur lors de l\'upload', 'error' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Supprimer la photo d'un produit
-     */
     public function deletePhoto($id): JsonResponse
     {
         try {
             $produit = Produit::findOrFail($id);
 
             if (!$produit->photo_url) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Aucune photo à supprimer'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Aucune photo à supprimer'], 404);
             }
 
-            // Supprimer le fichier physique
             if (Storage::disk('public')->exists($produit->photo_url)) {
                 Storage::disk('public')->delete($produit->photo_url);
             }
-            
-            // Mettre à jour le produit
-            $produit->update([
-                'photo_url' => null
-            ]);
 
-            // Recharger les relations
-            $produit->load(['categorie', 'valeursAttributs.attribut']);
+            $produit->update(['photo_url' => null]);
+            $produit->load(['categorie', 'variantes.valeursAttributs.attribut']);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Photo supprimée avec succès',
-                'data' => new ProduitResource($produit)
-            ], 200);
+            return response()->json(['success' => true, 'message' => 'Photo supprimée avec succès', 'data' => new ProduitResource($produit)]);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la suppression de la photo',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Erreur lors de la suppression', 'error' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Liste des produits en attente de validation (gestionnaire uniquement)
-     */
+    // ========================================
+    // VALIDATION
+    // ========================================
+
     public function enAttente(Request $request): JsonResponse
     {
-        $produits = Produit::enAttente()
-            ->with(['categorie', 'valeursAttributs.attribut', 'createur'])
+        $variantes = ProduitVariante::enAttente()
+            ->with(['produit.categorie', 'valeursAttributs.attribut', 'createur'])
             ->latest()
             ->paginate($request->input('per_page', 20));
 
         return response()->json([
             'success' => true,
-            'data'    => new ProduitCollection($produits),
-            'message' => 'Produits en attente de validation',
+            'data'    => $variantes,
+            'message' => 'Variantes en attente de validation',
         ]);
     }
 
-    /**
-     * Valider un produit sans modification
-     */
-    public function valider(Produit $produit): JsonResponse
+    public function valider(Request $request, Produit $produit): JsonResponse
     {
-        if ($produit->statut_validation === 'valide') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ce produit est déjà validé',
-            ], 422);
+        $varianteId = $request->input('variante_id');
+
+        $variantes = $varianteId
+            ? ProduitVariante::where('id', $varianteId)->where('produit_id', $produit->id)->get()
+            : $produit->variantes()->where('statut_validation', '!=', 'valide')->get();
+
+        foreach ($variantes as $variante) {
+            $variante->update([
+                'statut_validation' => 'valide',
+                'valide_par'        => auth()->id(),
+                'valide_le'         => now(),
+                'motif_rejet'       => null,
+            ]);
         }
 
-        $produit->update([
-            'statut_validation' => 'valide',
-            'valide_par'        => auth()->id(),
-            'valide_le'         => now(),
-            'motif_rejet'       => null,
-        ]);
-
-        $produit->load(['categorie', 'valeursAttributs.attribut', 'validateur']);
+        $produit->load(['categorie', 'variantes.valeursAttributs.attribut', 'variantes.validateur']);
 
         return response()->json([
             'success' => true,
             'data'    => new ProduitResource($produit),
-            'message' => 'Produit validé avec succès',
+            'message' => 'Variante(s) validée(s) avec succès',
         ]);
     }
 
-    /**
-     * Modifier et valider en une seule action
-     */
     public function modifierEtValider(UpdateProduitRequest $request, Produit $produit): JsonResponse
     {
         DB::beginTransaction();
         try {
-            $produitData = $request->except('attributs');
+            $produit->update($request->only(['nom', 'description', 'categorie_id', 'marque', 'fournisseur']));
 
-            // Champs seuils nullables
-            foreach (['seuil_alerte', 'seuil_critique', 'seuil_alerte_utilisation', 'seuil_critique_utilisation'] as $champ) {
-                if ($request->has($champ)) {
-                    $produitData[$champ] = $request->input($champ) ?: null;
-                }
-            }
+            if ($request->has('variantes') && is_array($request->variantes)) {
+                foreach ($request->variantes as $varianteData) {
+                    if (empty($varianteData['id'])) continue;
 
-            $produitData['statut_validation'] = 'valide';
-            $produitData['valide_par']        = auth()->id();
-            $produitData['valide_le']         = now();
-            $produitData['motif_rejet']       = null;
+                    $variante = ProduitVariante::findOrFail($varianteData['id']);
 
-            $produit->update($produitData);
+                    $varianteData['statut_validation'] = 'valide';
+                    $varianteData['valide_par']        = auth()->id();
+                    $varianteData['valide_le']         = now();
+                    $varianteData['motif_rejet']       = null;
 
-            if ($request->has('attributs') && is_array($request->attributs)) {
-                ProduitAttributValeur::supprimerPourProduit($produit->id);
-                foreach ($request->attributs as $attributId => $valeur) {
-                    if (!empty($valeur)) {
-                        $produit->setAttribut($attributId, $valeur);
+                    $variante->update($varianteData);
+
+                    if (!empty($varianteData['attributs']) && is_array($varianteData['attributs'])) {
+                        ProduitAttributValeur::supprimerPourVariante($variante->id);
+                        foreach ($varianteData['attributs'] as $attributId => $valeur) {
+                            if (!empty($valeur)) {
+                                $variante->setAttribut($attributId, $valeur);
+                            }
+                        }
                     }
                 }
             }
 
             DB::commit();
 
-            $produit->load(['categorie', 'valeursAttributs.attribut', 'validateur']);
+            $produit->load(['categorie', 'variantes.valeursAttributs.attribut', 'variantes.validateur']);
 
             return response()->json([
                 'success' => true,
@@ -608,35 +567,35 @@ class ProduitController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur : ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Erreur : ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Rejeter un produit avec motif
-     */
     public function rejeter(Request $request, Produit $produit): JsonResponse
     {
-        $request->validate([
-            'motif' => 'required|string|max:500',
-        ]);
+        $request->validate(['motif' => 'required|string|max:500']);
 
-        $produit->update([
-            'statut_validation' => 'rejete',
-            'valide_par'        => auth()->id(),
-            'valide_le'         => now(),
-            'motif_rejet'       => $request->motif,
-        ]);
+        $varianteId = $request->input('variante_id');
 
-        $produit->load(['categorie', 'valeursAttributs.attribut', 'validateur']);
+        $variantes = $varianteId
+            ? ProduitVariante::where('id', $varianteId)->where('produit_id', $produit->id)->get()
+            : $produit->variantes()->where('statut_validation', '!=', 'rejete')->get();
+
+        foreach ($variantes as $variante) {
+            $variante->update([
+                'statut_validation' => 'rejete',
+                'valide_par'        => auth()->id(),
+                'valide_le'         => now(),
+                'motif_rejet'       => $request->motif,
+            ]);
+        }
+
+        $produit->load(['categorie', 'variantes.valeursAttributs.attribut', 'variantes.validateur']);
 
         return response()->json([
             'success' => true,
             'data'    => new ProduitResource($produit),
-            'message' => 'Produit rejeté',
+            'message' => 'Variante(s) rejetée(s)',
         ]);
     }
 }

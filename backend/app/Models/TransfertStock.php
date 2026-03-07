@@ -16,7 +16,7 @@ class TransfertStock extends Model
 
     protected $fillable = [
         'numero_transfert',
-        'produit_id',
+        'variante_id',
         'type_transfert',
         'quantite',
         'prix_unitaire',
@@ -29,203 +29,169 @@ class TransfertStock extends Model
     ];
 
     protected $casts = [
-        'quantite' => 'integer',
-        'prix_unitaire' => 'decimal:2',
-        'montant_total' => 'decimal:2',
-        'valide' => 'boolean',
+        'quantite'        => 'integer',
+        'prix_unitaire'   => 'decimal:2',
+        'montant_total'   => 'decimal:2',
+        'valide'          => 'boolean',
         'date_validation' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'created_at'      => 'datetime',
+        'updated_at'      => 'datetime',
     ];
 
-    /**
-     * Génère automatiquement le numéro de transfert
-     */
-    protected static function booted()
+    // ========================================
+    // BOOT
+    // ========================================
+
+    protected static function booted(): void
     {
         static::creating(function ($transfert) {
             if (!$transfert->numero_transfert) {
                 $transfert->numero_transfert = self::genererNumero();
             }
-            
-            // Calculer le montant total
             if (!$transfert->montant_total) {
                 $transfert->montant_total = $transfert->quantite * $transfert->prix_unitaire;
             }
         });
     }
 
-    /**
-     * Relation avec le produit
-     */
-    public function produit(): BelongsTo
+    // ========================================
+    // RELATIONS
+    // ========================================
+
+    public function variante(): BelongsTo
     {
-        return $this->belongsTo(Produit::class);
+        return $this->belongsTo(ProduitVariante::class, 'variante_id');
     }
 
-    /**
-     * Relation avec l'utilisateur qui a effectué le transfert
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Relation avec le valideur
-     */
     public function valideur(): BelongsTo
     {
         return $this->belongsTo(User::class, 'valideur_id');
     }
 
-    /**
-     * Relation avec les mouvements de stock générés
-     */
     public function mouvements(): HasMany
     {
         return $this->hasMany(MouvementStock::class, 'transfert_id');
     }
 
-    /**
-     * Scope pour les transferts validés
-     */
+    // ========================================
+    // SCOPES
+    // ========================================
+
     public function scopeValides($query)
     {
         return $query->where('valide', true);
     }
 
-    /**
-     * Scope pour les transferts en attente
-     */
     public function scopeEnAttente($query)
     {
         return $query->where('valide', false);
     }
 
-    /**
-     * Scope pour un type de transfert spécifique
-     */
     public function scopeType($query, string $type)
     {
         return $query->where('type_transfert', $type);
     }
 
-    /**
-     * Scope pour une période
-     */
     public function scopePeriode($query, $dateDebut, $dateFin)
     {
         return $query->whereBetween('created_at', [$dateDebut, $dateFin]);
     }
 
-    /**
-     * Vérifie si le transfert est validé
-     */
+    // ========================================
+    // HELPERS
+    // ========================================
+
     public function isValide(): bool
     {
         return $this->valide === true;
     }
 
-    /**
-     * Obtient le libellé du type de transfert
-     */
-     public function getTypeTransfertLibelleAttribute(): string
+    public function getTypeTransfertLibelleAttribute(): string
     {
         return match($this->type_transfert) {
-            'vente_vers_utilisation' => 'Stock Vente → Stock Utilisation',
-            'utilisation_vers_vente' => 'Stock Utilisation → Stock Vente',
-            // ✅ AJOUT - Nouveaux types
-            'reserve_vers_vente' => 'Stock Réserve → Stock Vente',
+            'vente_vers_utilisation'   => 'Stock Vente → Stock Utilisation',
+            'utilisation_vers_vente'   => 'Stock Utilisation → Stock Vente',
+            'reserve_vers_vente'       => 'Stock Réserve → Stock Vente',
             'reserve_vers_utilisation' => 'Stock Réserve → Stock Utilisation',
-            'vente_vers_reserve' => 'Stock Vente → Stock Réserve',
+            'vente_vers_reserve'       => 'Stock Vente → Stock Réserve',
             'utilisation_vers_reserve' => 'Stock Utilisation → Stock Réserve',
-            default => 'Inconnu',
+            default                    => 'Inconnu',
         };
     }
 
-    /**
-     * Obtient le stock source selon le type de transfert
-     */
     public function getStockSourceAttribute(): string
     {
         return match($this->type_transfert) {
-            'vente_vers_utilisation', 'vente_vers_reserve' => 'vente',
+            'vente_vers_utilisation', 'vente_vers_reserve'       => 'vente',
             'utilisation_vers_vente', 'utilisation_vers_reserve' => 'utilisation',
-            // ✅ AJOUT
-            'reserve_vers_vente', 'reserve_vers_utilisation' => 'reserve',
-            default => 'vente',
+            'reserve_vers_vente', 'reserve_vers_utilisation'     => 'reserve',
+            default                                               => 'vente',
         };
     }
 
-    /**
-     * Obtient le stock destination selon le type de transfert
-     */
     public function getStockDestinationAttribute(): string
     {
         return match($this->type_transfert) {
-            'vente_vers_utilisation' => 'utilisation',
-            'utilisation_vers_vente' => 'vente',
-            // ✅ AJOUT
-            'reserve_vers_vente', 'utilisation_vers_reserve', 'vente_vers_reserve' => 
-                str_contains($this->type_transfert, 'vers_vente') ? 'vente' :
-                (str_contains($this->type_transfert, 'vers_utilisation') ? 'utilisation' : 'reserve'),
-            'reserve_vers_utilisation' => 'utilisation',
-            default => 'vente',
+            'vente_vers_utilisation', 'reserve_vers_utilisation' => 'utilisation',
+            'utilisation_vers_vente', 'reserve_vers_vente'       => 'vente',
+            'vente_vers_reserve', 'utilisation_vers_reserve'     => 'reserve',
+            default                                               => 'vente',
         };
     }
 
-    /**
-     * Valide le transfert et effectue les mouvements de stock
-     */
-     public function valider(?int $valideurId = null): bool
+    // ========================================
+    // MÉTHODES MÉTIER
+    // ========================================
+
+    public function valider(?int $valideurId = null): bool
     {
         if ($this->valide) {
-            return false; // Déjà validé
+            return false;
         }
 
         DB::beginTransaction();
         try {
-            $produit = $this->produit;
+            $variante = $this->variante;
 
-            // ✅ MODIFICATION - Gérer les 3 types de stock
             $stockSource = match($this->stock_source) {
-                'vente' => $produit->stock_vente,
-                'utilisation' => $produit->stock_utilisation,
-                'reserve' => $produit->stock_reserve, // ← AJOUT
-                default => 0,
+                'vente'       => $variante->stock_vente,
+                'utilisation' => $variante->stock_utilisation,
+                'reserve'     => $variante->stock_reserve,
+                default       => 0,
             };
 
             if ($stockSource < $this->quantite) {
                 throw new \Exception("Stock insuffisant pour le transfert");
             }
 
-            // Créer mouvement de sortie du stock source
             MouvementStock::enregistrerMouvement(
-                produitId: $this->produit_id,
-                typeStock: $this->stock_source,
+                varianteId:    $this->variante_id,
+                typeStock:     $this->stock_source,
                 typeMouvement: 'sortie',
-                quantite: $this->quantite,
-                motif: "Transfert vers stock {$this->stock_destination} - {$this->numero_transfert}",
-                transfertId: $this->id,
-                userId: $valideurId ?? auth()->id()
+                quantite:      $this->quantite,
+                motif:         "Transfert vers stock {$this->stock_destination} - {$this->numero_transfert}",
+                transfertId:   $this->id,
+                userId:        $valideurId ?? auth()->id()
             );
 
-            // Créer mouvement d'entrée dans le stock destination
             MouvementStock::enregistrerMouvement(
-                produitId: $this->produit_id,
-                typeStock: $this->stock_destination,
+                varianteId:    $this->variante_id,
+                typeStock:     $this->stock_destination,
                 typeMouvement: 'entree',
-                quantite: $this->quantite,
-                motif: "Transfert depuis stock {$this->stock_source} - {$this->numero_transfert}",
-                transfertId: $this->id,
-                userId: $valideurId ?? auth()->id()
+                quantite:      $this->quantite,
+                motif:         "Transfert depuis stock {$this->stock_source} - {$this->numero_transfert}",
+                transfertId:   $this->id,
+                userId:        $valideurId ?? auth()->id()
             );
 
-            // Marquer comme validé
             $this->update([
-                'valide' => true,
-                'valideur_id' => $valideurId ?? auth()->id(),
+                'valide'          => true,
+                'valideur_id'     => $valideurId ?? auth()->id(),
                 'date_validation' => now(),
             ]);
 
@@ -238,26 +204,23 @@ class TransfertStock extends Model
         }
     }
 
-    /**
-     * Crée un nouveau transfert
-     */
     public static function creerTransfert(
-        int $produitId,
+        int $varianteId,
         string $typeTransfert,
         int $quantite,
         ?string $motif = null,
         ?int $userId = null,
         bool $autoValider = false
     ): self {
-        $produit = Produit::findOrFail($produitId);
-        
+        $variante = ProduitVariante::findOrFail($varianteId);
+
         $transfert = self::create([
-            'produit_id' => $produitId,
+            'variante_id'    => $varianteId,
             'type_transfert' => $typeTransfert,
-            'quantite' => $quantite,
-            'prix_unitaire' => $produit->prix_achat,
-            'motif' => $motif,
-            'user_id' => $userId ?? auth()->id(),
+            'quantite'       => $quantite,
+            'prix_unitaire'  => $variante->prix_achat,
+            'motif'          => $motif,
+            'user_id'        => $userId ?? auth()->id(),
         ]);
 
         if ($autoValider) {
@@ -267,15 +230,15 @@ class TransfertStock extends Model
         return $transfert;
     }
 
-    /**
-     * Génère un numéro unique de transfert
-     */
+    // ========================================
+    // UTILITAIRES
+    // ========================================
+
     private static function genererNumero(): string
     {
-        $prefix = 'TRF';
-        $date = now()->format('Ymd');
+        $prefix  = 'TRF';
+        $date    = now()->format('Ymd');
         $dernier = self::whereDate('created_at', today())->count() + 1;
-        
         return sprintf('%s-%s-%04d', $prefix, $date, $dernier);
     }
 }

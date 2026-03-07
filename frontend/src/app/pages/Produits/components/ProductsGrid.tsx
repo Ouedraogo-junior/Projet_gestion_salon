@@ -1,16 +1,21 @@
 // src/app/pages/Produits/components/ProductsGrid.tsx
-import { Plus } from 'lucide-react';
+
+import { useState } from 'react';
+import { Plus, LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { ProduitCard } from './ProduitCard';
+import { ProduitRow } from './ProduitRow';
 import type { Produit } from '@/types/produit.types';
+
+type ViewMode = 'list' | 'grid';
 
 interface ProductsGridProps {
   produits: Produit[];
   loading: boolean;
   showStockVente: boolean;
   showStockSalon: boolean;
-  showStockReserve?: boolean; // ← AJOUTEZ
+  showStockReserve?: boolean;
   onEdit: (produit: Produit) => void;
   onDelete: (id: number) => void;
   onToggleActive: (id: number) => void;
@@ -23,18 +28,20 @@ export function ProductsGrid({
   loading,
   showStockVente,
   showStockSalon,
-  showStockReserve = false, // ← AJOUTEZ
+  showStockReserve = false,
   onEdit,
   onDelete,
   onToggleActive,
   onViewDetails,
-  onCreateClick
+  onCreateClick,
 }: ProductsGridProps) {
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+
   if (loading) {
     return (
       <div className="text-center py-12">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-        <p className="mt-2 text-sm sm:text-base text-gray-600">Chargement...</p>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent" />
+        <p className="mt-2 text-sm text-gray-600">Chargement...</p>
       </div>
     );
   }
@@ -53,21 +60,67 @@ export function ProductsGrid({
     );
   }
 
+  const sharedProps = {
+    onEdit,
+    onDelete,
+    onToggleActive,
+    onViewDetails,
+    showStockVente,
+    showStockSalon,
+    showStockReserve,
+  };
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-      {produits.map((produit) => (
-        <ProduitCard
-          key={produit.id}
-          produit={produit}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleActive={onToggleActive}
-          onViewDetails={onViewDetails}
-          showStockVente={showStockVente}
-          showStockSalon={showStockSalon}
-          showStockReserve={showStockReserve} // ← AJOUTEZ
-        />
-      ))}
+    <div className="space-y-3">
+      {/* Toggle vue */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          {produits.length} produit{produits.length > 1 ? 's' : ''}
+        </p>
+
+        <div className="flex items-center bg-gray-100 rounded-lg p-1 gap-0.5">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'list'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <List size={15} />
+            <span className="hidden sm:inline">Liste</span>
+          </button>
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+              viewMode === 'grid'
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <LayoutGrid size={15} />
+            <span className="hidden sm:inline">Cartes</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Vue liste */}
+      {viewMode === 'list' && (
+        <div className="space-y-1.5">
+          {produits.map(produit => (
+            <ProduitRow key={produit.id} produit={produit} {...sharedProps} />
+          ))}
+        </div>
+      )}
+
+      {/* Vue grille */}
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {produits.map(produit => (
+            <ProduitCard key={produit.id} produit={produit} {...sharedProps} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

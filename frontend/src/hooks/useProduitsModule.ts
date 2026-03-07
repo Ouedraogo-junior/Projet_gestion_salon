@@ -80,6 +80,7 @@ export function useAttributs() {
 // ========================================
 // HOOK PRODUITS
 // ========================================
+// useProduits → produits avec variantes imbriquées (pour ProductsGrid, TransfertsTab, etc.)
 export function useProduits() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,29 +92,66 @@ export function useProduits() {
     setError(null);
     try {
       const response = await produitsApi.produits.getAll({ per_page: 500, ...params });
-
-      // console.log('📦 Réponse complète:', response);
-      // console.log('📄 Meta pagination:', response.data?.meta);
-      // console.log('🔍 Statuts:', (response.data?.data ?? []).map((p: any) => ({
-      //   id: p.id,
-      //   nom: p.nom,
-      //   statut: p.statut_validation
-      // })));
-
       setData(response.data?.data || []);
       setMeta(response.data?.meta || null);
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement');
-      console.error('Erreur:', err);
     } finally {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    load();
-  }, []);
 
+  useEffect(() => { load(); }, []);
   return { data, loading, error, meta, reload: load };
+}
+
+// useVariantes → liste aplatie de variantes (pour selects dans formulaires)
+
+export function useVariantes() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await produitsApi.produits.getAll({ per_page: 500 });
+      const produits: any[] = response.data?.data || [];
+
+      const variantes = produits.flatMap((produit: any) =>
+        (produit.variantes ?? []).map((v: any) => {
+          const attrLabel = v.attributs?.length > 0
+            ? v.attributs.map((a: any) => a.valeur_formatee ?? a.valeur).join(' · ')
+            : null;
+          return {
+            variante_id:          v.id,
+            produit_id:           produit.id,
+            categorie_id:         produit.categorie_id,   // ← clé pour le filtre
+            nom:                  attrLabel ? `${produit.nom} — ${attrLabel}` : produit.nom,
+            reference:            v.reference,
+            prix_achat:           v.prix_achat        ?? 0,
+            prix_vente:           v.prix_vente         ?? 0,
+            stock_vente:          v.stock_vente        ?? 0,
+            stock_utilisation:    v.stock_utilisation  ?? 0,
+            stock_reserve:        v.stock_reserve      ?? 0,
+            type_stock_principal: v.type_stock_principal,
+            statut_validation:    v.statut_validation,
+            is_active:            v.is_active,
+          };
+        })
+      );
+
+      setData(variantes);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+  return { data, loading, error, reload: load };
 }
 
 // ========================================
@@ -168,19 +206,22 @@ export function useTransferts() {
     setError(null);
     try {
       const response = await produitsApi.transferts.getAll(params);
-      // Les transferts sont directement dans response.data (pas de pagination)
-      setData(response.data || []);
+
+      // Le controller retourne une réponse paginée : response.data est la collection paginée
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        setData(response.data.data); // réponse paginée
+      } else if (Array.isArray(response.data)) {
+        setData(response.data);      // réponse directe
+      } else {
+        setData([]);
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement');
-      console.error('Erreur:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
-
+  useEffect(() => { load(); }, []);
   return { data, loading, error, reload: load };
 }

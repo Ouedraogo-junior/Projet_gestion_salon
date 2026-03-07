@@ -7,6 +7,7 @@ use App\Http\Requests\StoreVenteRequest;
 use App\Models\Vente;
 use App\Models\VenteDetail;
 use App\Models\Produit;
+use App\Models\ProduitVariante;
 use App\Models\TypePrestation;
 use App\Models\Client;
 use App\Models\MouvementStock;
@@ -256,69 +257,69 @@ class VenteController extends Controller
             // 5. CRÉER LES DÉTAILS
             // ========================================
             foreach ($request->articles as $article) {
-                $articleNom = '';
-                $prestationId = null;
-                $produitId = null;
+                $articleNom      = '';
+                $prestationId    = null;
+                $varianteId      = null;
                 $produitReference = null;
 
                 if ($article['type'] === 'prestation') {
                     $prestation = TypePrestation::find($article['id']);
                     if ($prestation) {
-                        $articleNom = $prestation->nom;
+                        $articleNom   = $prestation->nom;
                         $prestationId = $prestation->id;
                     }
                 } else {
-                    $produit = Produit::find($article['id']);
-                    if ($produit) {
-                        if ($produit->statut_validation !== 'valide') {
-                            throw new \Exception("Le produit \"{$produit->nom}\" n'est pas validé et ne peut pas être vendu.");
+                    // $article['id'] est maintenant un variante_id
+                    $variante = ProduitVariante::with('produit')->find($article['id']);
+                    if ($variante) {
+                        if ($variante->statut_validation !== 'valide') {
+                            throw new \Exception("Le produit \"{$variante->produit->nom}\" n'est pas validé et ne peut pas être vendu.");
                         }
-                        $articleNom = $produit->nom;
-                        $produitId = $produit->id;
-                        $produitReference = $produit->reference;
 
-                        // Vérifier stock
-                        $sourceStock = $article['source_stock'] ?? 'vente';
-                        $stockDisponible = $sourceStock === 'vente' ? $produit->stock_vente : $produit->stock_utilisation;
+                        $articleNom       = $variante->produit->nom;
+                        $varianteId       = $variante->id;
+                        $produitReference = $variante->reference;
+
+                        $sourceStock     = $article['source_stock'] ?? 'vente';
+                        $stockDisponible = $sourceStock === 'vente'
+                            ? $variante->stock_vente
+                            : $variante->stock_utilisation;
 
                         if ($stockDisponible < $article['quantite']) {
-                            throw new \Exception("Stock insuffisant pour {$produit->nom}. Disponible: {$stockDisponible}");
+                            throw new \Exception("Stock insuffisant pour {$variante->produit->nom}. Disponible: {$stockDisponible}");
                         }
 
-                        // Décompter le stock
                         if ($sourceStock === 'vente') {
-                            $produit->decrement('stock_vente', $article['quantite']);
+                            $variante->decrement('stock_vente', $article['quantite']);
                         } else {
-                            $produit->decrement('stock_utilisation', $article['quantite']);
+                            $variante->decrement('stock_utilisation', $article['quantite']);
                         }
 
-                        // Créer mouvement de stock
                         MouvementStock::create([
-                            'produit_id' => $produit->id,
-                            'type_stock' => $sourceStock,
+                            'variante_id'    => $variante->id,
+                            'type_stock'     => $sourceStock,
                             'type_mouvement' => 'sortie',
-                            'quantite' => $article['quantite'],
-                            'stock_avant' => $stockDisponible,
-                            'stock_apres' => $stockDisponible - $article['quantite'],
-                            'motif' => "Vente #{$numeroFacture}",
-                            'vente_id' => $vente->id,
-                            'user_id' => auth()->id(),
+                            'quantite'       => $article['quantite'],
+                            'stock_avant'    => $stockDisponible,
+                            'stock_apres'    => $stockDisponible - $article['quantite'],
+                            'motif'          => "Vente #{$numeroFacture}",
+                            'vente_id'       => $vente->id,
+                            'user_id'        => auth()->id(),
                         ]);
                     }
                 }
 
-                // Créer détail vente
                 VenteDetail::create([
-                    'vente_id' => $vente->id,
-                    'type_article' => $article['type'],
-                    'article_nom' => $articleNom,
-                    'prestation_id' => $prestationId,
-                    'produit_id' => $produitId,
+                    'vente_id'         => $vente->id,
+                    'type_article'     => $article['type'],
+                    'article_nom'      => $articleNom,
+                    'prestation_id'    => $prestationId,
+                    'variante_id'      => $varianteId,
                     'produit_reference' => $produitReference,
-                    'quantite' => $article['quantite'],
-                    'prix_unitaire' => $article['prix_unitaire'],
-                    'prix_total' => $article['prix_unitaire'] * $article['quantite'],
-                    'reduction' => $article['reduction'] ?? 0,
+                    'quantite'         => $article['quantite'],
+                    'prix_unitaire'    => $article['prix_unitaire'],
+                    'prix_total'       => $article['prix_unitaire'] * $article['quantite'],
+                    'reduction'        => $article['reduction'] ?? 0,
                 ]);
             }
 
@@ -439,35 +440,33 @@ class VenteController extends Controller
 
             // Recréditer le stock pour les produits
             foreach ($vente->details as $detail) {
-                if ($detail->type_article === 'produit' && $detail->produit_id) {
-                    $produit = Produit::find($detail->produit_id);
-                    if ($produit) {
-                        // Trouver le mouvement original pour connaître la source
+                if ($detail->type_article === 'produit' && $detail->variante_id) {
+                    $variante = ProduitVariante::find($detail->variante_id);
+                    if ($variante) {
                         $mouvementOriginal = MouvementStock::where('vente_id', $vente->id)
-                            ->where('produit_id', $produit->id)
+                            ->where('variante_id', $variante->id)
                             ->first();
-                        
+
                         $typeStock = $mouvementOriginal ? $mouvementOriginal->type_stock : 'vente';
-                        
+
                         if ($typeStock === 'vente') {
-                            $stockAvant = $produit->stock_vente;
-                            $produit->increment('stock_vente', $detail->quantite);
+                            $stockAvant = $variante->stock_vente;
+                            $variante->increment('stock_vente', $detail->quantite);
                         } else {
-                            $stockAvant = $produit->stock_utilisation;
-                            $produit->increment('stock_utilisation', $detail->quantite);
+                            $stockAvant = $variante->stock_utilisation;
+                            $variante->increment('stock_utilisation', $detail->quantite);
                         }
 
-                        // Créer mouvement de recrédit
                         MouvementStock::create([
-                            'produit_id' => $produit->id,
-                            'type_stock' => $typeStock,
+                            'variante_id'    => $variante->id,
+                            'type_stock'     => $typeStock,
                             'type_mouvement' => 'entree',
-                            'quantite' => $detail->quantite,
-                            'stock_avant' => $stockAvant,
-                            'stock_apres' => $stockAvant + $detail->quantite,
-                            'motif' => "Annulation vente #{$vente->numero_facture}",
-                            'vente_id' => $vente->id,
-                            'user_id' => auth()->id(),
+                            'quantite'       => $detail->quantite,
+                            'stock_avant'    => $stockAvant,
+                            'stock_apres'    => $stockAvant + $detail->quantite,
+                            'motif'          => "Annulation vente #{$vente->numero_facture}",
+                            'vente_id'       => $vente->id,
+                            'user_id'        => auth()->id(),
                         ]);
                     }
                 }
@@ -522,7 +521,7 @@ class VenteController extends Controller
 
             // Créer le PDF en format A6 (105x148mm)
             $pdf = Pdf::loadView('receipts.vente', compact('vente', 'salon'))
-                ->setPaper([0, 0, 297.64, 419.53], 'portrait'); // A6 en points
+                ->setPaper([0, 0, 226.77, 1000], 'portrait');
 
             // Marquer le reçu comme imprimé
             $vente->update(['recu_imprime' => true]);
@@ -748,68 +747,70 @@ class VenteController extends Controller
 
             // CRÉER LES DÉTAILS
             foreach ($request->articles as $article) {
-                $articleNom = '';
-                $prestationId = null;
-                $produitId = null;
+                $articleNom       = '';
+                $prestationId     = null;
+                $varianteId       = null;   // ✅ initialisé ici
                 $produitReference = null;
 
                 if ($article['type'] === 'prestation') {
-                        $prestation = TypePrestation::find($article['id']); // ← NOUVELLE VERSION
-                        if ($prestation) {
-                            $articleNom = $prestation->nom;
-                            $prestationId = $prestation->id;
+                    $prestation = TypePrestation::find($article['id']);
+                    if ($prestation) {
+                        $articleNom   = $prestation->nom;
+                        $prestationId = $prestation->id;
+                    }
+                } else {
+                    $variante = ProduitVariante::with('produit')->find($article['id']);
+                    if ($variante) {
+                        if ($variante->statut_validation !== 'valide') {
+                            throw new \Exception("Le produit \"{$variante->produit->nom}\" n'est pas validé.");
                         }
-                    } else {
-                    $produit = Produit::find($article['id']);
-                    if ($produit) {
 
-                        $articleNom = $produit->nom;
-                        $produitId = $produit->id;
-                        $produitReference = $produit->reference;
-                        if ($produit->statut_validation !== 'valide') {
-                            throw new \Exception("Le produit \"{$produit->nom}\" n'est pas validé et ne peut pas être vendu.");
-                        }
-                        // Vérifier et décompter stock
-                        $sourceStock = $article['source_stock'] ?? 'utilisation';
-                        $stockDisponible = $sourceStock === 'vente' ? $produit->stock_vente : $produit->stock_utilisation;
+                        $articleNom       = $variante->produit->nom;
+                        $varianteId       = $variante->id;           // ✅ déjà bien ici
+                        $produitReference = $variante->reference;
+
+                        $sourceStock     = $article['source_stock'] ?? 'utilisation';
+                        $stockDisponible = $sourceStock === 'vente'
+                            ? $variante->stock_vente
+                            : $variante->stock_utilisation;
 
                         if ($stockDisponible < $article['quantite']) {
-                            throw new \Exception("Stock insuffisant pour {$produit->nom}");
+                            throw new \Exception("Stock insuffisant pour {$variante->produit->nom}");
                         }
 
                         if ($sourceStock === 'vente') {
-                            $produit->decrement('stock_vente', $article['quantite']);
+                            $variante->decrement('stock_vente', $article['quantite']);
                         } else {
-                            $produit->decrement('stock_utilisation', $article['quantite']);
+                            $variante->decrement('stock_utilisation', $article['quantite']);
                         }
 
-                        // Mouvement de stock
                         MouvementStock::create([
-                            'produit_id' => $produit->id,
-                            'type_stock' => $sourceStock,
+                            'variante_id'    => $variante->id,
+                            'type_stock'     => $sourceStock,
                             'type_mouvement' => 'sortie',
-                            'quantite' => $article['quantite'],
-                            'stock_avant' => $stockDisponible,
-                            'stock_apres' => $stockDisponible - $article['quantite'],
-                            'motif' => "Vente RDV #{$rendezVous->id} - {$numeroFacture}",
-                            'vente_id' => $vente->id,
-                            'user_id' => auth()->id(),
+                            'quantite'       => $article['quantite'],
+                            'stock_avant'    => $stockDisponible,
+                            'stock_apres'    => $stockDisponible - $article['quantite'],
+                            'motif'          => "Vente RDV #{$rendezVous->id} - {$numeroFacture}",
+                            'vente_id'       => $vente->id,
+                            'user_id'        => auth()->id(),
                         ]);
+                    } else {
+                        throw new \Exception("Variante introuvable (id: {$article['id']})");
                     }
                 }
 
                 VenteDetail::create([
-                    'vente_id' => $vente->id,
-                    'type_article' => $article['type'],
-                    'article_nom' => $articleNom,
-                    'prestation_id' => $prestationId,
-                    'produit_id' => $produitId,
+                    'vente_id'          => $vente->id,
+                    'type_article'      => $article['type'],
+                    'article_nom'       => $articleNom,
+                    'prestation_id'     => $prestationId,
+                    'variante_id'       => $varianteId,
                     'produit_reference' => $produitReference,
-                    'quantite' => $article['quantite'],
-                    'prix_unitaire' => $article['prix_unitaire'],
-                    'prix_total' => $article['prix_unitaire'] * $article['quantite'],
-                    'reduction' => $article['reduction'] ?? 0,
-                    'articles.*.coiffeur_id' => 'nullable|exists:users,id',
+                    'quantite'          => $article['quantite'],
+                    'prix_unitaire'     => $article['prix_unitaire'],
+                    'prix_total'        => $article['prix_unitaire'] * $article['quantite'],
+                    'reduction'         => $article['reduction'] ?? 0,
                 ]);
             }
 

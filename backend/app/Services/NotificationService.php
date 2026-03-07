@@ -6,6 +6,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\Produit;
 use App\Models\RendezVous;
+use App\Models\ProduitVariante;
 
 class NotificationService
 {
@@ -35,66 +36,93 @@ class NotificationService
     /**
      * Notifier stock critique
      */
-    public function notifierStockCritique(Produit $produit): void
-    {
-        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
+   public function notifierStockCritique(ProduitVariante $variante, string $typeStock = 'vente'): void
+{
+    $produit = $variante->produit;
+    $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
-        foreach ($gerants as $gerant) {
-            $existante = Notification::where('user_id', $gerant->id)
-                ->where('type', 'stock_critique')
-                ->whereJsonContains('data->produit_id', $produit->id)
-                ->whereDate('created_at', today())
-                ->exists();
+    $stockActuel = match($typeStock) {
+        'vente'        => $variante->stock_vente,
+        'utilisation'  => $variante->stock_utilisation,
+        'reserve'      => $variante->stock_reserve,
+    };
 
-            if (!$existante) {
-                $this->creer(
-                    userId: $gerant->id,
-                    type: 'stock_critique',
-                    titre: '🔴 Stock critique',
-                    message: "Le produit \"{$produit->nom}\" est en stock critique ({$produit->stock_total} unités)",
-                    data: [
-                        'produit_id' => $produit->id,
-                        'stock_vente' => $produit->stock_vente,
-                        'stock_utilisation' => $produit->stock_utilisation,
-                    ],
-                    priorite: 'critique',
-                    lien: "/produits?id={$produit->id}" // ← Modifié
-                );
-            }
+    $labelStock = match($typeStock) {
+        'vente'       => 'vente',
+        'utilisation' => 'salon',
+        'reserve'     => 'réserve',
+    };
+
+    foreach ($gerants as $gerant) {
+        $existante = Notification::where('user_id', $gerant->id)
+            ->where('type', 'stock_critique')
+            ->whereJsonContains('data->variante_id', $variante->id)
+            ->whereJsonContains('data->type_stock', $typeStock)
+            ->whereDate('created_at', today())
+            ->exists();
+
+        if (!$existante) {
+            $this->creer(
+                userId: $gerant->id,
+                type: 'stock_critique',
+                titre: '🔴 Stock critique',
+                message: "Le stock {$labelStock} de \"{$produit->nom}\" est critique ({$stockActuel} unités).",
+                data: [
+                    'produit_id'  => $produit->id,
+                    'variante_id' => $variante->id,
+                    'type_stock'  => $typeStock,
+                    'stock'       => $stockActuel,
+                ],
+                priorite: 'critique',
+                lien: "/produits?id={$produit->id}"
+            );
         }
     }
+}
 
-    /**
-     * Notifier stock en alerte
-     */
-    public function notifierStockAlerte(Produit $produit): void
-    {
-        $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
+public function notifierStockAlerte(ProduitVariante $variante, string $typeStock = 'vente'): void
+{
+    $produit = $variante->produit;
+    $gerants = User::whereIn('role', ['gerant', 'gestionnaire'])->get();
 
-        foreach ($gerants as $gerant) {
-            $existante = Notification::where('user_id', $gerant->id)
-                ->where('type', 'stock_alerte')
-                ->whereJsonContains('data->produit_id', $produit->id)
-                ->whereDate('created_at', today())
-                ->exists();
+    $stockActuel = match($typeStock) {
+        'vente'       => $variante->stock_vente,
+        'utilisation' => $variante->stock_utilisation,
+        'reserve'     => $variante->stock_reserve,
+    };
 
-            if (!$existante) {
-                $this->creer(
-                    userId: $gerant->id,
-                    type: 'stock_alerte',
-                    titre: '🟡 Stock en alerte',
-                    message: "Le produit \"{$produit->nom}\" nécessite un réapprovisionnement ({$produit->stock_total} unités)",
-                    data: [
-                        'produit_id' => $produit->id,
-                        'stock_vente' => $produit->stock_vente,
-                        'stock_utilisation' => $produit->stock_utilisation,
-                    ],
-                    priorite: 'haute',
-                    lien: "/produits?id={$produit->id}" // ← Modifié
-                );
-            }
+    $labelStock = match($typeStock) {
+        'vente'       => 'vente',
+        'utilisation' => 'salon',
+        'reserve'     => 'réserve',
+    };
+
+    foreach ($gerants as $gerant) {
+        $existante = Notification::where('user_id', $gerant->id)
+            ->where('type', 'stock_alerte')
+            ->whereJsonContains('data->variante_id', $variante->id)
+            ->whereJsonContains('data->type_stock', $typeStock)
+            ->whereDate('created_at', today())
+            ->exists();
+
+        if (!$existante) {
+            $this->creer(
+                userId: $gerant->id,
+                type: 'stock_alerte',
+                titre: '🟡 Stock en alerte',
+                message: "Le stock {$labelStock} de \"{$produit->nom}\" nécessite un réapprovisionnement ({$stockActuel} unités).",
+                data: [
+                    'produit_id'  => $produit->id,
+                    'variante_id' => $variante->id,
+                    'type_stock'  => $typeStock,
+                    'stock'       => $stockActuel,
+                ],
+                priorite: 'haute',
+                lien: "/produits?id={$produit->id}"
+            );
         }
     }
+}
 
     /**
      * Notifier nouveau rendez-vous
@@ -185,21 +213,22 @@ class NotificationService
     /**
      * Notifier produit soumis pour validation
      */
-    public function notifierProduitSoumis(Produit $produit): void
+    public function notifierProduitSoumis(ProduitVariante $variante): void
     {
         $gestionnaires = User::where('role', 'gestionnaire')->get();
+        $produit = $variante->produit;
 
         foreach ($gestionnaires as $gestionnaire) {
             $this->creer(
                 userId: $gestionnaire->id,
                 type: 'produit_a_valider',
                 titre: '🛍️ Nouveau produit à valider',
-                message: "Le produit \"{$produit->nom}\" a été soumis par {$produit->createur?->name} et attend votre validation.",
+                message: "Le produit \"{$produit->nom}\" a été soumis et attend votre validation.",
                 data: [
-                    'produit_id'  => $produit->id,
-                    'produit_nom' => $produit->nom,
-                    'cree_par_id' => $produit->cree_par,
-                    'cree_par'    => $produit->createur?->name,
+                    'produit_id'   => $produit->id,
+                    'variante_id'  => $variante->id,
+                    'produit_nom'  => $produit->nom,
+                    'cree_par_id'  => $variante->cree_par,
                 ],
                 priorite: 'haute',
                 lien: "/produits?statut_validation=en_attente&id={$produit->id}"
@@ -207,26 +236,29 @@ class NotificationService
         }
     }
 
+
     /**
      * Notifier le créateur du résultat de la validation
      */
-    public function notifierResultatValidation(Produit $produit): void
+    public function notifierResultatValidation(ProduitVariante $variante): void
     {
-        if (!$produit->cree_par) return;
+        if (!$variante->cree_par) return;
 
-        $estValide = $produit->statut_validation === 'valide';
+        $produit   = $variante->produit;
+        $estValide = $variante->statut_validation === 'valide';
 
         $this->creer(
-            userId: $produit->cree_par,
+            userId: $variante->cree_par,
             type: $estValide ? 'produit_valide' : 'produit_rejete',
             titre: $estValide ? '✅ Produit validé' : '❌ Produit rejeté',
             message: $estValide
-                ? "Votre produit \"{$produit->nom}\" a été validé et est maintenant disponible dans le système."
-                : "Votre produit \"{$produit->nom}\" a été rejeté. Motif : {$produit->motif_rejet}",
+                ? "Votre produit \"{$produit->nom}\" a été validé."
+                : "Votre produit \"{$produit->nom}\" a été rejeté. Motif : {$variante->motif_rejet}",
             data: [
                 'produit_id'  => $produit->id,
+                'variante_id' => $variante->id,
                 'produit_nom' => $produit->nom,
-                'motif_rejet' => $produit->motif_rejet,
+                'motif_rejet' => $variante->motif_rejet,
             ],
             priorite: $estValide ? 'normale' : 'haute',
             lien: "/produits?id={$produit->id}"

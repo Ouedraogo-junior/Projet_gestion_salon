@@ -3,14 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { confectionApi } from '../services/confectionApi';
 import type {
-  Confection,
   CreateConfectionData,
   UpdateConfectionData,
   ConfectionFilters,
 } from '../types/confection';
-import { toast } from 'sonner'; // ou votre lib de notifications
+import { toast } from 'sonner';
 
-// Clés de query pour React Query
 export const confectionKeys = {
   all: ['confections'] as const,
   lists: () => [...confectionKeys.all, 'list'] as const,
@@ -21,9 +19,6 @@ export const confectionKeys = {
     [...confectionKeys.all, 'statistiques', dateDebut, dateFin] as const,
 };
 
-/**
- * Hook pour récupérer la liste des confections
- */
 export function useConfections(filters?: ConfectionFilters) {
   return useQuery({
     queryKey: confectionKeys.list(filters),
@@ -31,13 +26,10 @@ export function useConfections(filters?: ConfectionFilters) {
       const response = await confectionApi.getAll(filters);
       return response.data;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-/**
- * Hook pour récupérer une confection par ID
- */
 export function useConfection(id: number) {
   return useQuery({
     queryKey: confectionKeys.detail(id),
@@ -49,131 +41,90 @@ export function useConfection(id: number) {
   });
 }
 
-/**
- * Hook pour les statistiques
- */
 export function useConfectionStatistiques(dateDebut?: string, dateFin?: string) {
   return useQuery({
     queryKey: confectionKeys.statistiques(dateDebut, dateFin),
     queryFn: async () => {
       const response = await confectionApi.getStatistiques(dateDebut, dateFin);
-      return response.data;
+      // ✅ Gérer les deux structures possibles
+      return response.data?.data ?? response.data ?? {};
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 }
 
-/**
- * Hook pour créer une confection
- */
 export function useCreateConfection() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (data: CreateConfectionData) => confectionApi.create(data),
     onSuccess: (response) => {
-      // Invalider le cache pour rafraîchir la liste
-      queryClient.invalidateQueries({ queryKey: confectionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['confections'] });
       toast.success(response.message || 'Confection créée avec succès');
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.message || 'Erreur lors de la création de la confection';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Erreur lors de la création de la confection');
     },
   });
 }
 
-/**
- * Hook pour mettre à jour une confection
- */
 export function useUpdateConfection() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateConfectionData }) =>
       confectionApi.update(id, data),
     onSuccess: (response) => {
-      // Invalider le cache
-      queryClient.invalidateQueries({ queryKey: confectionKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: confectionKeys.detail(response.data.id) });
+      queryClient.invalidateQueries({ queryKey: ['confections'] });
       toast.success(response.message || 'Confection mise à jour avec succès');
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.message || 'Erreur lors de la mise à jour';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Erreur lors de la mise à jour');
     },
   });
 }
 
-/**
- * Hook pour supprimer une confection
- */
 export function useDeleteConfection() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (id: number) => confectionApi.delete(id),
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: confectionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['confections'] });
       toast.success(response.message || 'Confection supprimée avec succès');
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.message || 'Erreur lors de la suppression';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Erreur lors de la suppression');
     },
   });
 }
 
-/**
- * Hook pour terminer une confection
- */
 export function useTerminerConfection() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (id: number) => confectionApi.terminer(id),
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: confectionKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: confectionKeys.detail(response.data.id) });
-      queryClient.invalidateQueries({ queryKey: confectionKeys.statistiques() });
+      queryClient.invalidateQueries({ queryKey: ['confections'] });
       toast.success(response.message || 'Confection terminée avec succès. Produit créé !');
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.message || 'Erreur lors de la finalisation';
-      toast.error(message);
+      toast.error(error.response?.data?.message || 'Erreur lors de la finalisation');
     },
   });
 }
 
-/**
- * Hook pour annuler une confection
- */
 export function useAnnulerConfection() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, motif }: { id: number; motif?: string }) =>
       confectionApi.annuler(id, motif),
     onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: confectionKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: confectionKeys.detail(response.data.id) });
+      queryClient.invalidateQueries({ queryKey: ['confections'] });
       toast.success(response.message || 'Confection annulée avec succès');
     },
     onError: (error: any) => {
-      const message =
-        error.response?.data?.message || 'Erreur lors de l\'annulation';
-      toast.error(message);
+      toast.error(error.response?.data?.message || "Erreur lors de l'annulation");
     },
   });
 }
 
-/**
- * Hook combiné pour toutes les actions sur une confection
- */
 export function useConfectionActions() {
   return {
     create: useCreateConfection(),

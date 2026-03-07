@@ -67,14 +67,21 @@ export function ProduitsTab() {
   // Filtrage selon l'onglet actif
   const filteredProduits = produits.filter((prod: Produit) => {
     if (activeTab === 'tous') return true;
+
+    const variantes = prod.variantes ?? [];
+
     if (activeTab === 'vente') {
-      return prod.type_stock_principal === 'vente' || prod.type_stock_principal === 'mixte';
+      return variantes.some(v =>
+        v.type_stock_principal === 'vente' || v.type_stock_principal === 'mixte'
+      );
     }
     if (activeTab === 'utilisation') {
-      return prod.type_stock_principal === 'utilisation' || prod.type_stock_principal === 'mixte';
+      return variantes.some(v =>
+        v.type_stock_principal === 'utilisation' || v.type_stock_principal === 'mixte'
+      );
     }
-    if (activeTab === 'reserve') {  
-      return prod.type_stock_principal === 'reserve';
+    if (activeTab === 'reserve') {
+      return variantes.some(v => v.type_stock_principal === 'reserve');
     }
     return true;
   });

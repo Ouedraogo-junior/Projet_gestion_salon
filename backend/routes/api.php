@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\TypePrestationController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\Api\RendezVousPaiementController;
+use App\Http\Controllers\Api\CategorieDepenseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -164,6 +165,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/depenses/{depense}', [DepenseController::class, 'update']);
         Route::delete('/depenses/{depense}', [DepenseController::class, 'destroy']);
         
+        Route::post('/categories-depenses', [CategorieDepenseController::class, 'store']);
+        Route::put('/categories-depenses/{categorieDepense}', [CategorieDepenseController::class, 'update']);
+        Route::delete('/categories-depenses/{categorieDepense}', [CategorieDepenseController::class, 'destroy']);
+                
         // Confections - Suppression et annulation
         Route::put('/confections/{id}', [ConfectionController::class, 'update']);
         Route::delete('/confections/{id}', [ConfectionController::class, 'destroy']);
@@ -273,6 +278,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Dépenses - Consultation
         Route::get('/depenses', [DepenseController::class, 'index']);
         Route::get('/depenses/{depense}', [DepenseController::class, 'show']);
+        Route::get('/categories-depenses', [CategorieDepenseController::class, 'index']);
 
         // Profil utilisateur (soi-même)
         Route::prefix('profil')->group(function () {

@@ -3,6 +3,7 @@
 export interface SalonPublicInfo {
   id: number;
   nom: string;
+  slug: string;
   telephone: string;
   adresse: string;
   description?: string;
@@ -20,7 +21,15 @@ export interface PrestationPublique {
   ordre: number;
 }
 
-// Interface pour les attributs d'un produit
+export interface PhotoPublique {
+  id: number;
+  photo_url: string;
+  description?: string;
+  date_prise: string;
+}
+
+// ── Attributs ─────────────────────────────────────────────────────────────────
+
 export interface AttributPublic {
   id: number;
   nom: string;
@@ -28,7 +37,6 @@ export interface AttributPublic {
   unite?: string;
 }
 
-// Interface pour les valeurs d'attributs
 export interface ValeurAttributPublic {
   id: number;
   attribut_id: number;
@@ -36,38 +44,67 @@ export interface ValeurAttributPublic {
   attribut: AttributPublic;
 }
 
-// Interface pour la catégorie
+// ── Variantes & Produits ──────────────────────────────────────────────────────
+
+export interface VariantePublique {
+  id: number;
+  reference?: string;
+  prix_vente: number;
+  prix_promo?: number;
+  date_debut_promo?: string;
+  date_fin_promo?: string;
+  stock_vente: number;
+  type_stock_principal: string;
+  prix_actuel: number;
+  en_promo: boolean;
+  valeurs_attributs: ValeurAttributPublic[];
+}
+
+/** Utilisé dans la liste produits — données de la variante représentante aplaties */
+export interface ProduitPublic {
+  id: number;
+  nom: string;
+  description?: string;
+  marque?: string;
+  photo_url?: string;
+  prix_vente: number;
+  prix_promo?: number;
+  date_debut_promo?: string;
+  date_fin_promo?: string;
+  stock_vente: number;
+  prix_actuel: number;
+  en_promo: boolean;
+  variantes_count: number;
+}
+
 export interface CategoriePublique {
   id: number;
   nom: string;
   couleur?: string;
 }
 
-// Interface produit de base (liste)
-export interface ProduitPublic {
+/** Utilisé dans le modal détails */
+export interface ProduitPublicDetail {
   id: number;
   nom: string;
   description?: string;
   marque?: string;
-  prix_vente: number;
-  prix_promo?: number;
-  date_debut_promo?: string;
-  date_fin_promo?: string;
   photo_url?: string;
-  stock_vente: number;
-  prix_actuel: number;
-  en_promo: boolean;
-}
-
-// Interface produit détaillé (avec attributs)
-export interface ProduitDetailsPublic extends ProduitPublic {
   categorie?: CategoriePublique;
-  valeurs_attributs?: ValeurAttributPublic[];
+  variantes: VariantePublique[];
 }
 
-export interface PhotoPublique {
-  id: number;
-  photo_url: string;
-  description?: string;
-  date_prise: string;
+// ── Panier ────────────────────────────────────────────────────────────────────
+
+export interface CartItem {
+  /** clé unique : "produitId-varianteId" */
+  key: string;
+  produit_id: number;
+  produit_nom: string;
+  produit_photo?: string;
+  variante_id: number;
+  variante_label: string;
+  prix_unitaire: number;
+  quantite: number;
+  stock_max: number;
 }

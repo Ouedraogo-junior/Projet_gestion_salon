@@ -11,6 +11,7 @@ export interface Categorie {
   ordre: number;
   produits_count?: number;
   attributs_count?: number;
+  attributs?: Attribut[];
   created_at: string;
   updated_at: string;
 }
@@ -35,22 +36,24 @@ export interface Attribut {
 
 export interface ProduitAttributValeur {
   id: number;
+  variante_id: number;
   attribut_id: number;
   valeur: string;
+  valeur_formatee?: string;
   attribut: Attribut;
 }
 
-export type Devise = 
-  | 'FCFA'      // Franc CFA (Burkina Faso)
-  | 'EUR'       // Euro
-  | 'USD'       // Dollar Américain
-  | 'GBP'       // Livre Sterling
-  | 'CNY'       // Yuan Chinois
-  | 'AED'       // Dirham des Émirats (Dubaï)
-  | 'MAD'       // Dirham Marocain
-  | 'XOF';      // Franc CFA (alternatif)
+export type Devise =
+  | 'FCFA'
+  | 'EUR'
+  | 'USD'
+  | 'GBP'
+  | 'CNY'
+  | 'AED'
+  | 'MAD'
+  | 'XOF';
 
-export type MoyenPaiement = 
+export type MoyenPaiement =
   | 'especes'
   | 'virement'
   | 'cheque'
@@ -61,77 +64,142 @@ export type MoyenPaiement =
   | 'crypto'
   | 'credit';
 
+// ============================================================
+// VARIANTE
+// ============================================================
 
-export interface Produit {
+export interface ProduitVariante {
   id: number;
-  nom: string;
+  produit_id: number;
   reference?: string;
-  description?: string;
-  categorie_id: number;
-  categorie?: Categorie;
-  marque?: string;
-  fournisseur?: string;
-  prix_achat: number; // Prix unitaire en FCFA (calculé automatiquement par le backend)
+  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve';
+
+  // Prix
+  prix_achat: number;
   prix_vente: number;
   prix_promo?: number;
   date_debut_promo?: string;
   date_fin_promo?: string;
+  prix_actuel?: number;
+  en_promotion?: boolean;
+
+  // Marges
+  marge_montant?: number;
+  marge_pourcentage?: number;
+  gain_total_commande?: number;
+  gain_total_stock_actuel?: number;
+
+  // Stocks
   stock_vente: number;
   stock_utilisation: number;
   stock_reserve: number;
-  seuil_alerte: number;
-  seuil_critique: number;
-  seuil_alerte_utilisation: number;
-  seuil_critique_utilisation: number;
+  stock_total?: number;
+  seuil_alerte?: number;
+  seuil_critique?: number;
+  seuil_alerte_utilisation?: number;
+  seuil_critique_utilisation?: number;
   seuil_alerte_reserve?: number;
   seuil_critique_reserve?: number;
-  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve';
-  photo_url?: string;
-  quantite_min_commande?: number;
-  delai_livraison_jours?: number;
-  is_active: boolean;
-  visible_public: boolean;
-  valeurs_attributs?: ProduitAttributValeur[];
-  created_at: string;
-  updated_at: string;
-  
-  // Informations d'achat et commande
-  date_commande?: string;
+  alerte_stock_vente?: 'ok' | 'alerte' | 'critique';
+  alerte_stock_utilisation?: 'ok' | 'alerte' | 'critique';
+  alerte_stock_reserve?: 'ok' | 'alerte' | 'critique';
+
+  // Achat / Import
   devise_achat?: Devise;
-  taux_change?: number; 
-  prix_achat_devise_origine?: number; // Prix unitaire dans la devise d'origine
-  prix_achat_stock_total?: number; // Prix total du stock (devise achat)
-  quantite_stock_commande?: number; 
-  moyen_paiement?: MoyenPaiement;
-  date_reception?: string;
-  montant_total_achat?: number; // Somme de tous les frais (devise achat)
-  
-  // Informations physiques (informatif)
-  cbm?: number; // Volume en m³
-  poids_kg?: number; // Poids total en kg
-  
-  // Frais d'importation (tous en devise d'achat)
+  taux_change?: number;
+  prix_achat_devise_origine?: number;
+  prix_achat_stock_total?: number;
+  quantite_stock_commande?: number;
   frais_cmb?: number;
   frais_transit?: number;
   frais_bancaires?: number;
   frais_courtier?: number;
   frais_transport_local?: number;
+  montant_total_achat?: number;
+  moyen_paiement?: MoyenPaiement;
+  date_commande?: string;
+  date_reception?: string;
+  cbm?: number;
+  poids_kg?: number;
+  quantite_min_commande?: number;
+  delai_livraison_jours?: number;
+
+  // Valorisation
+  valeur_stock_vente?: number;
+  valeur_stock_utilisation?: number;
+  valeur_stock_reserve?: number;
+  valeur_stock_total?: number;
 
   // Validation
   statut_validation: 'en_attente' | 'valide' | 'rejete';
-  motif_rejet: string | null;
-  valide_le: string | null;
-  cree_par: number | null;
-  valide_par: number | null;
+  motif_rejet?: string | null;
+  valide_le?: string | null;
+  cree_par?: number | null;
+  valide_par?: number | null;
   createur?: { id: number; name: string };
   validateur?: { id: number; name: string };
+
+  // Attributs
+  attributs?: ProduitAttributValeur[];
+
+  // Relations (si chargées)
+  mouvements_recents?: MouvementStock[];
+  transferts?: TransfertStock[];
+
+  produit?: {
+    id: number;
+    nom: string;
+    marque?: string;
+    photo_url?: string;
+    categorie_id?: number;
+  };
+
+  is_active: boolean;
+  sync_status?: string;
+  created_at?: string;
+  updated_at?: string;
 }
+
+// ============================================================
+// PRODUIT PARENT
+// ============================================================
+
+export interface Produit {
+  id: number;
+  nom: string;
+  description?: string;
+  categorie_id: number;
+  categorie?: Categorie;
+  marque?: string;
+  fournisseur?: string;
+  photo_url?: string;
+  visible_public: boolean;
+  is_active: boolean;
+  salon_id?: number;
+
+  // Agrégats calculés côté backend/frontend
+  prix_min?: number;
+  prix_max?: number;
+  stock_total?: number;
+  has_variantes?: boolean;
+
+  // Variantes
+  variantes?: ProduitVariante[];
+
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
+
+// ============================================================
+// MOUVEMENTS & TRANSFERTS
+// ============================================================
 
 export interface MouvementStock {
   id: number;
-  produit_id: number;
-  produit?: Produit;
-  type_stock: 'vente' | 'utilisation' | 'reserve'; 
+  variante_id: number;
+  variante?: ProduitVariante;
+  type_stock: 'vente' | 'utilisation' | 'reserve';
   type_mouvement: 'entree' | 'sortie' | 'ajustement' | 'inventaire';
   quantite: number;
   stock_avant: number;
@@ -152,15 +220,15 @@ export interface MouvementStock {
 export interface TransfertStock {
   id: number;
   numero_transfert: string;
-  produit_id: number;
-  produit?: Produit;
-  type_transfert: 
-    | 'vente_vers_utilisation' 
+  variante_id: number;
+  variante?: ProduitVariante;
+  type_transfert:
+    | 'vente_vers_utilisation'
     | 'utilisation_vers_vente'
-    | 'reserve_vers_vente' // ✅ AJOUT
-    | 'reserve_vers_utilisation' // ✅ AJOUT
-    | 'vente_vers_reserve' // ✅ AJOUT
-    | 'utilisation_vers_reserve'; // ✅ AJOUT
+    | 'reserve_vers_vente'
+    | 'reserve_vers_utilisation'
+    | 'vente_vers_reserve'
+    | 'utilisation_vers_reserve';
   quantite: number;
   prix_unitaire: number;
   montant_total: number;
@@ -182,7 +250,10 @@ export interface TransfertStock {
   updated_at: string;
 }
 
-// Types pour les requêtes/filtres
+// ============================================================
+// FILTRES
+// ============================================================
+
 export interface CategorieFilters {
   search?: string;
   actives_only?: boolean;
@@ -200,29 +271,30 @@ export interface AttributFilters {
 export interface ProduitFilters {
   search?: string;
   categorie_id?: number;
-  type_stock_principal?: 'vente' | 'utilisation' | 'mixte' | 'reserve'; 
+  type_stock_principal?: 'vente' | 'utilisation' | 'mixte' | 'reserve';
   actifs_only?: boolean;
   alerte_stock_vente?: boolean;
   alerte_stock_utilisation?: boolean;
-  alerte_stock_reserve?: boolean; 
+  alerte_stock_reserve?: boolean;
   critique_stock_vente?: boolean;
   en_promotion?: boolean;
-  sort_by?: 'nom' | 'reference' | 'prix_vente' | 'prix_achat' | 'stock_vente' | 'stock_utilisation' | 'stock_reserve' | 'created_at'; // ✅ AJOUT 'stock_reserve'
+  sort_by?: 'nom' | 'created_at';
   sort_order?: 'asc' | 'desc';
   per_page?: number;
   page?: number;
   statut_validation?: 'en_attente' | 'valide' | 'rejete';
+  variante_id?: number;
 }
 
 export interface TransfertFilters {
-  produit_id?: number;
-  type_transfert?: 
-    | 'vente_vers_utilisation' 
+  variante_id?: number;
+  type_transfert?:
+    | 'vente_vers_utilisation'
     | 'utilisation_vers_vente'
-    | 'reserve_vers_vente' 
+    | 'reserve_vers_vente'
     | 'reserve_vers_utilisation'
-    | 'vente_vers_reserve' 
-    | 'utilisation_vers_reserve'; 
+    | 'vente_vers_reserve'
+    | 'utilisation_vers_reserve';
   en_attente?: boolean;
   valides?: boolean;
   user_id?: number;
@@ -234,6 +306,7 @@ export interface TransfertFilters {
 }
 
 export interface MouvementFilters {
+  variante_id?: number;
   type_stock?: 'vente' | 'utilisation' | 'reserve';
   type_mouvement?: 'entree' | 'sortie' | 'ajustement' | 'inventaire';
   date_debut?: string;
@@ -242,7 +315,75 @@ export interface MouvementFilters {
   page?: number;
 }
 
-// Types pour les formulaires
+// ============================================================
+// FORMULAIRES
+// ============================================================
+
+export interface VarianteFormData {
+  id?: number;
+  reference?: string;
+  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve';
+  devise_achat?: Devise;
+  taux_change?: number;
+  prix_achat_stock_total?: number;
+  quantite_stock_commande?: number;
+  prix_achat_devise_origine?: number;
+  montant_total_achat?: number;
+  frais_cmb?: number;
+  frais_transit?: number;
+  frais_bancaires?: number;
+  frais_courtier?: number;
+  frais_transport_local?: number;
+  cbm?: number;
+  poids_kg?: number;
+  moyen_paiement?: MoyenPaiement;
+  date_commande?: string;
+  date_reception?: string;
+  prix_achat: number;
+  prix_vente: number;
+  prix_promo?: number;
+  date_debut_promo?: string;
+  date_fin_promo?: string;
+  stock_vente?: number;
+  stock_utilisation?: number;
+  stock_reserve?: number;
+  seuil_alerte?: number;
+  seuil_critique?: number;
+  seuil_alerte_utilisation?: number;
+  seuil_critique_utilisation?: number;
+  seuil_alerte_reserve?: number;
+  seuil_critique_reserve?: number;
+  quantite_min_commande?: number;
+  delai_livraison_jours?: number;
+  is_active?: boolean;
+  attributs?: Record<number, string>;
+}
+
+export interface ProduitFormData {
+  nom: string;
+  description?: string;
+  categorie_id: number;
+  marque?: string;
+  fournisseur?: string;
+  visible_public?: boolean;
+  salon_id?: number;
+  variantes: VarianteFormData[];
+}
+
+export interface TransfertFormData {
+  variante_id: number;
+  type_transfert:
+    | 'vente_vers_utilisation'
+    | 'utilisation_vers_vente'
+    | 'reserve_vers_vente'
+    | 'reserve_vers_utilisation'
+    | 'vente_vers_reserve'
+    | 'utilisation_vers_reserve';
+  quantite: number;
+  motif?: string;
+  auto_valider?: boolean;
+}
+
 export interface CategorieFormData {
   nom: string;
   description?: string;
@@ -261,52 +402,10 @@ export interface AttributFormData {
   ordre?: number;
 }
 
-export interface ProduitFormData {
-  nom: string;
-  reference?: string;
-  description?: string;
-  categorie_id: number;
-  marque?: string;
-  fournisseur?: string;
-  prix_achat: number;
-  prix_vente: number;
-  prix_promo?: number;
-  date_debut_promo?: string;
-  date_fin_promo?: string;
-  stock_vente?: number;
-  stock_utilisation?: number;
-  stock_reserve?: number; 
-  seuil_alerte?: number;
-  seuil_critique?: number;
-  seuil_alerte_utilisation?: number;
-  seuil_critique_utilisation?: number;
-  seuil_alerte_reserve?: number; 
-  seuil_critique_reserve?: number; 
-  type_stock_principal: 'vente' | 'utilisation' | 'mixte' | 'reserve';
-  photo_url?: string;
-  quantite_min_commande?: number;
-  delai_livraison_jours?: number;
-  is_active?: boolean;
-  attributs?: Record<number, string>;
-}
+// ============================================================
+// RÉPONSES API
+// ============================================================
 
-export interface TransfertFormData {
-  produit_id: number;
-  type_transfert: 
-    | 'vente_vers_utilisation' 
-    | 'utilisation_vers_vente'
-    | 'reserve_vers_vente' 
-    | 'reserve_vers_utilisation'
-    | 'vente_vers_reserve' 
-    | 'utilisation_vers_reserve';
-  quantite: number;
-  motif?: string;
-  auto_valider?: boolean;
-  seuil_alerte?: number; // AJOUT (pour transferts depuis réserve)
-  seuil_critique?: number; // AJOUT (pour transferts depuis réserve)
-}
-
-// Types pour les réponses API
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -334,7 +433,7 @@ export interface AlertesStats {
   alertes_reserve: number;
   critiques_vente: number;
   critiques_utilisation: number;
-  critiques_reserve: number; 
+  critiques_reserve: number;
 }
 
 export interface TransfertStats {
@@ -343,9 +442,9 @@ export interface TransfertStats {
   valides: number;
   vente_vers_utilisation: number;
   utilisation_vers_vente: number;
-  reserve_vers_vente: number; 
-  reserve_vers_utilisation: number; 
-  vente_vers_reserve: number; 
+  reserve_vers_vente: number;
+  reserve_vers_utilisation: number;
+  vente_vers_reserve: number;
   utilisation_vers_reserve: number;
   montant_total: number;
   quantite_totale: number;
