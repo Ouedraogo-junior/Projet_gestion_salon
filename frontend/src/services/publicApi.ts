@@ -6,7 +6,7 @@ import type {
   PrestationPublique,
   ProduitPublic,
   ProduitPublicDetail,
-  PhotoPublique,
+  RealisationPublique,
 } from '@/types/public.types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -37,7 +37,10 @@ export const publicApiService = {
   getProduitDetails: (id: number): Promise<ApiResponse<ProduitPublicDetail>> =>
     publicApi.get(`/public/produits/${id}`).then((r) => r.data),
 
-  getPhotosPubliques: (slug?: string): Promise<ApiResponse<PhotoPublique[]>> =>
+  getPhotosPubliques: (slug?: string): Promise<ApiResponse<RealisationPublique[]>> =>
     publicApi.get(slug ? `/public/${slug}/photos` : '/public/photos').then((r) => r.data),
+
+  getRealisations: (slug?: string): Promise<ApiResponse<RealisationPublique[]>> =>
+    publicApi.get(slug ? `/public/${slug}/realisations` : '/public/realisations').then((r) => r.data),
 };
 

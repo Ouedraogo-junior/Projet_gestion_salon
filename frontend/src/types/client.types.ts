@@ -28,9 +28,12 @@ export interface PhotoClient {
   client_id: number;
   vente_id?: number;
   rendez_vous_id?: number;
-  photo_url: string;
+  media_url: string; 
   type_photo: 'avant' | 'apres';
+  type_media: 'photo' | 'video';
   description?: string;
+  nom_coiffure?: string;
+  montant_coiffure?: number;
   date_prise: string;
   is_public: boolean;
   created_at: string;
@@ -78,9 +81,12 @@ export interface ClientStats {
 }
 
 export interface UploadPhotoDTO {
-  photo: File;
+  media: File;
   type_photo: 'avant' | 'apres';
+  type_media: 'photo' | 'video';
   description?: string;
+  nom_coiffure?: string;
+  montant_coiffure?: number;
   vente_id?: number;
   rendez_vous_id?: number;
   is_public?: boolean;

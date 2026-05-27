@@ -14,19 +14,17 @@ class PhotoClient extends Model
     protected $table = 'photos_clients';
 
     protected $fillable = [
+        'realisation_id',
         'client_id',
         'vente_id',
         'rendez_vous_id',
-        'photo_url',
+        'media_url',
         'type_photo',
-        'description',
-        'date_prise',
-        'is_public',
+        'type_media',
     ];
 
     protected $casts = [
         'date_prise' => 'date',
-        'is_public' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -53,6 +51,14 @@ class PhotoClient extends Model
     public function rendezVous(): BelongsTo
     {
         return $this->belongsTo(RendezVous::class);
+    }
+
+    /**
+     * Relation avec la réalisation (optionnelle)
+     */
+    public function realisation(): BelongsTo
+    {
+        return $this->belongsTo(Realisation::class);
     }
 
     /**
@@ -124,26 +130,24 @@ class PhotoClient extends Model
      */
     public function getUrlCompleteAttribute(): string
     {
-        if (filter_var($this->photo_url, FILTER_VALIDATE_URL)) {
-            return $this->photo_url;
+        if (filter_var($this->media_url, FILTER_VALIDATE_URL)) {
+            return $this->media_url;
         }
-        
-        return Storage::url($this->photo_url);
+        return Storage::url($this->media_url);
     }
+
+    public function isVideo(): bool { return $this->type_media === 'video'; }
+    public function isPhoto(): bool { return $this->type_media === 'photo'; }
 
     /**
      * Obtient la miniature de la photo
      */
     public function getThumbnailAttribute(): string
     {
-        // Si vous avez un système de miniatures
-        $pathInfo = pathinfo($this->photo_url);
+        if ($this->isVideo()) return $this->url_complete;
+        $pathInfo = pathinfo($this->media_url);
         $thumbnailPath = $pathInfo['dirname'] . '/thumbnails/' . $pathInfo['basename'];
-        
-        if (Storage::exists($thumbnailPath)) {
-            return Storage::url($thumbnailPath);
-        }
-        
+        if (Storage::exists($thumbnailPath)) return Storage::url($thumbnailPath);
         return $this->url_complete;
     }
 
@@ -164,17 +168,12 @@ class PhotoClient extends Model
      */
     protected static function booted()
     {
-        static::deleting(function ($photo) {
-            // Supprimer le fichier physique
-            if (Storage::exists($photo->photo_url)) {
-                Storage::delete($photo->photo_url);
-            }
-            
-            // Supprimer aussi la miniature si elle existe
-            $pathInfo = pathinfo($photo->photo_url);
-            $thumbnailPath = $pathInfo['dirname'] . '/thumbnails/' . $pathInfo['basename'];
-            if (Storage::exists($thumbnailPath)) {
-                Storage::delete($thumbnailPath);
+        static::deleting(function ($media) {
+            if (Storage::exists($media->media_url)) Storage::delete($media->media_url);
+            if ($media->isPhoto()) {
+                $pathInfo = pathinfo($media->media_url);
+                $thumb = $pathInfo['dirname'] . '/thumbnails/' . $pathInfo['basename'];
+                if (Storage::exists($thumb)) Storage::delete($thumb);
             }
         });
     }

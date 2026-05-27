@@ -21,11 +21,22 @@ export interface PrestationPublique {
   ordre: number;
 }
 
-export interface PhotoPublique {
+export interface MediaPublique {
   id: number;
-  photo_url: string;
+  realisation_id: number;
+  media_url: string;
+  type_media: 'photo' | 'video';
+  type_photo: 'avant' | 'apres';
+  date_prise: string;
+}
+
+export interface RealisationPublique {
+  id: number;
+  nom_coiffure?: string;
+  montant_coiffure?: number;
   description?: string;
   date_prise: string;
+  medias: MediaPublique[];
 }
 
 // ── Attributs ─────────────────────────────────────────────────────────────────

@@ -57,6 +57,7 @@ import { ServicesPage } from './pages/public/ServicesPage';
 import { ProduitsPagePublic } from './pages/public/ProduitsPagePublic';
 import { AccueilPage } from './pages/public/AccueilPage';
 import { GaleriePage } from './pages/public/GaleriePage';
+import { RealisationsPage } from './pages/Realisations/RealisationsPage';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -195,6 +196,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <MainLayout><RapportsPage /></MainLayout>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/galerie-admin"
+                element={
+                  <PrivateRoute>
+                    <MainLayout><RealisationsPage /></MainLayout>
                   </PrivateRoute>
                 }
               />

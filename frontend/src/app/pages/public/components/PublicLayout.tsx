@@ -43,7 +43,10 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, salonInfo,
   // Cloner children en injectant addItem pour ProduitsPagePublic
   const childrenWithCart = React.Children.map(children, (child) => {
     if (React.isValidElement(child)) {
-      return React.cloneElement(child as React.ReactElement<any>, { onAddToCart: addItem });
+      return React.cloneElement(child as React.ReactElement<any>, {
+        onAddToCart: addItem,
+        salonInfo, // ← ajouter cette ligne
+      });
     }
     return child;
   });

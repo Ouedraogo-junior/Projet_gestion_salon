@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\Api\RendezVousPaiementController;
 use App\Http\Controllers\Api\CategorieDepenseController;
+use App\Http\Controllers\Api\RealisationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,6 +79,10 @@ Route::get('/ventes/{id}/receipt', [VenteController::class, 'generateReceipt']);
 // Génération des reçus pour paiements de rendez-vous
 Route::get('/rendez-vous/{id}/recu-acompte', [RendezVousPaiementController::class, 'genererRecuAcompte']);
 Route::get('/rendez-vous/{id}/recu-final', [RendezVousPaiementController::class, 'genererRecuFinal']);
+
+// Route pour obtenir les réalisations publiques
+Route::get('/public/{slug}/realisations', [PublicController::class, 'realisations']);
+Route::get('/public/realisations', [PublicController::class, 'realisations']);
 
 // ============================================================
 // ROUTES PROTÉGÉES
@@ -312,6 +317,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/rapports/ventes-detail', [RapportController::class, 'ventesDetail']);
         Route::get('/rapports/tresorerie', [RapportController::class, 'tresorerie']);
         Route::get('/rapports/comparaison-periodes', [RapportController::class, 'comparaisonPeriodes']);
+
+        // Réalisations - CRUD partiel
+        Route::get('/realisations', [RealisationController::class, 'index']);
+        Route::get('/realisations/{id}', [RealisationController::class, 'show']);
+        Route::post('/realisations', [RealisationController::class, 'store']);
+        Route::put('/realisations/{id}', [RealisationController::class, 'update']);
+        Route::post('/realisations/{id}/medias', [RealisationController::class, 'addMedias']);
+        Route::delete('/realisations/{id}/medias/{mediaId}', [RealisationController::class, 'deleteMedia']);
+        Route::delete('/realisations/{id}', [RealisationController::class, 'destroy']);
+        Route::patch('/realisations/{id}/toggle-public', [RealisationController::class, 'togglePublic']);
     });
 
     // ========================================

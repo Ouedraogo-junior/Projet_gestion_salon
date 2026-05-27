@@ -14,6 +14,7 @@ import {
   Clock,
   Wallet,
   X,
+  Camera,
 } from 'lucide-react';
 import { useSalon } from '@/hooks/useSalon';
 
@@ -27,8 +28,10 @@ const menuItems = [
   { path: '/depenses', label: 'Dépenses', icon: Wallet },
   { path: '/rendez-vous', label: 'Rendez-vous', icon: Calendar },
   { path: '/pointages', label: 'Pointages', icon: Clock },
+  { path: '/galerie-admin', label: 'Galerie', icon: Camera },
   { path: '/rapports', label: 'Rapports', icon: BarChart3 },
   { path: '/parametres', label: 'Paramètres', icon: Settings },
+  
 ];
 
 interface SidebarProps {

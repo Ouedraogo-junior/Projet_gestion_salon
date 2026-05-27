@@ -9,6 +9,7 @@ use App\Models\Produit;
 use App\Models\TypePrestation;
 use Illuminate\Http\Request;
 use App\Models\PhotoClient;
+use App\Models\Realisation;
 use Illuminate\Support\Facades\Log;
 
 class PublicController extends Controller
@@ -209,22 +210,63 @@ class PublicController extends Controller
                 return response()->json(['success' => false, 'message' => 'Aucun salon trouvé'], 404);
             }
 
-            $photos = PhotoClient::where('is_public', true)
-                ->where('type_photo', 'apres')
-                ->select('id', 'photo_url', 'description', 'date_prise')
+            // Retourner les réalisations publiques avec leurs médias
+            $realisations = Realisation::with(['medias' => function ($q) {
+                    $q->select('id', 'realisation_id', 'media_url', 'type_media', 'type_photo', 'date_prise');
+                }])
+                ->where('is_public', true)
+                ->select('id', 'nom_coiffure', 'montant_coiffure', 'description', 'date_prise')
                 ->orderBy('date_prise', 'desc')
                 ->limit(12)
                 ->get()
-                ->map(function ($photo) {
-                    $cleanPath = preg_replace('/^storage\//', '', $photo->photo_url);
-                    $photo->photo_url = url('storage/' . $cleanPath);
-                    return $photo;
+                ->map(function ($realisation) {
+                    $realisation->medias->transform(function ($media) {
+                        $cleanPath = preg_replace('/^storage\//', '', $media->media_url);
+                        $media->media_url = url('storage/' . $cleanPath);
+                        return $media;
+                    });
+                    return $realisation;
                 });
 
-            return response()->json(['success' => true, 'data' => $photos]);
+            return response()->json(['success' => true, 'data' => $realisations]);
 
         } catch (\Exception $e) {
-            Log::error('Erreur photos publiques: ' . $e->getMessage());
+            Log::error('Erreur médias publics: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function realisations($slug = null)
+    {
+        try {
+            $salon = $slug
+                ? Salon::where('slug', $slug)->first()
+                : Salon::orderBy('id')->first();
+
+            if (!$salon) {
+                return response()->json(['success' => false, 'message' => 'Aucun salon trouvé'], 404);
+            }
+
+            $realisations = Realisation::with(['medias' => function ($q) {
+                    $q->select('id', 'realisation_id', 'media_url', 'type_media', 'type_photo', 'date_prise');
+                }])
+                ->where('is_public', true)
+                ->select('id', 'nom_coiffure', 'montant_coiffure', 'description', 'date_prise')
+                ->orderBy('date_prise', 'desc')
+                ->get()
+                ->map(function ($realisation) {
+                    $realisation->medias->transform(function ($media) {
+                        $cleanPath = preg_replace('/^storage\//', '', $media->media_url);
+                        $media->media_url = url('storage/' . $cleanPath);
+                        return $media;
+                    });
+                    return $realisation;
+                });
+
+            return response()->json(['success' => true, 'data' => $realisations]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur réalisations publiques: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

@@ -8,6 +8,7 @@ use App\Models\PhotoClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class ClientController extends Controller
 {
@@ -241,97 +242,94 @@ public function index(Request $request)
     /**
      * Upload photo client
      */
-   public function uploadPhoto(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'photo' => 'required|image|mimes:jpeg,png,jpg|max:5120',
-            'type_photo' => 'required|in:avant,apres',
-            'description' => 'nullable|string|max:255',
-            'vente_id' => 'nullable|exists:ventes,id',
-            'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
-            'is_public' => 'nullable|boolean',
+  public function uploadPhoto(Request $request, $id)
+{
+    Log::info('Raw files:', ['files' => array_keys($_FILES), 'data' => $_FILES]);
+    Log::info('Request files:', ['media' => $request->hasFile('media'), 'all' => array_keys($request->allFiles())]);
+    // Log AVANT la validation
+    Log::info('Files reçus:', [
+        'size' => $request->file('media')?->getSize(),
+        'mime' => $request->file('media')?->getMimeType(),
+    ]);
+    Log::info('Data reçue:', $request->except('media'));
+
+    $validator = Validator::make($request->all(), [
+        'media'            => 'required|file|mimetypes:image/jpeg,image/png,image/jpg,video/mp4,video/quicktime,video/x-msvideo,video/webm|max:102400',
+        'type_photo'       => 'required|in:avant,apres',
+        'type_media'       => 'required|in:photo,video',
+        'description'      => 'nullable|string|max:1000',
+        'nom_coiffure'     => 'nullable|string|max:255',
+        'montant_coiffure' => 'nullable|numeric|min:0',
+        'vente_id'         => 'nullable|exists:ventes,id',
+        'rendez_vous_id'   => 'nullable|exists:rendez_vous,id',
+        'is_public'        => 'nullable|boolean',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+    }
+
+    try {
+        $client = Client::findOrFail($id);
+        $file = $request->file('media');
+        $typeMedia = $request->type_media;
+        $folder = $typeMedia === 'video' ? 'videos/clients' : 'photos/clients';
+
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
+        $filename = time() . '_' . $client->id . '_' . $safeName . '.' . $extension;
+
+        $path = $file->storeAs($folder, $filename, 'public');
+
+        $media = PhotoClient::create([
+            'client_id'        => $client->id,
+            'media_url'        => $path,
+            'type_media'       => $typeMedia,
+            'type_photo'       => $request->type_photo,
+            'description'      => $request->description,
+            'nom_coiffure'     => $request->nom_coiffure,
+            'montant_coiffure' => $request->montant_coiffure,
+            'vente_id'         => $request->vente_id,
+            'rendez_vous_id'   => $request->rendez_vous_id,
+            'is_public'        => $request->is_public ?? false,
+            'date_prise'       => now()->toDateString(),
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur de validation',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        return response()->json(['success' => true, 'message' => 'Média uploadé avec succès', 'data' => $media], 201);
 
-        try {
-            $client = Client::findOrFail($id);
-
-            if ($request->hasFile('photo')) {
-                $file = $request->file('photo');
-                
-                // Nom de fichier sécurisé (sans espaces ni caractères spéciaux)
-                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                $extension = $file->getClientOriginalExtension();
-                $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $originalName);
-                $filename = time() . '_' . $client->id . '_' . $safeName . '.' . $extension;
-                
-                // Stocker dans public/storage/photos/clients
-                $path = $file->storeAs('photos/clients', $filename, 'public');
-
-                $photo = PhotoClient::create([
-                    'client_id' => $client->id,
-                    'photo_url' => $path, // Sera "photos/clients/xxx.jpg"
-                    'type_photo' => $request->type_photo,
-                    'description' => $request->description,
-                    'vente_id' => $request->vente_id,
-                    'rendez_vous_id' => $request->rendez_vous_id,
-                    'is_public' => $request->is_public ?? false,
-                    'date_prise' => now()->toDateString(),
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Photo uploadée avec succès',
-                    'data' => $photo
-                ], 201);
-            }
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Aucun fichier fourni'
-            ], 400);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'upload de la photo',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
+}
 
     /**
      * Supprimer une photo
      */
-    public function deletePhoto($clientId, $photoId)
+   public function deletePhoto($clientId, $photoId)
     {
         try {
             $photo = PhotoClient::where('client_id', $clientId)
                 ->findOrFail($photoId);
 
-            // Supprimer le fichier physique
-            if (Storage::disk('public')->exists($photo->photo_url)) {
-                Storage::disk('public')->delete($photo->photo_url);
+            // Utiliser media_url au lieu de photo_url
+            $mediaUrl = $photo->media_url;
+
+            if ($mediaUrl && Storage::disk('public')->exists($mediaUrl)) {
+                Storage::disk('public')->delete($mediaUrl);
             }
-            
+
             $photo->delete();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Photo supprimée avec succès'
+                'message' => 'Média supprimé avec succès'
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de la suppression de la photo',
+                'message' => 'Erreur lors de la suppression du média',
                 'error' => $e->getMessage()
             ], 500);
         }

@@ -2,22 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Search,
-  Filter,
-  Eye,
-  Edit,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  Phone,
-  Mail,
-  Trophy,
-  ImageOff,
-  MapPin,
-  Calendar,
+  Search, Filter, Eye, Edit, Trash2,
+  ChevronLeft, ChevronRight, Phone, Mail,
+  Trophy, ImageOff, MapPin, Calendar, Play,
 } from 'lucide-react';
 import { clientApi } from '../../../../services/clientApi';
-import type { Client, ClientFilters } from '../../../../types/client.types';
+import type { Client, ClientFilters, PhotoClient } from '../../../../types/client.types';
 
 interface ClientListeProps {
   onVoirDetails: (client: Client) => void;
@@ -36,7 +26,7 @@ export const ClientListe: React.FC<ClientListeProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
-  const [photoIndexes, setPhotoIndexes] = useState<Record<number, number>>({});
+  const [mediaIndexes, setMediaIndexes] = useState<Record<number, number>>({});
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   const [filters, setFilters] = useState<ClientFilters>({
@@ -58,22 +48,16 @@ export const ClientListe: React.FC<ClientListeProps> = ({
   const loadClients = async () => {
     setIsLoading(true);
     try {
-      const response = await clientApi.getClients({
-        ...filters,
-        page: currentPage,
-      });
-
+      const response = await clientApi.getClients({ ...filters, page: currentPage });
       if (response.success) {
         setClients(response.data.data);
         setTotalPages(response.data.last_page);
         setTotal(response.data.total);
-        
-        // Initialiser les index de photos à 0 pour chaque client
         const initialIndexes: Record<number, number> = {};
         response.data.data.forEach((client: Client) => {
           initialIndexes[client.id] = 0;
         });
-        setPhotoIndexes(initialIndexes);
+        setMediaIndexes(initialIndexes);
       }
     } catch (error: any) {
       console.error('Erreur chargement clients:', error);
@@ -95,10 +79,7 @@ export const ClientListe: React.FC<ClientListeProps> = ({
   };
 
   const handleSupprimer = async (client: Client) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${client.prenom} ${client.nom} ?`)) {
-      return;
-    }
-
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${client.prenom} ${client.nom} ?`)) return;
     try {
       const response = await clientApi.deleteClient(client.id);
       if (response.success) {
@@ -111,29 +92,26 @@ export const ClientListe: React.FC<ClientListeProps> = ({
     }
   };
 
-  const nextPhoto = (clientId: number, photosCount: number, e: React.MouseEvent) => {
+  const nextMedia = (clientId: number, count: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    setPhotoIndexes(prev => ({
+    setMediaIndexes(prev => ({ ...prev, [clientId]: (prev[clientId] + 1) % count }));
+  };
+
+  const prevMedia = (clientId: number, count: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMediaIndexes(prev => ({
       ...prev,
-      [clientId]: (prev[clientId] + 1) % photosCount
+      [clientId]: prev[clientId] === 0 ? count - 1 : prev[clientId] - 1,
     }));
   };
 
-  const prevPhoto = (clientId: number, photosCount: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPhotoIndexes(prev => ({
-      ...prev,
-      [clientId]: prev[clientId] === 0 ? photosCount - 1 : prev[clientId] - 1
-    }));
-  };
-
-  const getImageUrl = (photoUrl: string) => {
-    let cleanUrl = photoUrl.replace(/^(storage\/)+/, '');
+  const getMediaUrl = (url: string) => {
+    const cleanUrl = url.replace(/^(storage\/)+/, '');
     return `${import.meta.env.VITE_API_URL}/storage/${cleanUrl}`;
   };
 
-  const handleImageError = (photoUrl: string) => {
-    setImageErrors(prev => new Set([...prev, photoUrl]));
+  const handleImageError = (url: string) => {
+    setImageErrors(prev => new Set([...prev, url]));
   };
 
   const formatDate = (date?: string) => {
@@ -141,8 +119,55 @@ export const ClientListe: React.FC<ClientListeProps> = ({
     return new Date(date).toLocaleDateString('fr-FR');
   };
 
-  const formatMontant = (montant: number) => {
-    return new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+  const formatMontant = (montant: number) =>
+    new Intl.NumberFormat('fr-FR').format(montant) + ' FCFA';
+
+  // ─── Miniature carrousel ────────────────────────────────────────────────────
+  const MediaPreview: React.FC<{ media: PhotoClient }> = ({ media }) => {
+    const url = getMediaUrl(media.media_url);
+    const isVideo = media.type_media === 'video';
+
+    if (isVideo) {
+      return (
+        <div className="relative w-full h-full bg-black">
+          <video
+            src={url}
+            className="w-full h-full object-cover"
+            muted
+            playsInline
+            preload="metadata"
+          />
+          {/* Overlay play */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div className="bg-black/60 rounded-full p-2">
+              <Play size={20} className="text-white" fill="white" />
+            </div>
+          </div>
+          {/* Badge vidéo */}
+          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+            Vidéo
+          </div>
+        </div>
+      );
+    }
+
+    if (imageErrors.has(media.media_url)) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200">
+          <ImageOff size={32} className="text-gray-400 mb-2" />
+          <p className="text-xs text-gray-500">Image non disponible</p>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={url}
+        alt={media.description || `Photo ${media.type_photo}`}
+        className="w-full h-full object-cover"
+        onError={() => handleImageError(media.media_url)}
+      />
+    );
   };
 
   return (
@@ -164,13 +189,9 @@ export const ClientListe: React.FC<ClientListeProps> = ({
           </button>
         </div>
 
-        {/* Barre de recherche */}
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="flex-1 relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Rechercher par nom, prénom ou téléphone..."
@@ -179,24 +200,18 @@ export const ClientListe: React.FC<ClientListeProps> = ({
               className="w-full pl-10 pr-3 py-2 border rounded"
             />
           </div>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
+          <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
             Rechercher
           </button>
         </form>
 
-        {/* Filtres avancés */}
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
             <div>
               <label className="block text-sm font-medium mb-1">Statut</label>
               <select
                 value={filters.is_active === undefined ? '' : filters.is_active.toString()}
-                onChange={(e) =>
-                  handleFilterChange('is_active', e.target.value === '' ? undefined : e.target.value === 'true')
-                }
+                onChange={(e) => handleFilterChange('is_active', e.target.value === '' ? undefined : e.target.value === 'true')}
                 className="w-full border rounded px-3 py-2"
               >
                 <option value="">Tous</option>
@@ -204,7 +219,6 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                 <option value="false">Inactif</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Points min.</label>
               <input
@@ -215,7 +229,6 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                 className="w-full border rounded px-3 py-2"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Trier par</label>
               <select
@@ -230,7 +243,6 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                 <option value="montant_total_depense">Montant dépensé</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium mb-1">Ordre</label>
               <select
@@ -260,22 +272,9 @@ export const ClientListe: React.FC<ClientListeProps> = ({
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {clients.map((client) => {
-                const currentPhotoIndex = photoIndexes[client.id] || 0;
-                const hasPhotos = client.photos && client.photos.length > 0;
-                const currentPhoto = hasPhotos ? client.photos[currentPhotoIndex] : null;
-
-                // LOG DE DÉBOGAGE
-                // console.log('=== CLIENT DEBUG ===');
-                // console.log('Client:', client.prenom, client.nom);
-                // console.log('client.photos:', client.photos);
-                // console.log('hasPhotos:', hasPhotos);
-                // console.log('currentPhotoIndex:', currentPhotoIndex);
-                // console.log('currentPhoto:', currentPhoto);
-                // if (currentPhoto) {
-                //   const imageUrl = getImageUrl(currentPhoto.photo_url);
-                //   console.log('Image URL:', imageUrl);
-                // }
-                // console.log('===================');
+                const currentIndex = mediaIndexes[client.id] ?? 0;
+                const hasMedias = (client.photos?.length ?? 0) > 0;
+                const currentMedia = hasMedias ? client.photos![currentIndex] : null;
 
                 return (
                   <div
@@ -283,57 +282,41 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                     className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden cursor-pointer group"
                     onClick={() => onVoirDetails(client)}
                   >
-                    {/* Carrousel de photos */}
+                    {/* ── Carrousel médias ── */}
                     <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100">
-                      {hasPhotos && currentPhoto ? (
+                      {hasMedias && currentMedia ? (
                         <>
-                          {imageErrors.has(currentPhoto.photo_url) ? (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-gray-200">
-                              <ImageOff size={32} className="text-gray-400 mb-2" />
-                              <p className="text-xs text-gray-500">Image non disponible</p>
-                            </div>
-                          ) : (
-                            <img
-                              src={getImageUrl(currentPhoto.photo_url)}
-                              alt={currentPhoto.description || `Photo ${currentPhoto.type_photo}`}
-                              className="w-full h-full object-cover"
-                              onError={() => handleImageError(currentPhoto.photo_url)}
-                            />
-                          )}
+                          <MediaPreview media={currentMedia} />
 
-                          {/* Badge type photo */}
+                          {/* Badge type (avant/après) */}
                           <div className="absolute top-2 left-2">
-                            <span className="px-2 py-1 bg-black bg-opacity-70 text-white text-xs rounded">
-                              {currentPhoto.type_photo === 'avant' ? 'Avant' : 'Après'}
+                            <span className="px-2 py-1 bg-black/70 text-white text-xs rounded">
+                              {currentMedia.type_photo === 'avant' ? 'Avant' : 'Après'}
                             </span>
                           </div>
 
-                          {/* Indicateurs de photos multiples */}
-                          {client.photos.length > 1 && (
+                          {/* Indicateurs + navigation si plusieurs médias */}
+                          {client.photos!.length > 1 && (
                             <>
-                              <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-                                {client.photos.map((_, index) => (
+                              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                {client.photos!.map((_, index) => (
                                   <div
                                     key={index}
-                                    className={`w-2 h-2 rounded-full ${
-                                      index === currentPhotoIndex
-                                        ? 'bg-white'
-                                        : 'bg-white bg-opacity-50'
+                                    className={`w-2 h-2 rounded-full transition-colors ${
+                                      index === currentIndex ? 'bg-white' : 'bg-white/50'
                                     }`}
                                   />
                                 ))}
                               </div>
-
-                              {/* Boutons navigation */}
                               <button
-                                onClick={(e) => prevPhoto(client.id, client.photos.length, e)}
-                                className="absolute left-2 top-1/2 transform -translate-y-1/2 p-1 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => prevMedia(client.id, client.photos!.length, e)}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 text-white rounded-full hover:bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <ChevronLeft size={20} />
                               </button>
                               <button
-                                onClick={(e) => nextPhoto(client.id, client.photos.length, e)}
-                                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => nextMedia(client.id, client.photos!.length, e)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 bg-black/50 text-white rounded-full hover:bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity"
                               >
                                 <ChevronRight size={20} />
                               </button>
@@ -343,32 +326,24 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center">
                           <ImageOff size={48} className="text-gray-300 mb-2" />
-                          <p className="text-sm text-gray-400">Aucune photo</p>
+                          <p className="text-sm text-gray-400">Aucun média</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Informations du client */}
+                    {/* ── Infos client ── */}
                     <div className="p-4 space-y-3">
-                      {/* Nom et statut */}
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-bold text-lg truncate">
-                            {client.prenom} {client.nom}
-                          </h3>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
-                            client.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
+                        <h3 className="font-bold text-lg truncate flex-1">
+                          {client.prenom} {client.nom}
+                        </h3>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
+                          client.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
                           {client.is_active ? 'Actif' : 'Inactif'}
                         </span>
                       </div>
 
-                      {/* Contact */}
                       <div className="space-y-1.5">
                         <a
                           href={`https://wa.me/${client.telephone.replace(/\s+/g, '')}`}
@@ -376,7 +351,6 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700 hover:underline"
-                          title="Envoyer un message WhatsApp"
                         >
                           <Phone size={14} />
                           <span className="truncate">{client.telephone}</span>
@@ -395,21 +369,18 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                         )}
                       </div>
 
-                      {/* Stats */}
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                         <div className="bg-yellow-50 p-2 rounded">
                           <div className="flex items-center gap-1 mb-0.5">
                             <Trophy size={14} className="text-yellow-600" />
                             <span className="text-xs text-gray-600">Points</span>
                           </div>
-                          <p className="text-lg font-bold text-yellow-600">
-                            {client.points_fidelite}
-                          </p>
+                          <p className="text-lg font-bold text-yellow-600">{client.points_fidelite}</p>
                         </div>
                         <div className="bg-green-50 p-2 rounded">
                           <div className="flex items-center gap-1 mb-0.5">
                             <Calendar size={14} className="text-green-600" />
-                            <span className="text-xs text-gray-600">Visites</span>
+                            <span className="text-xs text-gray-600">Dernière visite</span>
                           </div>
                           <p className="text-sm font-medium text-green-600 truncate">
                             {formatDate(client.date_derniere_visite)}
@@ -417,7 +388,6 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                         </div>
                       </div>
 
-                      {/* Total dépensé */}
                       <div className="pt-2 border-t">
                         <p className="text-xs text-gray-500">Total dépensé</p>
                         <p className="text-sm font-bold text-gray-900">
@@ -425,37 +395,24 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                         </p>
                       </div>
 
-                      {/* Actions */}
                       <div className="flex items-center gap-2 pt-2 border-t">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onVoirDetails(client);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); onVoirDetails(client); }}
                           className="flex-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded text-sm flex items-center justify-center gap-2"
-                          title="Voir détails"
                         >
                           <Eye size={16} />
                           Détails
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onModifier(client);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); onModifier(client); }}
                           className="flex-1 px-3 py-1.5 text-orange-600 hover:bg-orange-50 rounded text-sm flex items-center justify-center gap-2"
-                          title="Modifier"
                         >
                           <Edit size={16} />
                           Modifier
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSupprimer(client);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); handleSupprimer(client); }}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                          title="Supprimer"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -479,9 +436,7 @@ export const ClientListe: React.FC<ClientListeProps> = ({
                 >
                   <ChevronLeft size={18} />
                 </button>
-                <span className="text-sm text-gray-600">
-                  {currentPage} / {totalPages}
-                </span>
+                <span className="text-sm text-gray-600">{currentPage} / {totalPages}</span>
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
