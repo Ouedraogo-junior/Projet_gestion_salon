@@ -236,6 +236,43 @@ class PublicController extends Controller
         }
     }
 
+    public function realisationsEpinglees($slug = null)
+    {
+        try {
+            $salon = $slug
+                ? Salon::where('slug', $slug)->first()
+                : Salon::orderBy('id')->first();
+
+            if (!$salon) {
+                return response()->json(['success' => false, 'message' => 'Aucun salon trouvé'], 404);
+            }
+
+            $realisations = Realisation::with(['medias' => function ($q) {
+                    $q->select('id', 'realisation_id', 'media_url', 'type_media', 'type_photo', 'date_prise');
+                }])
+                ->where('is_public', true)
+                ->where('is_epingle', true)
+                ->select('id', 'nom_coiffure', 'montant_coiffure', 'description', 'date_prise')
+                ->orderBy('updated_at', 'desc')
+                ->limit(8)
+                ->get()
+                ->map(function ($realisation) {
+                    $realisation->medias->transform(function ($media) {
+                        $cleanPath = preg_replace('/^storage\//', '', $media->media_url);
+                        $media->media_url = url('storage/' . $cleanPath);
+                        return $media;
+                    });
+                    return $realisation;
+                });
+
+            return response()->json(['success' => true, 'data' => $realisations]);
+
+        } catch (\Exception $e) {
+            Log::error('Erreur réalisations épinglées: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function realisations($slug = null)
     {
         try {

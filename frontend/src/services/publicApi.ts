@@ -42,5 +42,8 @@ export const publicApiService = {
 
   getRealisations: (slug?: string): Promise<ApiResponse<RealisationPublique[]>> =>
     publicApi.get(slug ? `/public/${slug}/realisations` : '/public/realisations').then((r) => r.data),
+
+  getRealisationsEpinglees: (slug?: string): Promise<ApiResponse<RealisationPublique[]>> =>
+    publicApi.get(slug ? `/public/${slug}/realisations/epingles` : '/public/realisations/epingles').then((r) => r.data),
 };
 

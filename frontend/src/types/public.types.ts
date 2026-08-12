@@ -36,6 +36,7 @@ export interface RealisationPublique {
   montant_coiffure?: number;
   description?: string;
   date_prise: string;
+  is_epingle?: boolean;
   medias: MediaPublique[];
 }
 

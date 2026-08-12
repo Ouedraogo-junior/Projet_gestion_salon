@@ -197,4 +197,35 @@ class RealisationController extends Controller
             'is_public' => $realisation->is_public,
         ]);
     }
+
+    // ── Toggle is_epingle (mise en avant façon "Instagram") ────────────────
+    public const MAX_EPINGLES = 8;
+
+    public function toggleEpingle(int $id)
+    {
+        $realisation = Realisation::findOrFail($id);
+
+        // On ne peut épingler qu'une réalisation publique
+        if (!$realisation->is_epingle && !$realisation->is_public) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seule une réalisation publique peut être épinglée',
+            ], 422);
+        }
+
+        // Limite du nombre d'épingles actives simultanées
+        if (!$realisation->is_epingle && Realisation::epinglees()->count() >= self::MAX_EPINGLES) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous avez atteint la limite de ' . self::MAX_EPINGLES . ' réalisations épinglées. Désépinglez-en une avant d\'en ajouter une nouvelle.',
+            ], 422);
+        }
+
+        $realisation->update(['is_epingle' => !$realisation->is_epingle]);
+
+        return response()->json([
+            'success'    => true,
+            'is_epingle' => $realisation->is_epingle,
+        ]);
+    }
 }

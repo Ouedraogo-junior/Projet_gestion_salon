@@ -87,4 +87,10 @@ export const realisationApi = {
     const { data } = await axios.patch(`/realisations/${id}/toggle-public`);
     return data;
   },
+
+  async toggleEpingle(id: number): Promise<{ success: boolean; is_epingle?: boolean; message?: string }> {
+    const { data } = await axios.patch(`/realisations/${id}/toggle-epingle`);
+    return data;
+  },
+  
 };

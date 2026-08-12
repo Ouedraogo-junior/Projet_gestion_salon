@@ -84,6 +84,11 @@ Route::get('/rendez-vous/{id}/recu-final', [RendezVousPaiementController::class,
 Route::get('/public/{slug}/realisations', [PublicController::class, 'realisations']);
 Route::get('/public/realisations', [PublicController::class, 'realisations']);
 
+// Route pour obtenir les réalisations épinglées (mises en avant façon "Instagram")
+Route::get('/public/{slug}/realisations/epingles', [PublicController::class, 'realisationsEpinglees']);
+Route::get('/public/realisations/epingles', [PublicController::class, 'realisationsEpinglees']);
+
+
 // ============================================================
 // ROUTES PROTÉGÉES
 // ============================================================
@@ -327,6 +332,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/realisations/{id}/medias/{mediaId}', [RealisationController::class, 'deleteMedia']);
         Route::delete('/realisations/{id}', [RealisationController::class, 'destroy']);
         Route::patch('/realisations/{id}/toggle-public', [RealisationController::class, 'togglePublic']);
+        Route::patch('/realisations/{id}/toggle-epingle', [RealisationController::class, 'toggleEpingle']);
     });
 
     // ========================================

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, Trash2, Plus, Eye, EyeOff, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Edit, Trash2, Plus, Eye, EyeOff, Play, ChevronLeft, ChevronRight, Pin, PinOff } from 'lucide-react';
 import type { Realisation, MediaRealisation } from '@/types/realisation.types';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   onAddMedias: () => void;
   onDeleteMedia: (mediaId: number) => void;
   onTogglePublic: () => void;
+  onToggleEpingle: () => void;
 }
 
 const fmt = (v: number) => new Intl.NumberFormat('fr-FR').format(v);
@@ -19,7 +20,7 @@ const getMediaUrl = (url: string) => {
 };
 
 export const RealisationCard: React.FC<Props> = ({
-  realisation, onEdit, onDelete, onAddMedias, onDeleteMedia, onTogglePublic,
+  realisation, onEdit, onDelete, onAddMedias, onDeleteMedia, onTogglePublic, onToggleEpingle,
 }) => {
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -38,7 +39,7 @@ export const RealisationCard: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden flex flex-col">
+    <div className={`bg-white rounded-xl shadow-md overflow-hidden flex flex-col ${realisation.is_epingle ? 'ring-2 ring-indigo-500' : ''}`}>
       {/* ── Zone média ── */}
       <div className="relative group bg-gray-100">
         {current ? (
@@ -77,18 +78,34 @@ export const RealisationCard: React.FC<Props> = ({
           </span>
         )}
 
-        {/* Badge public/privé */}
-        <button
-          onClick={onTogglePublic}
-          className={`absolute top-2 right-2 px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 transition ${
-            realisation.is_public
-              ? 'bg-green-500 text-white hover:bg-green-600'
-              : 'bg-gray-500 text-white hover:bg-gray-600'
-          }`}
-        >
-          {realisation.is_public ? <Eye size={10} /> : <EyeOff size={10} />}
-          {realisation.is_public ? 'Public' : 'Privé'}
-        </button>
+        {/* Badges public/privé + épingle, empilés en haut à droite */}
+         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+           <button
+             onClick={onTogglePublic}
+             className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 transition ${
+               realisation.is_public
+                 ? 'bg-green-500 text-white hover:bg-green-600'
+                 : 'bg-gray-500 text-white hover:bg-gray-600'
+             }`}
+           >
+             {realisation.is_public ? <Eye size={10} /> : <EyeOff size={10} />}
+             {realisation.is_public ? 'Public' : 'Privé'}
+           </button>
+ 
+           <button
+             onClick={onToggleEpingle}
+             disabled={!realisation.is_public}
+             title={!realisation.is_public ? 'Rendez la réalisation publique pour pouvoir l\'épingler' : undefined}
+             className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 transition disabled:opacity-40 disabled:cursor-not-allowed ${
+               realisation.is_epingle
+                 ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                 : 'bg-white/90 text-gray-700 hover:bg-white'
+             }`}
+           >
+             {realisation.is_epingle ? <Pin size={10} fill="currentColor" /> : <PinOff size={10} />}
+             {realisation.is_epingle ? 'Épinglé' : 'Épingler'}
+           </button>
+         </div>
 
         {/* Navigation médias */}
         {medias.length > 1 && (

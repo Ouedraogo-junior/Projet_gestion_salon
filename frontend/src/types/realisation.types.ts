@@ -16,6 +16,7 @@ export interface Realisation {
   description?: string;
   date_prise: string;
   is_public: boolean;
+  is_epingle: boolean;
   created_at: string;
   updated_at: string;
   medias: MediaRealisation[];
@@ -28,6 +29,7 @@ export interface CreateRealisationDTO {
   description?: string;
   date_prise?: string;
   is_public?: boolean;
+  // is_epingle?: boolean;
   client_id?: number;
   medias: File[];
   types_photo: ('avant' | 'apres')[];
@@ -40,6 +42,7 @@ export interface UpdateRealisationDTO {
   description?: string;
   date_prise?: string;
   is_public?: boolean;
+  // is_epingle?: boolean;
   client_id?: number;
 }
 

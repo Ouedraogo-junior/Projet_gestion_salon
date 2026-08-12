@@ -85,6 +85,20 @@ export const RealisationsPage: React.FC = () => {
     load();
   };
 
+  const handleToggleEpingle = async (id: number) => {
+    try {
+      const res = await realisationApi.toggleEpingle(id);
+      if (!res.success) {
+        toast.error(res.message || 'Erreur');
+        return;
+      }
+      toast.success(res.is_epingle ? 'Réalisation épinglée sur l\'accueil' : 'Réalisation désépinglée');
+      load();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Erreur');
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
@@ -178,6 +192,7 @@ export const RealisationsPage: React.FC = () => {
               onAddMedias={() => setAddMediasModal(r)}
               onDeleteMedia={(mediaId) => handleDeleteMedia(r.id, mediaId)}
               onTogglePublic={() => handleTogglePublic(r.id)}
+              onToggleEpingle={() => handleToggleEpingle(r.id)}
             />
           ))}
         </div>

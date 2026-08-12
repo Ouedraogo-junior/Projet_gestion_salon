@@ -2,7 +2,7 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { usePublicData } from '@/hooks/usePublicData';
-import { Scissors, Calendar, ArrowRight, Play, ZoomIn, X } from 'lucide-react';
+import { Scissors, Calendar, ArrowRight, Play, ZoomIn, X, Pin } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { ImageWithFallback } from './components/ImageWithFallback';
 import type { RealisationPublique, MediaPublique } from '@/types/public.types';
@@ -15,7 +15,7 @@ const getMediaUrl = (url: string) => {
 };
 
 // ─── VideoCardSimple ──────────────────────────────────────────────────────────
-const VideoCardSimple: React.FC<{ url: string; onExpand: () => void }> = ({ url, onExpand }) => {
+const VideoCardSimple: React.FC<{ url: string; onExpand: () => void; aspectClass?: string; fit?: 'contain' | 'cover'; }> = ({ url, onExpand, aspectClass, fit = 'contain' }) => {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = React.useState(false);
   const [isVertical, setIsVertical] = React.useState(false);
@@ -36,12 +36,12 @@ const VideoCardSimple: React.FC<{ url: string; onExpand: () => void }> = ({ url,
 
   return (
     <div
-      className={`relative w-full ${isVertical ? 'aspect-[9/16]' : 'aspect-video'} bg-black cursor-pointer`}
+      className={`relative w-full ${aspectClass ?? (isVertical ? 'aspect-[9/16]' : 'aspect-video')} bg-black cursor-pointer`}
       onClick={togglePlay}
     >
       <video
         ref={videoRef} src={url}
-        className="w-full h-full object-contain"
+        className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`}
         muted playsInline loop preload="metadata"
         onLoadedMetadata={handleMetadata}
         onEnded={() => setPlaying(false)}
@@ -118,7 +118,7 @@ const Lightbox: React.FC<{
 // ─── Page principale ──────────────────────────────────────────────────────────
 export const AccueilPage: React.FC = () => {
   const { slug } = useParams<{ slug?: string }>();
-  const { salonInfo, prestations, produits, realisations, loading } = usePublicData(slug);
+  const { salonInfo, prestations, produits, realisations, realisationsEpinglees, loading } = usePublicData(slug);
   const [lightbox, setLightbox] = React.useState<{
     url: string;
     type: 'photo' | 'video';
@@ -168,6 +168,59 @@ export const AccueilPage: React.FC = () => {
           </Link>
         </div>
       </section>
+
+
+      {/* Coups de cœur épinglés (façon Instagram) */}
+      {realisationsEpinglees.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <Pin size={22} className="text-indigo-600" fill="currentColor" />
+            <h2 className="text-3xl font-bold text-gray-800">Nos coups de cœur</h2>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {realisationsEpinglees.map((realisation) => {
+              const media = realisation.medias[0];
+              if (!media) return null;
+              const url = getMediaUrl(media.media_url);
+              const isVideo = media.type_media === 'video';
+              return (
+                <div
+                  key={realisation.id}
+                  className="relative flex-shrink-0 w-40 sm:w-48 snap-start rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow bg-white"
+                >
+                  {isVideo ? (
+                    <VideoCardSimple
+                      url={url}
+                      aspectClass="aspect-square"
+                      fit="cover"
+                      onExpand={() => setLightbox({ url, type: 'video', realisation })}
+                    />
+                  ) : (
+                    <div
+                      className="relative aspect-square cursor-zoom-in"
+                      onClick={() => setLightbox({ url, type: 'photo', realisation })}
+                    >
+                      <ImageWithFallback
+                        src={url}
+                        alt={realisation.nom_coiffure || 'Réalisation'}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="absolute top-2 left-2 bg-black/60 rounded-full p-1.5 pointer-events-none">
+                    <Pin size={12} className="text-white" fill="white" />
+                  </div>
+                  {realisation.nom_coiffure && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none">
+                      <p className="text-white text-xs font-semibold truncate">{realisation.nom_coiffure}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Services */}
       <section>

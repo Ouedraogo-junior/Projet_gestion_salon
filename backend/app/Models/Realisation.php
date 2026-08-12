@@ -21,11 +21,13 @@ class Realisation extends Model
         'description',
         'date_prise',
         'is_public',
+        'is_epingle',
     ];
 
     protected $casts = [
         'date_prise'        => 'date',
         'is_public'         => 'boolean',
+        'is_epingle'        => 'boolean',
         'montant_coiffure'  => 'decimal:2',
         'created_at'        => 'datetime',
         'updated_at'        => 'datetime',
@@ -44,6 +46,11 @@ class Realisation extends Model
     public function scopePubliques($query)
     {
         return $query->where('is_public', true);
+    }
+
+    public function scopeEpinglees($query)
+    {
+        return $query->where('is_epingle', true);
     }
 
     public function scopePourClient($query, int $clientId)
