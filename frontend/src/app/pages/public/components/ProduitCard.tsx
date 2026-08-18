@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Eye } from 'lucide-react';
 import { ProduitDetailsModal } from './ProduitDetailsModal';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { ProduitPublic, ProduitPublicDetail, VariantePublique } from '@/types/public.types';
 
 interface Props {
@@ -10,12 +11,10 @@ interface Props {
   onAddToCart: (produit: ProduitPublicDetail, variante: VariantePublique) => void;
 }
 
-const fmt = (v: number) =>
-  new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(v);
-
 export const ProduitCard: React.FC<Props> = ({ produit, onAddToCart }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const { formatPrice } = useCurrency();
 
   return (
     <>
@@ -79,15 +78,15 @@ export const ProduitCard: React.FC<Props> = ({ produit, onAddToCart }) => {
               {produit.en_promo && produit.prix_promo ? (
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-red-600">
-                    {fmt(produit.prix_promo)} FCFA
+                    {formatPrice(produit.prix_promo)}
                   </span>
                   <span className="text-sm text-gray-400 line-through">
-                    {fmt(produit.prix_vente)} FCFA
+                    {formatPrice(produit.prix_vente)}
                   </span>
                 </div>
               ) : (
                 <div className="text-2xl font-bold text-indigo-600">
-                  {fmt(produit.prix_vente)} FCFA
+                  {formatPrice(produit.prix_vente)}
                 </div>
               )}
               {produit.variantes_count > 1 && (

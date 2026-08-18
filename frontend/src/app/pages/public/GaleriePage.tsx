@@ -4,13 +4,14 @@ import { useParams } from 'react-router-dom';
 import { publicApiService } from '@/services/publicApi';
 import { Loader2, Play, ChevronDown, ChevronUp, X, ZoomIn } from 'lucide-react';
 import { ImageWithFallback } from './components/ImageWithFallback';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { MediaPublique, RealisationPublique, SalonPublicInfo } from '@/types/public.types';
 
 interface GaleriePageProps {
   salonInfo?: SalonPublicInfo | null;
 }
 
-const fmt = (v: number) =>
+const fmtFCFA = (v: number) =>
   new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(v);
 
 const getMediaUrl = (url: string) => {
@@ -25,6 +26,8 @@ const Lightbox: React.FC<{
   realisation: RealisationPublique;
   onClose: () => void;
 }> = ({ media, realisation, onClose }) => {
+  const { formatPrice } = useCurrency();
+
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
@@ -63,7 +66,7 @@ const Lightbox: React.FC<{
         >
           {realisation.nom_coiffure && <p className="font-bold text-base">{realisation.nom_coiffure}</p>}
           {realisation.montant_coiffure && (
-            <p className="text-indigo-300 font-semibold text-sm">{fmt(realisation.montant_coiffure)} FCFA</p>
+            <p className="text-indigo-300 font-semibold text-sm">{formatPrice(realisation.montant_coiffure)}</p>
           )}
           {realisation.description && (
             <p className="text-gray-300 text-sm leading-snug">{realisation.description}</p>
@@ -80,6 +83,7 @@ const RealisationInfo: React.FC<{
   onRdv: () => void;
 }> = ({ realisation, onRdv }) => {
   const [expanded, setExpanded] = React.useState(false);
+  const { formatPrice } = useCurrency();
   const hasDesc = !!realisation.description;
   const longDesc = hasDesc && realisation.description!.length > 60;
 
@@ -92,7 +96,7 @@ const RealisationInfo: React.FC<{
       )}
       {realisation.montant_coiffure && (
         <p className="text-sm font-semibold text-indigo-600">
-          {fmt(realisation.montant_coiffure)} FCFA
+          {formatPrice(realisation.montant_coiffure)}
         </p>
       )}
       {hasDesc && (
@@ -276,7 +280,7 @@ export const GaleriePage: React.FC<GaleriePageProps> = ({ salonInfo }) => {
   const handleRdv = (realisation: RealisationPublique) => {
     if (!salonInfo?.telephone) return;
     const nom  = realisation.nom_coiffure ? ` pour "${realisation.nom_coiffure}"` : '';
-    const prix = realisation.montant_coiffure ? ` (${fmt(realisation.montant_coiffure)} FCFA)` : '';
+    const prix = realisation.montant_coiffure ? ` (${fmtFCFA(realisation.montant_coiffure)} FCFA)` : '';
     const message = `Bonjour ${salonInfo.nom}, je souhaite prendre un rendez-vous${nom}${prix}.`;
     window.open(
       `https://wa.me/${salonInfo.telephone.replace(/\s/g, '')}?text=${encodeURIComponent(message)}`,

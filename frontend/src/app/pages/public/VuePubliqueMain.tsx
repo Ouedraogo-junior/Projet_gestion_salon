@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { PublicLayout } from './components/PublicLayout';
 import { usePublicData } from '@/hooks/usePublicData';
+import { CurrencyProvider } from '@/contexts/CurrencyContext';
 
 interface VuePubliqueMainProps {
   children: React.ReactNode;
@@ -33,8 +34,10 @@ export const VuePubliqueMain: React.FC<VuePubliqueMainProps> = ({ children }) =>
   }
 
   return (
-    <PublicLayout salonInfo={salonInfo} slug={slug || ''}>
-      {children}
-    </PublicLayout>
+    <CurrencyProvider>
+      <PublicLayout salonInfo={salonInfo} slug={slug || ''}>
+        {children}
+      </PublicLayout>
+    </CurrencyProvider>
   );
 };

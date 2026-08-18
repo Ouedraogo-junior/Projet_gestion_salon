@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, ShoppingCart, Loader2, Check } from 'lucide-react';
 import { publicApiService } from '@/services/publicApi';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { ProduitPublicDetail, VariantePublique } from '@/types/public.types';
 
 interface Props {
@@ -11,9 +12,6 @@ interface Props {
   produitId: number;
   onAddToCart: (produit: ProduitPublicDetail, variante: VariantePublique) => void;
 }
-
-const fmt = (v: number) =>
-  new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(v);
 
 export const ProduitDetailsModal: React.FC<Props> = ({
   isOpen,
@@ -25,6 +23,7 @@ export const ProduitDetailsModal: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [selectedVariante, setSelectedVariante] = useState<VariantePublique | null>(null);
   const [added, setAdded] = useState(false);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -139,10 +138,10 @@ export const ProduitDetailsModal: React.FC<Props> = ({
                   {selectedVariante.en_promo && selectedVariante.prix_promo ? (
                     <div className="flex items-baseline gap-3">
                       <span className="text-2xl font-bold text-red-600">
-                        {fmt(selectedVariante.prix_promo)} FCFA
+                        {formatPrice(selectedVariante.prix_promo)}
                       </span>
                       <span className="text-sm text-gray-400 line-through">
-                        {fmt(selectedVariante.prix_vente)} FCFA
+                        {formatPrice(selectedVariante.prix_vente)}
                       </span>
                       <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-semibold">
                         -{Math.round(((selectedVariante.prix_vente - selectedVariante.prix_promo) / selectedVariante.prix_vente) * 100)}%
@@ -150,7 +149,7 @@ export const ProduitDetailsModal: React.FC<Props> = ({
                     </div>
                   ) : (
                     <span className="text-2xl font-bold text-indigo-600">
-                      {fmt(selectedVariante.prix_vente)} FCFA
+                      {formatPrice(selectedVariante.prix_vente)}
                     </span>
                   )}
                   <p className="text-xs text-gray-500">

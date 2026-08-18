@@ -5,9 +5,8 @@ import { usePublicData } from '@/hooks/usePublicData';
 import { Scissors, Calendar, ArrowRight, Play, ZoomIn, X, Pin } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { ImageWithFallback } from './components/ImageWithFallback';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { RealisationPublique, MediaPublique } from '@/types/public.types';
-
-const fmt = (v: number) => new Intl.NumberFormat('fr-FR').format(v);
 
 const getMediaUrl = (url: string) => {
   if (url.startsWith('http')) return url;
@@ -70,6 +69,8 @@ const Lightbox: React.FC<{
   realisation: RealisationPublique;
   onClose: () => void;
 }> = ({ url, type, realisation, onClose }) => {
+  const { formatPrice } = useCurrency();
+
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
@@ -104,7 +105,7 @@ const Lightbox: React.FC<{
         >
           {realisation.nom_coiffure && <p className="font-bold text-base">{realisation.nom_coiffure}</p>}
           {realisation.montant_coiffure && (
-            <p className="text-indigo-300 font-semibold text-sm">{fmt(realisation.montant_coiffure)} FCFA</p>
+            <p className="text-indigo-300 font-semibold text-sm">{formatPrice(realisation.montant_coiffure)}</p>
           )}
           {realisation.description && (
             <p className="text-gray-300 text-sm leading-snug">{realisation.description}</p>
@@ -119,6 +120,7 @@ const Lightbox: React.FC<{
 export const AccueilPage: React.FC = () => {
   const { slug } = useParams<{ slug?: string }>();
   const { salonInfo, prestations, produits, realisations, realisationsEpinglees, loading } = usePublicData(slug);
+  const { formatPrice } = useCurrency();
   const [lightbox, setLightbox] = React.useState<{
     url: string;
     type: 'photo' | 'video';
@@ -154,9 +156,18 @@ export const AccueilPage: React.FC = () => {
     <div className="space-y-16">
       {/* Hero */}
       <section className="relative bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl overflow-hidden">
+        {/* Image de fond (placeholder — dépose ton fichier dans /public/images/hero-bg.jpg).
+            En cas d'absence ou d'erreur de chargement, l'image se cache et le dégradé
+            de la section (déjà présent en className ci-dessus) sert de fallback. */}
+        <img
+          src="/images/hero-bg.jpg"
+          alt=""
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative px-8 py-20 text-center text-white">
-          <h1 className="text-5xl font-bold mb-4">Bienvenue chez {salonInfo?.nom}</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 break-words px-2">Bienvenue chez {salonInfo?.nom}</h1>
           {salonInfo?.description && (
             <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">{salonInfo.description}</p>
           )}
@@ -237,7 +248,7 @@ export const AccueilPage: React.FC = () => {
                 <div className="bg-indigo-100 p-3 rounded-lg">
                   <Scissors className="text-indigo-600" size={24} />
                 </div>
-                <span className="text-2xl font-bold text-indigo-600">{p.prix_base.toLocaleString()} FCFA</span>
+                <span className="text-2xl font-bold text-indigo-600">{formatPrice(p.prix_base)}</span>
               </div>
               <h3 className="font-semibold text-lg mb-2">{p.nom}</h3>
               {p.description && <p className="text-sm text-gray-600 line-clamp-2">{p.description}</p>}
@@ -292,7 +303,7 @@ export const AccueilPage: React.FC = () => {
                             <p className="text-sm font-bold text-gray-800 truncate">{realisation.nom_coiffure}</p>
                           )}
                           {realisation.montant_coiffure && (
-                            <p className="text-sm font-semibold text-indigo-600">{fmt(realisation.montant_coiffure)} FCFA</p>
+                            <p className="text-sm font-semibold text-indigo-600">{formatPrice(realisation.montant_coiffure)}</p>
                           )}
                         </div>
                       )}
@@ -307,7 +318,7 @@ export const AccueilPage: React.FC = () => {
           {realisationsAvecVideo.length > 0 && (
             <div>
               <h3 className="text-xl font-bold text-gray-800 mb-4">Nos Vidéos</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {realisationsAvecVideo.map((realisation) => {
                   const media = getPremierMedia(realisation, 'video');
                   if (!media) return null;
@@ -317,6 +328,8 @@ export const AccueilPage: React.FC = () => {
                       <div className="relative group">
                         <VideoCardSimple
                           url={url}
+                          aspectClass="aspect-square"
+                          fit="cover"
                           onExpand={() => setLightbox({ url, type: 'video', realisation })}
                         />
                         {realisation.description && (
@@ -334,7 +347,7 @@ export const AccueilPage: React.FC = () => {
                             <p className="text-sm font-bold text-gray-800 truncate">{realisation.nom_coiffure}</p>
                           )}
                           {realisation.montant_coiffure && (
-                            <p className="text-sm font-semibold text-indigo-600">{fmt(realisation.montant_coiffure)} FCFA</p>
+                            <p className="text-sm font-semibold text-indigo-600">{formatPrice(realisation.montant_coiffure)}</p>
                           )}
                         </div>
                       )}
@@ -373,7 +386,7 @@ export const AccueilPage: React.FC = () => {
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold mb-1">{produit.nom}</h3>
-                  <p className="text-lg font-bold text-indigo-600">{produit.prix_actuel.toLocaleString()} FCFA</p>
+                  <p className="text-lg font-bold text-indigo-600">{formatPrice(produit.prix_actuel)}</p>
                 </div>
               </div>
             ))}

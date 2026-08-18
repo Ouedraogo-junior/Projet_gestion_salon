@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Scissors, ShoppingBag, Calendar, Phone, MapPin, Camera } from 'lucide-react';
 import { CartDrawer } from './CartDrawer';
+import { CurrencySelector } from './CurrencySelector';
 import { useCart } from '@/hooks/useCart';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { SalonPublicInfo } from '@/types/public.types';
 
 interface PublicLayoutProps {
@@ -16,6 +18,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, salonInfo,
   const location = useLocation();
   const [cartOpen, setCartOpen] = useState(false);
   const { items, total, totalItems, addItem, updateQuantite, removeItem } = useCart();
+  const { selectedCurrency, changeCurrency } = useCurrency();
 
   const baseUrl = slug ? `/public/${slug}` : '';
   const isActive = (path: string) => location.pathname === path;
@@ -58,22 +61,22 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, salonInfo,
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to={`${baseUrl}/`} className="flex items-center gap-3 hover:opacity-80 transition">
+            <Link to={`${baseUrl}/`} className="flex items-center gap-3 hover:opacity-80 transition min-w-0">
               {salonInfo?.logo_url ? (
                 <img
                   src={getLogoUrl(salonInfo.logo_url) || ''}
                   alt={`Logo ${salonInfo.nom}`}
-                  className="w-14 h-14 object-cover rounded-full border-2 border-indigo-100"
+                  className="w-14 h-14 object-cover rounded-full border-2 border-indigo-100 flex-shrink-0"
                 />
               ) : (
-                <Scissors className="text-indigo-600" size={32} />
+                <Scissors className="text-indigo-600 flex-shrink-0" size={32} />
               )}
-              <h1 className="text-xl font-bold text-gray-800">
+              <h1 className="hidden sm:block text-xl font-bold text-gray-800 truncate">
                 {salonInfo?.nom || 'Salon de Coiffure'}
               </h1>
             </Link>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {/* Nav desktop */}
               <nav className="hidden md:flex items-center gap-2 mr-2">
                 {[
@@ -94,10 +97,16 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children, salonInfo,
                 ))}
               </nav>
 
+              {/* Sélecteur de devise (desktop + mobile, à côté du panier) */}
+              <CurrencySelector
+                selectedCurrency={selectedCurrency}
+                onCurrencyChange={changeCurrency}
+              />
+
               {/* Bouton panier */}
               <button
                 onClick={() => setCartOpen(true)}
-                className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition"
+                className="relative flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition flex-shrink-0"
                 aria-label="Ouvrir le panier"
               >
                 <ShoppingBag size={22} className="text-indigo-600" />

@@ -1,6 +1,6 @@
 // src/app/pages/Produits/components/ProduitDetailsModal.tsx
 import { useEffect, useState } from 'react';
-import { Package, Tag, DollarSign, Calendar, Info, ImageOff, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { Info, ImageOff, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Badge } from './ui/Badge';
 import { produitsApi } from '@/services/produitsApi';
@@ -29,15 +29,15 @@ const formatDate = (date?: string) => {
   return new Date(date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 };
 
-const typeStockLabel = (type: string) => {
-  const map: Record<string, string> = {
-    vente: 'Vente uniquement',
-    utilisation: 'Utilisation salon',
-    mixte: 'Mixte (vente + salon)',
-    reserve: 'Réserve',
-  };
-  return map[type] ?? type;
-};
+// const typeStockLabel = (type: string) => {
+//   const map: Record<string, string> = {
+//     vente: 'Vente uniquement',
+//     utilisation: 'Utilisation salon',
+//     mixte: 'Mixte (vente + salon)',
+//     reserve: 'Réserve',
+//   };
+//   return map[type] ?? type;
+// };
 
 // ============================================================
 // SOUS-COMPOSANT : DÉTAIL D'UNE VARIANTE

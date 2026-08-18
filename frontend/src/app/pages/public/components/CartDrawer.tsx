@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import type { CartItem } from '@/types/public.types';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
   onCommander: () => void;
 }
 
-const fmt = (v: number) =>
+const fmtFCFA = (v: number) =>
   new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(v);
 
 export const CartDrawer: React.FC<Props> = ({
@@ -26,6 +27,7 @@ export const CartDrawer: React.FC<Props> = ({
   onRemove,
   onCommander,
 }) => {
+  const { formatPrice, selectedCurrency } = useCurrency();
   return (
     <>
       {/* Overlay */}
@@ -89,7 +91,7 @@ export const CartDrawer: React.FC<Props> = ({
                   </p>
                   <p className="text-xs text-gray-500 truncate">{item.variante_label}</p>
                   <p className="text-sm font-bold text-indigo-600 mt-1">
-                    {fmt(item.prix_unitaire * item.quantite)} FCFA
+                    {formatPrice(item.prix_unitaire * item.quantite)}
                   </p>
 
                   {/* Quantité */}
@@ -126,8 +128,13 @@ export const CartDrawer: React.FC<Props> = ({
           <div className="p-4 border-t space-y-3">
             <div className="flex items-center justify-between text-base font-bold text-gray-800">
               <span>Total</span>
-              <span className="text-indigo-600">{fmt(total)} FCFA</span>
+              <span className="text-indigo-600">{formatPrice(total)}</span>
             </div>
+            {selectedCurrency !== 'XOF' && (
+              <p className="text-xs text-gray-400 text-right -mt-2">
+                Facturation en {fmtFCFA(total)} FCFA (devise de référence)
+              </p>
+            )}
             <button
               onClick={onCommander}
               className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all shadow-md flex items-center justify-center gap-2"

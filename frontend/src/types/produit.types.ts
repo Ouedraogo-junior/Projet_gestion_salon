@@ -36,6 +36,7 @@ export interface Attribut {
 
 export interface ProduitAttributValeur {
   id: number;
+  // nom: string;
   variante_id: number;
   attribut_id: number;
   valeur: string;
